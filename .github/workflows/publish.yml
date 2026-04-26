@@ -3,10 +3,30 @@ name: Publish to PyPI
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which job to run"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - linux
+          - macos
+          - windows
+          - android
+          - sdist
+      publish:
+        description: "Upload to PyPI after build"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
-  # ── Linux (manylinux) ────────────────────────────────────────────────────
+
   linux:
+    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'linux'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -16,17 +36,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
+        with:
+          python-version: "3.11"
       - uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
           args: --release --out dist --find-interpreter
           manylinux: auto
       - uses: actions/upload-artifact@v4
-        with: { name: wheels-linux-${{ matrix.target }}, path: dist }
+        with:
+          name: wheels-linux-${{ matrix.target }}
+          path: dist
 
-  # ── macOS ────────────────────────────────────────────────────────────────
   macos:
+    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'macos'
     runs-on: macos-latest
     strategy:
       matrix:
@@ -36,35 +59,42 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
+        with:
+          python-version: "3.11"
       - uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
           args: --release --out dist --find-interpreter
       - uses: actions/upload-artifact@v4
-        with: { name: wheels-macos-${{ matrix.target }}, path: dist }
+        with:
+          name: wheels-macos-${{ matrix.target }}
+          path: dist
 
-  # ── Windows ──────────────────────────────────────────────────────────────
   windows:
+    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'windows'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
+        with:
+          python-version: "3.11"
       - uses: PyO3/maturin-action@v1
         with:
           args: --release --out dist --find-interpreter
       - uses: actions/upload-artifact@v4
-        with: { name: wheels-windows, path: dist }
+        with:
+          name: wheels-windows
+          path: dist
 
-  # ── Android / Termux (aarch64-linux-android, API 24+) ───────────────────
   android:
+    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'android'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
+        with:
+          python-version: "3.11"
 
       - name: Setup Android NDK r26d
         uses: nttld/setup-ndk@v1
@@ -81,7 +111,6 @@ jobs:
       - name: Install maturin
         run: pip install maturin
 
-      # aarch64 — what almost all Termux users run
       - name: Build aarch64-linux-android wheel
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
@@ -95,7 +124,6 @@ jobs:
             --target aarch64-linux-android \
             --out dist
 
-      # x86_64 — Android emulator / ChromeOS
       - name: Build x86_64-linux-android wheel
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
@@ -110,10 +138,12 @@ jobs:
             --out dist
 
       - uses: actions/upload-artifact@v4
-        with: { name: wheels-android, path: dist }
+        with:
+          name: wheels-android
+          path: dist
 
-  # ── Source dist — fallback for any platform not covered above ────────────
   sdist:
+    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'sdist'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -122,18 +152,26 @@ jobs:
           command: sdist
           args: --out dist
       - uses: actions/upload-artifact@v4
-        with: { name: wheels-sdist, path: dist }
+        with:
+          name: wheels-sdist
+          path: dist
 
-  # ── Publish all artifacts to PyPI ────────────────────────────────────────
   publish:
     needs: [linux, macos, windows, android, sdist]
+    if: |
+      always() &&
+      (github.event_name == 'push' || inputs.publish == true) &&
+      !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
-        with: { pattern: wheels-*, merge-multiple: true, path: dist }
+        with:
+          pattern: "wheels-*"
+          merge-multiple: true
+          path: dist
       - uses: PyO3/maturin-action@v1
         with:
           command: upload
