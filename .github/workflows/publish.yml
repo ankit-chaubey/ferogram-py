@@ -146,6 +146,36 @@ jobs:
       - name: Install maturin
         run: pip install maturin
 
+      - name: Fetch Termux libpython3.13 for linking
+        run: |
+          TARGET=${{ matrix.target }}
+          case "$TARGET" in
+            aarch64-linux-android)   TERMUX_ARCH=aarch64 ;;
+            armv7-linux-androideabi) TERMUX_ARCH=arm     ;;
+            x86_64-linux-android)    TERMUX_ARCH=x86_64  ;;
+            i686-linux-android)      TERMUX_ARCH=i686    ;;
+          esac
+
+          # Locate the python package in Termux's apt repo
+          PKGS_URL="https://packages.termux.dev/apt/termux-main/dists/stable/main/binary-${TERMUX_ARCH}/Packages"
+          DEB_PATH=$(curl -sL "$PKGS_URL" | \
+            awk '/^Package: python$/{f=1} f && /^Filename:/{print $2; f=0}' | head -1)
+          echo "Downloading: $DEB_PATH"
+
+          mkdir -p /tmp/termux-py && cd /tmp/termux-py
+          curl -sL "https://packages.termux.dev/apt/termux-main/${DEB_PATH}" -o python.deb
+          ar x python.deb
+          # data archive may be .tar.xz or .tar.zst depending on Termux version
+          tar xf data.tar.* --wildcards "*/libpython3.13*" 2>/dev/null || true
+
+          LIB_DIR=/tmp/termux-py/data/data/com.termux/files/usr/lib
+          # Ensure the unversioned name exists for -lpython3.13
+          if [ ! -f "$LIB_DIR/libpython3.13.so" ]; then
+            ln -sf "$(basename $(ls $LIB_DIR/libpython3.13.so* | head -1))" \
+                   "$LIB_DIR/libpython3.13.so"
+          fi
+          echo "TERMUX_LIBDIR=$LIB_DIR" >> $GITHUB_ENV
+
       - name: Build Android wheel
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
@@ -173,16 +203,12 @@ jobs:
           export AR_${TARGET_LOWER}=$NDK_BIN/llvm-ar
           export CARGO_TARGET_${TARGET_UPPER}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
 
-          # pyo3 emits -lpython3.12 for abi3 cross-builds. The linker needs a
-          # lib to satisfy that reference; at runtime Termux's Python provides
-          # the real symbols. Create empty stubs and inject via RUSTFLAGS so
-          # the linker finds them without maturin treating the dir as a Python
-          # sysroot (which PYO3_CROSS_LIB_DIR would do, triggering a
-          # _sysconfigdata*.py search and failing).
-          STUB_DIR=$(mktemp -d)
-          $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.13.a"
-          $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.a"
-          export RUSTFLAGS="-L native=$STUB_DIR"
+          # Link against Termux's real libpython3.13.so (not an empty stub).
+          # This embeds DT_NEEDED: libpython3.13.so in the extension, so
+          # bionic resolves all Python symbols explicitly at dlopen time via
+          # Termux's LD_LIBRARY_PATH — instead of relying on global namespace
+          # propagation, which Android's linker does not guarantee.
+          export RUSTFLAGS="-L native=$TERMUX_LIBDIR"
 
           maturin build \
             --release \
