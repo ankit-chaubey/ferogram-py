@@ -29,6 +29,8 @@ pub struct Message {
     #[pyo3(get)]
     pub date: i32,
     #[pyo3(get)]
+    pub edit_date: Option<i32>,
+    #[pyo3(get)]
     pub chat_id: i64,
     #[pyo3(get)]
     pub from_id: Option<i64>,
@@ -48,6 +50,16 @@ pub struct Message {
     pub has_media: bool,
     #[pyo3(get)]
     pub has_photo: bool,
+    #[pyo3(get)]
+    pub has_document: bool,
+    #[pyo3(get)]
+    pub is_forwarded: bool,
+    #[pyo3(get)]
+    pub post_author: Option<String>,
+    #[pyo3(get)]
+    pub view_count: Option<i32>,
+    #[pyo3(get)]
+    pub reply_count: Option<i32>,
     pub(crate) client: Option<Arc<ferogram::Client>>,
 }
 
@@ -58,6 +70,21 @@ impl Message {
             "Message(id={}, chat_id={}, text={:?})",
             self.id, self.chat_id, self.text
         )
+    }
+
+    #[getter]
+    fn is_private(&self) -> bool {
+        self.chat_id > 0
+    }
+
+    #[getter]
+    fn is_group(&self) -> bool {
+        self.chat_id < 0
+    }
+
+    #[getter]
+    fn is_reply(&self) -> bool {
+        self.reply_to_message_id.is_some()
     }
 
     fn reply<'py>(&self, py: Python<'py>, text: String) -> PyResult<Bound<'py, PyAny>> {
@@ -264,6 +291,18 @@ impl Message {
             Ok(())
         })
     }
+
+    fn mark_read<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let client = self
+            .client
+            .clone()
+            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
+        let peer = self.chat_id.to_string();
+        future_into_py(py, async move {
+            client.mark_as_read(peer).await.map_err(py_err)?;
+            Ok(())
+        })
+    }
 }
 
 pub fn from_incoming(
@@ -274,6 +313,7 @@ pub fn from_incoming(
         id: m.id(),
         text: m.text().map(str::to_owned),
         date: m.date(),
+        edit_date: m.edit_date(),
         chat_id: m.chat_id(),
         from_id: m.from_id(),
         outgoing: m.outgoing(),
@@ -284,6 +324,11 @@ pub fn from_incoming(
         grouped_id: m.grouped_id(),
         has_media: m.has_media(),
         has_photo: m.has_photo(),
+        has_document: m.has_document(),
+        is_forwarded: m.is_forwarded(),
+        post_author: m.post_author().map(str::to_owned),
+        view_count: m.view_count(),
+        reply_count: m.reply_count(),
         client,
     }
 }

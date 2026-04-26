@@ -206,7 +206,7 @@ jobs:
           # Link against Termux's real libpython3.13.so (not an empty stub).
           # This embeds DT_NEEDED: libpython3.13.so in the extension, so
           # bionic resolves all Python symbols explicitly at dlopen time via
-          # Termux's LD_LIBRARY_PATH — instead of relying on global namespace
+          # Termux's LD_LIBRARY_PATH - instead of relying on global namespace
           # propagation, which Android's linker does not guarantee.
           export RUSTFLAGS="-L native=$TERMUX_LIBDIR"
 

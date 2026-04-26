@@ -26,5 +26,11 @@ if _main_file:
 
 from .client import Client
 from . import filters
+from ._ferogram import User, Dialog, ChatMember, UserFull, Message
+from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
 
-__all__ = ["Client", "filters"]
+__all__ = [
+    "Client", "filters",
+    "User", "Dialog", "ChatMember", "UserFull", "Message",
+    "Chat", "Authorization", "ForumTopic", "BotInfo",
+]

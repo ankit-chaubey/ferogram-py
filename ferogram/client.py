@@ -19,13 +19,14 @@ import logging
 import os
 from typing import Any, Callable
 
-from ._ferogram import Client as _RustClient, PasswordToken, User, Dialog
+from ._ferogram import Client as _RustClient, PasswordToken, User, Dialog, ChatMember, UserFull
 from ._ferogram import Message, CallbackQuery
 from ._ferogram import (
     MessageDeletion, InlineQuery, InlineSend, UserStatus,
     ChatAction, ParticipantUpdate, JoinRequest, MessageReaction,
     PollVote, BotStopped, RawUpdate,
 )
+from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
 from .raw import _tl
 from .raw.generated._tl_schema import _SCHEMA_BY_CID
 
@@ -52,6 +53,11 @@ _ALL_EVENTS = (
     "raw_update",
 )
 
+_AUDIO_MIME  = "audio/mpeg"
+_VIDEO_MIME  = "video/mp4"
+_VOICE_MIME  = "audio/ogg"
+_STICKER_MIME = "image/webp"
+
 
 class Client:
     def __init__(
@@ -71,7 +77,6 @@ class Client:
         self._phone    = phone
         self._password = password
         self._raw: _RustClient | None = None
-
         self._handlers: dict[str, list[_Handler]] = {e: [] for e in _ALL_EVENTS}
 
     def _require_creds(self) -> tuple[int, str]:
@@ -220,8 +225,8 @@ class Client:
         if self._raw is not None:
             return self
         api_id, api_hash = self._require_creds()
-        _log.info("connecting (session=%r)", self.session + (".session" if not self.session.endswith(".session") else ""))
         session_path = self.session if self.session.endswith(".session") else self.session + ".session"
+        _log.info("connecting (session=%r)", session_path)
         self._raw = await _RustClient.builder(api_id, api_hash, session_path).connect()
         if not await self._raw.is_authorized():
             if self.bot_token:
@@ -235,8 +240,8 @@ class Client:
         return self
 
     async def _interactive_login(self) -> None:
-        phone   = self._phone or input("Phone (+countrycode): ")
-        token   = await self._client.request_login_code(phone)
+        phone    = self._phone or input("Phone (+countrycode): ")
+        token    = await self._client.request_login_code(phone)
         pw_token = await self._client.sign_in(token, input("Code: "))
         if pw_token is not None:
             hint = pw_token.hint
@@ -251,6 +256,7 @@ class Client:
             _log.info("signed out")
 
     async def run_until_disconnected(self) -> None:
+        """Blocking run: start, dispatch updates, stop on Ctrl-C."""
         await self.start()
         try:
             await self._run_updates()
@@ -258,7 +264,6 @@ class Client:
             pass
 
     def run(self) -> None:
-        """Blocking run: start, dispatch updates, stop on Ctrl-C."""
         try:
             asyncio.run(self.run_until_disconnected())
         except KeyboardInterrupt:
@@ -281,6 +286,9 @@ class Client:
     async def send_markdown(self, peer: str, md: str) -> Message:
         return await self._client.send_markdown(peer, md)
 
+    async def send_to_self(self, text: str) -> None:
+        await self._client.send_to_self(text)
+
     async def edit_message(self, peer: str, message_id: int, new_text: str) -> None:
         await self._client.edit_message(peer, message_id, new_text)
 
@@ -299,34 +307,100 @@ class Client:
     async def unpin_message(self, peer: str, message_id: int) -> None:
         await self._client.unpin_message(peer, message_id)
 
+    async def unpin_all_messages(self, peer: str) -> None:
+        await self._client.unpin_all_messages(peer)
+
     async def mark_as_read(self, peer: str) -> None:
         await self._client.mark_as_read(peer)
+
+    async def clear_mentions(self, peer: str) -> None:
+        await self._client.clear_mentions(peer)
 
     async def send_reaction(self, peer: str, message_id: int, emoji: str) -> None:
         """Send a reaction emoji to a message."""
         await self._client.send_reaction(peer, message_id, emoji)
 
-    # media
+    async def send_chat_action(self, peer: str, action: str) -> None:
+        """Send a typing indicator or other chat action.
 
-    async def send_photo(self, peer: str, path: str, caption: str = "") -> Message:
-        import os
-        if not os.path.isfile(path):
-            raise FileNotFoundError(f"No such file: {path!r}")
-        return await self._client.send_photo(peer, path, caption)
+        action: "typing" | "upload_photo" | "record_video" | "upload_video" |
+                "record_audio" | "upload_audio" | "upload_document" |
+                "choose_sticker" | "record_round" | "upload_round" | "cancel"
+        """
+        await self._client.send_chat_action(peer, action)
 
-    async def send_document(self, peer: str, path: str, caption: str = "", mime_type: str | None = None) -> Message:
-        import os
-        if not os.path.isfile(path):
-            raise FileNotFoundError(f"No such file: {path!r}")
-        return await self._client.send_document(peer, path, caption, mime_type)
+    async def get_messages_by_id(self, peer: str, message_ids: list[int]) -> list[Message]:
+        return await self._client.get_messages_by_id(peer, message_ids)
 
-    async def send_file(self, peer: str, path: str, caption: str = "", mime_type: str | None = None) -> Message:
-        import os
-        if not os.path.isfile(path):
-            raise FileNotFoundError(f"No such file: {path!r}")
-        return await self._client.send_file(peer, path, caption, mime_type)
+    async def send_dice(self, peer: str, emoji: str = "\U0001f3b2") -> None:
+        """Send a dice/slot/dart/etc. emoji that animates on Telegram.
+
+        Common emoji values: "\\U0001f3b2" (dice), "\\U0001f3af" (dart),
+        "\\U0001f3c0" (basketball), "\\u26bd" (football), "\\U0001f3b3" (bowling)
+        """
+        await self._client.send_dice(peer, emoji)
+
+    async def delete_dialog(self, peer: str) -> None:
+        await self._client.delete_dialog(peer)
+
+    async def get_online_count(self, peer: str) -> int:
+        return await self._client.get_online_count(peer)
+
+    # chat membership
+
+    async def join_chat(self, peer: str) -> None:
+        await self._client.join_chat(peer)
+
+    async def leave_chat(self, peer: str) -> None:
+        await self._client.leave_chat(peer)
+
+    async def get_chat_administrators(self, peer: str) -> list[ChatMember]:
+        return await self._client.get_chat_administrators(peer)
+
+    async def archive_chat(self, peer: str) -> None:
+        await self._client.archive_chat(peer)
+
+    async def unarchive_chat(self, peer: str) -> None:
+        await self._client.unarchive_chat(peer)
+
+    async def pin_dialog(self, peer: str) -> None:
+        await self._client.pin_dialog(peer)
+
+    async def unpin_dialog(self, peer: str) -> None:
+        await self._client.unpin_dialog(peer)
+
+    # contacts / blocking
+
+    async def block_user(self, peer: str) -> None:
+        await self._client.block_user(peer)
+
+    async def unblock_user(self, peer: str) -> None:
+        await self._client.unblock_user(peer)
+
+    async def get_contacts(self) -> list[User]:
+        return await self._client.get_contacts()
 
     # account
+
+    async def get_users_by_id(self, user_ids: list[int]) -> list[User | None]:
+        return await self._client.get_users_by_id(user_ids)
+
+    async def get_user_full(self, user_id: int) -> UserFull:
+        return await self._client.get_user_full(user_id)
+
+    async def update_profile(
+        self,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        about: str | None = None,
+    ) -> None:
+        await self._client.update_profile(first_name, last_name, about)
+
+    async def update_username(self, username: str) -> None:
+        await self._client.update_username(username)
+
+    async def update_status(self, offline: bool = False) -> None:
+        await self._client.update_status(offline)
 
     async def get_me(self) -> User:
         return await self._client.get_me()
@@ -337,11 +411,222 @@ class Client:
     async def export_session_string(self) -> str:
         return await self._client.export_session_string()
 
+    # media
+
+    async def send_photo(self, peer: str, path: str, caption: str = "") -> Message:
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"No such file: {path!r}")
+        return await self._client.send_photo(peer, path, caption)
+
+    async def send_document(self, peer: str, path: str, caption: str = "", mime_type: str | None = None) -> Message:
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"No such file: {path!r}")
+        return await self._client.send_document(peer, path, caption, mime_type)
+
+    async def send_file(self, peer: str, path: str, caption: str = "", mime_type: str | None = None) -> Message:
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"No such file: {path!r}")
+        return await self._client.send_file(peer, path, caption, mime_type)
+
+    async def send_audio(self, peer: str, path: str, caption: str = "") -> Message:
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"No such file: {path!r}")
+        return await self._client.send_document(peer, path, caption, _AUDIO_MIME)
+
+    async def send_video(self, peer: str, path: str, caption: str = "") -> Message:
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"No such file: {path!r}")
+        return await self._client.send_document(peer, path, caption, _VIDEO_MIME)
+
+    async def send_voice(self, peer: str, path: str, caption: str = "") -> Message:
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"No such file: {path!r}")
+        return await self._client.send_document(peer, path, caption, _VOICE_MIME)
+
+    async def send_sticker(self, peer: str, path: str) -> Message:
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"No such file: {path!r}")
+        return await self._client.send_document(peer, path, "", _STICKER_MIME)
+
+    # search
+
+    async def search_messages(self, peer: str, query: str, limit: int = 100) -> list[Message]:
+        return await self._client.search_messages(peer, query, limit)
+
+    async def search_global(self, query: str, limit: int = 100) -> list[Message]:
+        return await self._client.search_global(query, limit)
+
+    # chat creation / management
+
+    async def create_group(self, title: str, user_ids: list[int]) -> Chat:
+        return await self._client.create_group(title, user_ids)
+
+    async def create_channel(self, title: str, about: str = "", broadcast: bool = True) -> Chat:
+        return await self._client.create_channel(title, about, broadcast)
+
+    async def create_supergroup(self, title: str, about: str = "") -> Chat:
+        return await self._client.create_channel(title, about, False)
+
+    async def delete_channel(self, peer: str) -> None:
+        await self._client.delete_channel(peer)
+
+    async def delete_chat(self, chat_id: int) -> None:
+        await self._client.delete_chat(chat_id)
+
+    async def edit_chat_title(self, peer: str, title: str) -> None:
+        await self._client.edit_chat_title(peer, title)
+
+    async def edit_chat_about(self, peer: str, about: str) -> None:
+        await self._client.edit_chat_about(peer, about)
+
+    async def invite_users(self, peer: str, user_ids: list[int]) -> None:
+        await self._client.invite_users(peer, user_ids)
+
+    async def set_history_ttl(self, peer: str, period: int) -> None:
+        """period in seconds. 0 = disable. common: 86400, 604800, 2678400"""
+        await self._client.set_history_ttl(peer, period)
+
+    async def delete_chat_history(self, peer: str, max_id: int = 0, revoke: bool = False) -> None:
+        await self._client.delete_chat_history(peer, max_id, revoke)
+
+    # join requests
+
+    async def approve_join_request(self, peer: str, user_id: int) -> None:
+        await self._client.approve_join_request(peer, user_id)
+
+    async def reject_join_request(self, peer: str, user_id: int) -> None:
+        await self._client.reject_join_request(peer, user_id)
+
+    async def approve_all_join_requests(self, peer: str) -> None:
+        await self._client.approve_all_join_requests(peer)
+
+    async def reject_all_join_requests(self, peer: str) -> None:
+        await self._client.reject_all_join_requests(peer)
+
+    # contacts
+
+    async def add_contact(self, user_id: int, first_name: str, last_name: str = "", phone: str = "") -> None:
+        await self._client.add_contact(user_id, first_name, last_name, phone)
+
+    async def delete_contacts(self, user_ids: list[int]) -> None:
+        await self._client.delete_contacts(user_ids)
+
+    async def get_blocked_users(self, limit: int = 100) -> list[int]:
+        """Returns list of blocked peer IDs."""
+        return await self._client.get_blocked_users(limit)
+
+    async def get_common_chats(self, user_id: int, limit: int = 100) -> list[Chat]:
+        return await self._client.get_common_chats(user_id, limit)
+
+    # account / sessions
+
+    async def get_authorizations(self) -> list[Authorization]:
+        return await self._client.get_authorizations()
+
+    async def terminate_session(self, hash: int) -> None:
+        await self._client.terminate_session(hash)
+
+    # messages
+
+    async def get_scheduled_messages(self, peer: str) -> list[Message]:
+        return await self._client.get_scheduled_messages(peer)
+
+    async def get_pinned_message(self, peer: str) -> Message | None:
+        return await self._client.get_pinned_message(peer)
+
+    async def translate_messages(self, peer: str, msg_ids: list[int], to_lang: str) -> list[str]:
+        return await self._client.translate_messages(peer, msg_ids, to_lang)
+
+    # drafts
+
+    async def save_draft(self, peer: str, text: str) -> None:
+        await self._client.save_draft(peer, text)
+
+    async def clear_all_drafts(self) -> None:
+        await self._client.clear_all_drafts()
+
+    # polls
+
+    async def send_poll(
+        self,
+        peer: str,
+        question: str,
+        answers: list[str],
+        *,
+        quiz: bool = False,
+        correct_index: int | None = None,
+        multiple_choice: bool = False,
+    ) -> None:
+        await self._client.send_poll(peer, question, answers, quiz, correct_index, multiple_choice)
+
+    async def send_vote(self, peer: str, msg_id: int, options: list[bytes]) -> None:
+        """options: list of raw option bytes from the poll answer (e.g. [b'\\x00'])"""
+        await self._client.send_vote(peer, msg_id, options)
+
+    # reactions
+
+    async def read_reactions(self, peer: str) -> None:
+        await self._client.read_reactions(peer)
+
+    async def clear_recent_reactions(self) -> None:
+        await self._client.clear_recent_reactions()
+
+    # bot commands / info
+
+    async def set_bot_commands(self, commands: list[tuple[str, str]], lang_code: str = "") -> None:
+        """commands: list of (command, description) pairs"""
+        await self._client.set_bot_commands(commands, lang_code)
+
+    async def delete_bot_commands(self, lang_code: str = "") -> None:
+        await self._client.delete_bot_commands(lang_code)
+
+    async def set_bot_info(
+        self,
+        name: str | None = None,
+        about: str | None = None,
+        description: str | None = None,
+        lang_code: str = "",
+    ) -> None:
+        await self._client.set_bot_info(name, about, description, lang_code)
+
+    async def get_bot_info(self, lang_code: str = "") -> BotInfo:
+        return await self._client.get_bot_info(lang_code)
+
+    # forum topics
+
+    async def get_forum_topics(self, peer: str, limit: int = 100) -> list[ForumTopic]:
+        return await self._client.get_forum_topics(peer, limit)
+
+    async def create_forum_topic(
+        self,
+        peer: str,
+        title: str,
+        icon_color: int | None = None,
+        icon_emoji_id: int | None = None,
+    ) -> None:
+        await self._client.create_forum_topic(peer, title, icon_color, icon_emoji_id)
+
+    async def edit_forum_topic(
+        self,
+        peer: str,
+        topic_id: int,
+        title: str | None = None,
+        closed: bool | None = None,
+        hidden: bool | None = None,
+    ) -> None:
+        await self._client.edit_forum_topic(peer, topic_id, title, closed, hidden)
+
+    async def delete_forum_topic_history(self, peer: str, top_msg_id: int) -> None:
+        await self._client.delete_forum_topic_history(peer, top_msg_id)
+
+    async def toggle_forum(self, peer: str, enabled: bool) -> None:
+        await self._client.toggle_forum(peer, enabled)
+
     # raw invoke
 
     async def invoke(self, func: Any) -> dict:
-        """Invoke a raw TL function object. Returns a deserialized dict."""
         tl_bytes  = func.to_bytes()
+        """Invoke a raw TL function object. Returns a deserialized dict."""
         resp_bytes = await self._client.invoke_raw(tl_bytes)
         return _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
 

@@ -34,6 +34,12 @@ fn _ferogram(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<message::Message>()?;
     m.add_class::<types::User>()?;
     m.add_class::<types::Dialog>()?;
+    m.add_class::<types::ChatMember>()?;
+    m.add_class::<types::UserFull>()?;
+    m.add_class::<types::Chat>()?;
+    m.add_class::<types::Authorization>()?;
+    m.add_class::<types::ForumTopic>()?;
+    m.add_class::<types::BotInfo>()?;
     // update types
     m.add_class::<updates::CallbackQuery>()?;
     m.add_class::<updates::MessageDeletion>()?;
