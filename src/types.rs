@@ -17,31 +17,46 @@ use pyo3::prelude::*;
 
 #[pyclass]
 pub struct User {
-    #[pyo3(get)] pub id: i64,
-    #[pyo3(get)] pub first_name: String,
-    #[pyo3(get)] pub last_name: Option<String>,
-    #[pyo3(get)] pub username: Option<String>,
-    #[pyo3(get)] pub phone: Option<String>,
-    #[pyo3(get)] pub bot: bool,
+    #[pyo3(get)]
+    pub id: i64,
+    #[pyo3(get)]
+    pub first_name: String,
+    #[pyo3(get)]
+    pub last_name: Option<String>,
+    #[pyo3(get)]
+    pub username: Option<String>,
+    #[pyo3(get)]
+    pub phone: Option<String>,
+    #[pyo3(get)]
+    pub bot: bool,
 }
 
 #[pymethods]
 impl User {
     fn __repr__(&self) -> String {
-        format!("User(id={}, username={:?}, first_name={:?})", self.id, self.username, self.first_name)
+        format!(
+            "User(id={}, username={:?}, first_name={:?})",
+            self.id, self.username, self.first_name
+        )
     }
 }
 
 #[pyclass]
 pub struct Dialog {
-    #[pyo3(get)] pub title: String,
-    #[pyo3(get)] pub unread_count: i32,
-    #[pyo3(get)] pub top_message: i32,
+    #[pyo3(get)]
+    pub title: String,
+    #[pyo3(get)]
+    pub unread_count: i32,
+    #[pyo3(get)]
+    pub top_message: i32,
 }
 
 #[pymethods]
 impl Dialog {
     fn __repr__(&self) -> String {
-        format!("Dialog(title={:?}, unread={})", self.title, self.unread_count)
+        format!(
+            "Dialog(title={:?}, unread={})",
+            self.title, self.unread_count
+        )
     }
 }

@@ -220,8 +220,9 @@ class Client:
         if self._raw is not None:
             return self
         api_id, api_hash = self._require_creds()
-        _log.info("connecting (session=%r)", self.session)
-        self._raw = await _RustClient.builder(api_id, api_hash, self.session).connect()
+        _log.info("connecting (session=%r)", self.session + (".session" if not self.session.endswith(".session") else ""))
+        session_path = self.session if self.session.endswith(".session") else self.session + ".session"
+        self._raw = await _RustClient.builder(api_id, api_hash, session_path).connect()
         if not await self._raw.is_authorized():
             if self.bot_token:
                 await self._raw.bot_sign_in(self.bot_token)

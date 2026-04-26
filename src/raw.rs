@@ -17,7 +17,7 @@
 // Use ferogram::tl for all TL traits to avoid a duplicate-crate version
 // conflict with ferogram's internal copy of ferogram-tl-types.
 
-use ferogram::tl::{RemoteCall, Serializable, Deserializable, Cursor};
+use ferogram::tl::{Cursor, Deserializable, RemoteCall, Serializable};
 use pyo3::prelude::*;
 
 use crate::py_err;
@@ -44,10 +44,7 @@ impl Deserializable for RawBytes {
     }
 }
 
-pub async fn invoke_raw_inner(
-    client: &ferogram::Client,
-    tl_bytes: Vec<u8>,
-) -> PyResult<Vec<u8>> {
+pub async fn invoke_raw_inner(client: &ferogram::Client, tl_bytes: Vec<u8>) -> PyResult<Vec<u8>> {
     let call = RawCall(tl_bytes);
     let result = client.invoke(&call).await.map_err(py_err)?;
     Ok(result.0)

@@ -30,7 +30,11 @@ pub struct Client {
 impl Client {
     #[staticmethod]
     fn builder(api_id: i32, api_hash: String, session: String) -> ClientBuilder {
-        ClientBuilder { api_id, api_hash, session }
+        ClientBuilder {
+            api_id,
+            api_hash,
+            session,
+        }
     }
 
     fn is_authorized<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
@@ -38,7 +42,11 @@ impl Client {
         future_into_py(py, async move { c.is_authorized().await.map_err(py_err) })
     }
 
-    fn request_login_code<'py>(&self, py: Python<'py>, phone: String) -> PyResult<Bound<'py, PyAny>> {
+    fn request_login_code<'py>(
+        &self,
+        py: Python<'py>,
+        phone: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let tok = c.request_login_code(&phone).await.map_err(py_err)?;
@@ -46,43 +54,66 @@ impl Client {
         })
     }
 
-    fn sign_in<'py>(&self, py: Python<'py>, token: &LoginToken, code: String) -> PyResult<Bound<'py, PyAny>> {
+    fn sign_in<'py>(
+        &self,
+        py: Python<'py>,
+        token: &LoginToken,
+        code: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         let owned = {
             let mut g = token.0.lock().map_err(py_err)?;
-            g.take().ok_or_else(|| PyRuntimeError::new_err("LoginToken already consumed"))?
+            g.take()
+                .ok_or_else(|| PyRuntimeError::new_err("LoginToken already consumed"))?
         };
         future_into_py(py, async move {
             match c.sign_in(&owned, &code).await {
                 Ok(_) => Ok(None::<PasswordToken>),
                 Err(ferogram::SignInError::PasswordRequired(box_tok)) => {
                     let hint = box_tok.hint().map(str::to_owned);
-                    Ok(Some(PasswordToken { inner: Arc::new(std::sync::Mutex::new(Some(*box_tok))), hint }))
+                    Ok(Some(PasswordToken {
+                        inner: Arc::new(std::sync::Mutex::new(Some(*box_tok))),
+                        hint,
+                    }))
                 }
                 Err(e) => Err(py_err(e)),
             }
         })
     }
 
-    fn check_password<'py>(&self, py: Python<'py>, token: &PasswordToken, password: String) -> PyResult<Bound<'py, PyAny>> {
+    fn check_password<'py>(
+        &self,
+        py: Python<'py>,
+        token: &PasswordToken,
+        password: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         let owned = {
             let mut g = token.inner.lock().map_err(py_err)?;
-            g.take().ok_or_else(|| PyRuntimeError::new_err("PasswordToken already consumed"))?
+            g.take()
+                .ok_or_else(|| PyRuntimeError::new_err("PasswordToken already consumed"))?
         };
         future_into_py(py, async move {
-            c.check_password(owned, password.as_bytes()).await.map_err(py_err)
+            c.check_password(owned, password.as_bytes())
+                .await
+                .map_err(py_err)
         })
     }
 
     fn bot_sign_in<'py>(&self, py: Python<'py>, token: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
-        future_into_py(py, async move { c.bot_sign_in(&token).await.map_err(py_err) })
+        future_into_py(
+            py,
+            async move { c.bot_sign_in(&token).await.map_err(py_err) },
+        )
     }
 
     fn save_session<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
-        future_into_py(py, async move { c.save_session().await.map_err(py_err)?; Ok(()) })
+        future_into_py(py, async move {
+            c.save_session().await.map_err(py_err)?;
+            Ok(())
+        })
     }
 
     fn sign_out<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
@@ -92,7 +123,9 @@ impl Client {
 
     fn export_session_string<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
-        future_into_py(py, async move { c.export_session_string().await.map_err(py_err) })
+        future_into_py(py, async move {
+            c.export_session_string().await.map_err(py_err)
+        })
     }
 
     fn next_update<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
@@ -102,17 +135,19 @@ impl Client {
             let upd = stream.lock().await.next().await;
             match upd {
                 None => Ok(None::<(String, PyObject)>),
-                Some(u) => {
-                    Python::with_gil(|py| {
-                        Ok(crate::updates::update_to_py(py, u, c)
-                            .map(|(k, v)| (k.to_owned(), v)))
-                    })
-                }
+                Some(u) => Python::with_gil(|py| {
+                    Ok(crate::updates::update_to_py(py, u, c).map(|(k, v)| (k.to_owned(), v)))
+                }),
             }
         })
     }
 
-    fn send_message<'py>(&self, py: Python<'py>, peer: String, text: String) -> PyResult<Bound<'py, PyAny>> {
+    fn send_message<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        text: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let m = c.send_message(&peer, &text).await.map_err(py_err)?;
@@ -120,58 +155,112 @@ impl Client {
         })
     }
 
-    fn send_html<'py>(&self, py: Python<'py>, peer: String, html: String) -> PyResult<Bound<'py, PyAny>> {
+    fn send_html<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        html: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            Ok(from_incoming(c.send_html(peer, &html).await.map_err(py_err)?, Some(c)))
+            Ok(from_incoming(
+                c.send_html(peer, &html).await.map_err(py_err)?,
+                Some(c),
+            ))
         })
     }
 
-    fn send_markdown<'py>(&self, py: Python<'py>, peer: String, md: String) -> PyResult<Bound<'py, PyAny>> {
+    fn send_markdown<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        md: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            Ok(from_incoming(c.send_markdown(peer, &md).await.map_err(py_err)?, Some(c)))
+            Ok(from_incoming(
+                c.send_markdown(peer, &md).await.map_err(py_err)?,
+                Some(c),
+            ))
         })
     }
 
     fn send_to_self<'py>(&self, py: Python<'py>, text: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
-        future_into_py(py, async move { c.send_to_self(&text).await.map_err(py_err)?; Ok(()) })
-    }
-
-    fn edit_message<'py>(&self, py: Python<'py>, peer: String, message_id: i32, new_text: String) -> PyResult<Bound<'py, PyAny>> {
-        let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.edit_message(peer, message_id, &new_text).await.map_err(py_err)?;
+            c.send_to_self(&text).await.map_err(py_err)?;
             Ok(())
         })
     }
 
-    fn delete_messages<'py>(&self, py: Python<'py>, message_ids: Vec<i32>, revoke: bool) -> PyResult<Bound<'py, PyAny>> {
+    fn edit_message<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        message_id: i32,
+        new_text: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.delete_messages(message_ids, revoke).await.map_err(py_err)?;
+            c.edit_message(peer, message_id, &new_text)
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
 
-    fn forward_messages<'py>(&self, py: Python<'py>, destination: String, source: String, message_ids: Vec<i32>) -> PyResult<Bound<'py, PyAny>> {
+    fn delete_messages<'py>(
+        &self,
+        py: Python<'py>,
+        message_ids: Vec<i32>,
+        revoke: bool,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.forward_messages(destination, &message_ids, source).await.map_err(py_err)?;
+            c.delete_messages(message_ids, revoke)
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
 
-    fn pin_message<'py>(&self, py: Python<'py>, peer: String, message_id: i32) -> PyResult<Bound<'py, PyAny>> {
+    fn forward_messages<'py>(
+        &self,
+        py: Python<'py>,
+        destination: String,
+        source: String,
+        message_ids: Vec<i32>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.pin_message(peer, message_id, false, false, false).await.map_err(py_err)?;
+            c.forward_messages(destination, &message_ids, source)
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
 
-    fn unpin_message<'py>(&self, py: Python<'py>, peer: String, message_id: i32) -> PyResult<Bound<'py, PyAny>> {
+    fn pin_message<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        message_id: i32,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            c.pin_message(peer, message_id, false, false, false)
+                .await
+                .map_err(py_err)?;
+            Ok(())
+        })
+    }
+
+    fn unpin_message<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        message_id: i32,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             c.unpin_message(peer, message_id).await.map_err(py_err)?;
@@ -188,34 +277,77 @@ impl Client {
     }
 
     #[pyo3(signature = (peer, path, caption = String::new()))]
-    fn send_photo<'py>(&self, py: Python<'py>, peer: String, path: String, caption: String) -> PyResult<Bound<'py, PyAny>> {
+    fn send_photo<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        path: String,
+        caption: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let data = tokio::fs::read(&path).await.map_err(py_err)?;
-            let name = std::path::Path::new(&path).file_name()
-                .and_then(|n| n.to_str()).unwrap_or("photo.jpg").to_owned();
-            let uploaded = c.upload_file(&data, &name, "image/jpeg").await.map_err(py_err)?;
-            let msg = c.send_file(peer, uploaded.as_photo_media(), &ferogram::InputMessage::text(caption)).await.map_err(py_err)?;
+            let name = std::path::Path::new(&path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("photo.jpg")
+                .to_owned();
+            let uploaded = c
+                .upload_file(&data, &name, "image/jpeg")
+                .await
+                .map_err(py_err)?;
+            let msg = c
+                .send_file(
+                    peer,
+                    uploaded.as_photo_media(),
+                    &ferogram::InputMessage::text(caption),
+                )
+                .await
+                .map_err(py_err)?;
             Ok(from_incoming(msg, Some(c)))
         })
     }
 
     #[pyo3(signature = (peer, path, caption = String::new(), mime_type = None))]
-    fn send_document<'py>(&self, py: Python<'py>, peer: String, path: String, caption: String, mime_type: Option<String>) -> PyResult<Bound<'py, PyAny>> {
+    fn send_document<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        path: String,
+        caption: String,
+        mime_type: Option<String>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let data = tokio::fs::read(&path).await.map_err(py_err)?;
-            let name = std::path::Path::new(&path).file_name()
-                .and_then(|n| n.to_str()).unwrap_or("file").to_owned();
+            let name = std::path::Path::new(&path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("file")
+                .to_owned();
             let mime = mime_type.as_deref().unwrap_or("application/octet-stream");
             let uploaded = c.upload_file(&data, &name, mime).await.map_err(py_err)?;
-            let msg = c.send_file(peer, uploaded.as_document_media(), &ferogram::InputMessage::text(caption)).await.map_err(py_err)?;
+            let msg = c
+                .send_file(
+                    peer,
+                    uploaded.as_document_media(),
+                    &ferogram::InputMessage::text(caption),
+                )
+                .await
+                .map_err(py_err)?;
             Ok(from_incoming(msg, Some(c)))
         })
     }
 
     #[pyo3(signature = (peer, path, caption = String::new(), mime_type = None))]
-    fn send_file<'py>(&self, py: Python<'py>, peer: String, path: String, caption: String, mime_type: Option<String>) -> PyResult<Bound<'py, PyAny>> {
+    fn send_file<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        path: String,
+        caption: String,
+        mime_type: Option<String>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         self.send_document(py, peer, path, caption, mime_type)
     }
 
@@ -239,18 +371,33 @@ impl Client {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let dialogs = c.get_dialogs(limit).await.map_err(py_err)?;
-            Ok(dialogs.into_iter().map(|d| Dialog {
-                title: d.title(), unread_count: d.unread_count(), top_message: d.top_message(),
-            }).collect::<Vec<_>>())
+            Ok(dialogs
+                .into_iter()
+                .map(|d| Dialog {
+                    title: d.title(),
+                    unread_count: d.unread_count(),
+                    top_message: d.top_message(),
+                })
+                .collect::<Vec<_>>())
         })
     }
 
-    fn send_reaction<'py>(&self, py: Python<'py>, peer: String, message_id: i32, emoji: String) -> PyResult<Bound<'py, PyAny>> {
+    fn send_reaction<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        message_id: i32,
+        emoji: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.send_reaction(peer, message_id, ferogram::reactions::InputReactions::emoticon(&emoji))
-                .await
-                .map_err(py_err)?;
+            c.send_reaction(
+                peer,
+                message_id,
+                ferogram::reactions::InputReactions::emoticon(&emoji),
+            )
+            .await
+            .map_err(py_err)?;
             Ok(())
         })
     }

@@ -29,26 +29,37 @@ pub struct PasswordToken {
 #[pymethods]
 impl PasswordToken {
     #[getter]
-    fn hint(&self) -> Option<&str> { self.hint.as_deref() }
+    fn hint(&self) -> Option<&str> {
+        self.hint.as_deref()
+    }
     fn __repr__(&self) -> String {
         match &self.hint {
             Some(h) => format!("PasswordToken(hint={h:?})"),
-            None    => "PasswordToken(hint=None)".into(),
+            None => "PasswordToken(hint=None)".into(),
         }
     }
 }
 
 #[pyclass]
-pub struct ClientBuilder { pub api_id: i32, pub api_hash: String, pub session: String }
+pub struct ClientBuilder {
+    pub api_id: i32,
+    pub api_hash: String,
+    pub session: String,
+}
 
 #[pymethods]
 impl ClientBuilder {
     fn connect<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let (api_id, api_hash, session) = (self.api_id, self.api_hash.clone(), self.session.clone());
+        let (api_id, api_hash, session) =
+            (self.api_id, self.api_hash.clone(), self.session.clone());
         future_into_py(py, async move {
             let (client, shutdown) = ferogram::Client::builder()
-                .api_id(api_id).api_hash(api_hash).session(session)
-                .connect().await.map_err(py_err)?;
+                .api_id(api_id)
+                .api_hash(api_hash)
+                .session(session)
+                .connect()
+                .await
+                .map_err(py_err)?;
             Ok(crate::client::make_client(client, shutdown))
         })
     }

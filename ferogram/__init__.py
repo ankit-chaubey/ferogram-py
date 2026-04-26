@@ -11,28 +11,20 @@
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
-from .client import Client
-from ._ferogram import (
-    LoginToken, PasswordToken,
-    Message, CallbackQuery, User, Dialog,
-    MessageDeletion, InlineQuery, InlineSend,
-    UserStatus, ChatAction, ParticipantUpdate,
-    JoinRequest, MessageReaction, PollVote,
-    BotStopped, RawUpdate,
-)
-from . import filters
-from . import raw
-from . import logging as log
+import os
+import sys
 
-__version__ = "0.1.0"
-__author__  = "Ankit Chaubey"
-__all__ = [
-    "Client",
-    "LoginToken", "PasswordToken",
-    "Message", "CallbackQuery", "User", "Dialog",
-    "MessageDeletion", "InlineQuery", "InlineSend",
-    "UserStatus", "ChatAction", "ParticipantUpdate",
-    "JoinRequest", "MessageReaction", "PollVote",
-    "BotStopped", "RawUpdate",
-    "filters", "raw", "log",
-]
+_main_file = getattr(sys.modules.get("__main__"), "__file__", None)
+if _main_file:
+    _name = os.path.splitext(os.path.basename(_main_file))[0]
+    if _name == "ferogram":
+        raise ImportError(
+            "\n\nYour script is named 'ferogram.py' which shadows the ferogram package "
+            "and causes circular imports.\n"
+            "Rename your file to something like 'bot.py', 'main.py', or 'app.py'."
+        )
+
+from .client import Client
+from . import filters
+
+__all__ = ["Client", "filters"]
