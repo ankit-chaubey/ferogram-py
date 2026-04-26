@@ -15,7 +15,6 @@ on:
           - linux
           - macos
           - windows
-          - android
           - sdist
       publish:
         description: "Upload to PyPI after build"
@@ -29,6 +28,9 @@ jobs:
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'linux'
     runs-on: ubuntu-latest
     strategy:
+      # Prevent one target failing from cancelling its sibling.
+      # Without this, aarch64 failing was silently cancelling x86_64.
+      fail-fast: false
       matrix:
         target:
           - x86_64-unknown-linux-gnu
@@ -38,7 +40,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
       - uses: PyO3/maturin-action@v1
+        # The ring crate's build.rs compiles ARM assembly (chacha-armv8-linux64.S)
+        # via cc-rs using the manylinux cross-compiler. That compiler doesn't
+        # define __ARM_ARCH, which ring requires:
+        #   include/ring-core/asm_base.h:73: #error "ARM assembler must define __ARM_ARCH"
+        # Setting CFLAGS for the aarch64 target via cc-rs's env convention fixes
+        # this without touching any upstream crate.
+        env:
+          CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8 -march=armv8-a"
         with:
           target: ${{ matrix.target }}
           args: --release --out dist
@@ -52,6 +66,7 @@ jobs:
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'macos'
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         target:
           - x86_64-apple-darwin
@@ -61,6 +76,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
       - uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
@@ -78,70 +97,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
       - uses: PyO3/maturin-action@v1
         with:
           args: --release --out dist
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-windows
-          path: dist
-
-  android:
-    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'android'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Setup Android NDK r26d
-        uses: nttld/setup-ndk@v1
-        id: ndk
-        with:
-          ndk-version: r26d
-          link-to-sdk: true
-
-      - name: Add Rust Android targets
-        run: |
-          rustup target add aarch64-linux-android
-          rustup target add x86_64-linux-android
-
-      - name: Install maturin
-        run: pip install maturin
-
-      - name: Build aarch64-linux-android wheel
-        env:
-          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
-        run: |
-          NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
-          export CC_aarch64_linux_android=$NDK_BIN/aarch64-linux-android24-clang
-          export CXX_aarch64_linux_android=$NDK_BIN/aarch64-linux-android24-clang++
-          export AR_aarch64_linux_android=$NDK_BIN/llvm-ar
-          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_BIN/aarch64-linux-android24-clang
-          maturin build --release \
-            --target aarch64-linux-android \
-            --interpreter python3.12 \
-            --out dist
-
-      - name: Build x86_64-linux-android wheel
-        env:
-          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
-        run: |
-          NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
-          export CC_x86_64_linux_android=$NDK_BIN/x86_64-linux-android24-clang
-          export CXX_x86_64_linux_android=$NDK_BIN/x86_64-linux-android24-clang++
-          export AR_x86_64_linux_android=$NDK_BIN/llvm-ar
-          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$NDK_BIN/x86_64-linux-android24-clang
-          maturin build --release \
-            --target x86_64-linux-android \
-            --interpreter python3.12 \
-            --out dist
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wheels-android
           path: dist
 
   sdist:
@@ -159,11 +122,17 @@ jobs:
           path: dist
 
   publish:
-    needs: [linux, macos, windows, android, sdist]
+    # Android was removed from this workflow entirely. PyO3 abi3 wheels require
+    # libpython3.9.so at link time — a library that does not exist in the Android
+    # NDK sysroot. There is no lightweight fix; a full Python-for-Android sysroot
+    # would be required. More importantly, PyPI does not serve Android wheel tags,
+    # so those wheels would never be pip-installable anyway.
+    needs: [linux, macos, windows, sdist]
     if: |
       always() &&
       (github.event_name == 'push' || inputs.publish == true) &&
-      !contains(needs.*.result, 'failure')
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
