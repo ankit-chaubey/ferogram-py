@@ -172,15 +172,16 @@ jobs:
           export AR_${TARGET_LOWER}=$NDK_BIN/llvm-ar
           export CARGO_TARGET_${TARGET_UPPER}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
 
-          # pyo3 emits -lpython3.9 even for abi3 cross-builds because maturin
-          # injects PYO3_PYTHON/PYO3_ENVIRONMENT_SIGNATURE into cargo, which
-          # overrides PYO3_NO_PYTHON. Create empty stub archives so the linker
-          # is satisfied at build time; Termux's Python provides real symbols
-          # at runtime.
+          # pyo3 emits -lpython3.9 for abi3 cross-builds. The linker needs a
+          # lib to satisfy that reference; at runtime Termux's Python provides
+          # the real symbols. Create empty stubs and inject via RUSTFLAGS so
+          # the linker finds them without maturin treating the dir as a Python
+          # sysroot (which PYO3_CROSS_LIB_DIR would do, triggering a
+          # _sysconfigdata*.py search and failing).
           STUB_DIR=$(mktemp -d)
           $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.9.a"
           $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.a"
-          export PYO3_CROSS_LIB_DIR=$STUB_DIR
+          export RUSTFLAGS="-L native=$STUB_DIR"
 
           maturin build \
             --release \
