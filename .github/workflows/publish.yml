@@ -167,12 +167,14 @@ jobs:
             i686-linux-android)      CLANG_PREFIX="i686-linux-android${API}" ;;
           esac
 
-          # Cargo env vars for the cross-compilation toolchain
-          TARGET_ENV=$(echo "$TARGET" | tr '[:lower:]-' '[:upper:]_')
-          export CC_${TARGET_ENV}=$NDK_BIN/${CLANG_PREFIX}-clang
-          export CXX_${TARGET_ENV}=$NDK_BIN/${CLANG_PREFIX}-clang++
-          export AR_${TARGET_ENV}=$NDK_BIN/llvm-ar
-          export CARGO_TARGET_${TARGET_ENV}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
+          # cc-rs reads CC_<target> with lowercase triple (dashes -> underscores).
+          # CARGO_TARGET_<TARGET>_LINKER uses uppercase. Split accordingly.
+          TARGET_UPPER=$(echo "$TARGET" | tr '[:lower:]-' '[:upper:]_')
+          TARGET_LOWER=$(echo "$TARGET" | tr '-' '_')
+          export CC_${TARGET_LOWER}=$NDK_BIN/${CLANG_PREFIX}-clang
+          export CXX_${TARGET_LOWER}=$NDK_BIN/${CLANG_PREFIX}-clang++
+          export AR_${TARGET_LOWER}=$NDK_BIN/llvm-ar
+          export CARGO_TARGET_${TARGET_UPPER}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
 
           maturin build \
             --release \
