@@ -15,6 +15,7 @@ on:
           - linux
           - macos
           - windows
+          - android
           - sdist
       publish:
         description: "Upload to PyPI after build"
@@ -28,8 +29,6 @@ jobs:
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'linux'
     runs-on: ubuntu-latest
     strategy:
-      # Prevent one target failing from cancelling its sibling.
-      # Without this, aarch64 failing was silently cancelling x86_64.
       fail-fast: false
       matrix:
         target:
@@ -45,12 +44,8 @@ jobs:
         with:
           key: ${{ matrix.target }}
       - uses: PyO3/maturin-action@v1
-        # The ring crate's build.rs compiles ARM assembly (chacha-armv8-linux64.S)
-        # via cc-rs using the manylinux cross-compiler. That compiler doesn't
-        # define __ARM_ARCH, which ring requires:
-        #   include/ring-core/asm_base.h:73: #error "ARM assembler must define __ARM_ARCH"
-        # Setting CFLAGS for the aarch64 target via cc-rs's env convention fixes
-        # this without touching any upstream crate.
+        # ring's build.rs compiles ARM assembly via cc-rs using the manylinux
+        # cross-compiler, which doesn't define __ARM_ARCH. Explicitly set it.
         env:
           CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8 -march=armv8-a"
         with:
@@ -107,6 +102,89 @@ jobs:
           name: wheels-windows
           path: dist
 
+  android:
+    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'android'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-linux-android
+            api: 24
+            arch: arm64-v8a
+          - target: armv7-linux-androideabi
+            api: 24
+            arch: armeabi-v7a
+          - target: x86_64-linux-android
+            api: 24
+            arch: x86_64
+          - target: i686-linux-android
+            api: 24
+            arch: x86
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Android NDK r26d
+        uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r26d
+          link-to-sdk: true
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Add Rust Android target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build Android wheel
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+          # generate-import-lib (enabled in Cargo.toml) generates a stub
+          # libpython3.9.a for the linker so we don't need a real Python
+          # Android sysroot. This is the fix for the previous failure:
+          #   ld.lld: error: unable to find library -lpython3.9
+          PYO3_CROSS_PYTHON_VERSION: "3.9"
+        run: |
+          NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+          TARGET=${{ matrix.target }}
+          API=${{ matrix.api }}
+
+          # Resolve the correct clang triple for this target + API level
+          case "$TARGET" in
+            aarch64-linux-android)   CLANG_PREFIX="aarch64-linux-android${API}" ;;
+            armv7-linux-androideabi) CLANG_PREFIX="armv7a-linux-androideabi${API}" ;;
+            x86_64-linux-android)    CLANG_PREFIX="x86_64-linux-android${API}" ;;
+            i686-linux-android)      CLANG_PREFIX="i686-linux-android${API}" ;;
+          esac
+
+          # Cargo env vars for the cross-compilation toolchain
+          TARGET_ENV=$(echo "$TARGET" | tr '[:lower:]-' '[:upper:]_')
+          export CC_${TARGET_ENV}=$NDK_BIN/${CLANG_PREFIX}-clang
+          export CXX_${TARGET_ENV}=$NDK_BIN/${CLANG_PREFIX}-clang++
+          export AR_${TARGET_ENV}=$NDK_BIN/llvm-ar
+          export CARGO_TARGET_${TARGET_ENV}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
+
+          maturin build \
+            --release \
+            --target $TARGET \
+            --compatibility off \
+            --out dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-android-${{ matrix.target }}
+          path: dist
+
   sdist:
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'sdist'
     runs-on: ubuntu-latest
@@ -122,12 +200,7 @@ jobs:
           path: dist
 
   publish:
-    # Android was removed from this workflow entirely. PyO3 abi3 wheels require
-    # libpython3.9.so at link time — a library that does not exist in the Android
-    # NDK sysroot. There is no lightweight fix; a full Python-for-Android sysroot
-    # would be required. More importantly, PyPI does not serve Android wheel tags,
-    # so those wheels would never be pip-installable anyway.
-    needs: [linux, macos, windows, sdist]
+    needs: [linux, macos, windows, android, sdist]
     if: |
       always() &&
       (github.event_name == 'push' || inputs.publish == true) &&
