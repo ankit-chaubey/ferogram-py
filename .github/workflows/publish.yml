@@ -149,9 +149,6 @@ jobs:
       - name: Build Android wheel
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
-          # PYO3_NO_PYTHON: Android extensions don't link libpython; symbols
-          # are resolved at runtime from the host Python process (e.g. Termux).
-          PYO3_NO_PYTHON: "1"
           PYO3_CROSS_PYTHON_VERSION: "3.9"
         run: |
           NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
@@ -174,6 +171,16 @@ jobs:
           export CXX_${TARGET_LOWER}=$NDK_BIN/${CLANG_PREFIX}-clang++
           export AR_${TARGET_LOWER}=$NDK_BIN/llvm-ar
           export CARGO_TARGET_${TARGET_UPPER}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
+
+          # pyo3 emits -lpython3.9 even for abi3 cross-builds because maturin
+          # injects PYO3_PYTHON/PYO3_ENVIRONMENT_SIGNATURE into cargo, which
+          # overrides PYO3_NO_PYTHON. Create empty stub archives so the linker
+          # is satisfied at build time; Termux's Python provides real symbols
+          # at runtime.
+          STUB_DIR=$(mktemp -d)
+          $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.9.a"
+          $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.a"
+          export PYO3_CROSS_LIB_DIR=$STUB_DIR
 
           maturin build \
             --release \
