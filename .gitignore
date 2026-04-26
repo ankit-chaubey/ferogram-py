@@ -1,6 +1,9 @@
-__pycache__/
-*.py[cod]
+/target/
+*.so
+*.pyd
 dist/
-build/
-*.egg-info/
-.env
+__pycache__/
+*.pyc
+.venv/
+ferogram.session
+*.session

@@ -1,0 +1,23 @@
+[package]
+name        = "ferogram-py"
+version = "0.1.0"
+edition     = "2024"
+description = "Python bindings for ferogram (Rust MTProto)"
+license     = "MIT OR Apache-2.0"
+
+[lib]
+name       = "_ferogram"
+crate-type = ["cdylib"]
+
+[dependencies]
+ferogram           = { git = "https://github.com/ankit-chaubey/ferogram", branch = "main" }
+pyo3               = { version = "0.23", features = ["extension-module"] }
+pyo3-async-runtimes = { version = "0.23", features = ["tokio-runtime"] }
+tokio              = { version = "1", features = ["full"] }
+# Note: do NOT add ferogram-tl-types as a direct dep — use ferogram::tl instead
+# to avoid a duplicate-crate version conflict (crates.io vs git).
+
+[profile.release]
+strip     = true
+opt-level = 3
+lto       = true

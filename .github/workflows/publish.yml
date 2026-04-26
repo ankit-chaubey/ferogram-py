@@ -2,33 +2,139 @@ name: Publish to PyPI
 
 on:
   push:
-    tags:
-      - "v*"
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  id-token: write
+    tags: ["v*"]
 
 jobs:
-  publish:
-    name: Build & publish
+  # ── Linux (manylinux) ────────────────────────────────────────────────────
+  linux:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - uses: PyO3/maturin-action@v1
         with:
-          python-version: "3.12"
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter
+          manylinux: auto
+      - uses: actions/upload-artifact@v4
+        with: { name: wheels-linux-${{ matrix.target }}, path: dist }
 
-      - name: Install build tools
-        run: pip install hatchling build
+  # ── macOS ────────────────────────────────────────────────────────────────
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter
+      - uses: actions/upload-artifact@v4
+        with: { name: wheels-macos-${{ matrix.target }}, path: dist }
 
-      - name: Build distribution
-        run: python -m build
+  # ── Windows ──────────────────────────────────────────────────────────────
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - uses: PyO3/maturin-action@v1
+        with:
+          args: --release --out dist --find-interpreter
+      - uses: actions/upload-artifact@v4
+        with: { name: wheels-windows, path: dist }
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+  # ── Android / Termux (aarch64-linux-android, API 24+) ───────────────────
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Setup Android NDK r26d
+        uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r26d
+          link-to-sdk: true
+
+      - name: Add Rust Android targets
+        run: |
+          rustup target add aarch64-linux-android
+          rustup target add x86_64-linux-android
+
+      - name: Install maturin
+        run: pip install maturin
+
+      # aarch64 — what almost all Termux users run
+      - name: Build aarch64-linux-android wheel
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+          export CC_aarch64_linux_android=$NDK_BIN/aarch64-linux-android24-clang
+          export CXX_aarch64_linux_android=$NDK_BIN/aarch64-linux-android24-clang++
+          export AR_aarch64_linux_android=$NDK_BIN/llvm-ar
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_BIN/aarch64-linux-android24-clang
+          maturin build --release \
+            --target aarch64-linux-android \
+            --out dist
+
+      # x86_64 — Android emulator / ChromeOS
+      - name: Build x86_64-linux-android wheel
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+          export CC_x86_64_linux_android=$NDK_BIN/x86_64-linux-android24-clang
+          export CXX_x86_64_linux_android=$NDK_BIN/x86_64-linux-android24-clang++
+          export AR_x86_64_linux_android=$NDK_BIN/llvm-ar
+          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$NDK_BIN/x86_64-linux-android24-clang
+          maturin build --release \
+            --target x86_64-linux-android \
+            --out dist
+
+      - uses: actions/upload-artifact@v4
+        with: { name: wheels-android, path: dist }
+
+  # ── Source dist — fallback for any platform not covered above ────────────
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with: { name: wheels-sdist, path: dist }
+
+  # ── Publish all artifacts to PyPI ────────────────────────────────────────
+  publish:
+    needs: [linux, macos, windows, android, sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { pattern: wheels-*, merge-multiple: true, path: dist }
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: upload
+          args: --non-interactive --skip-existing dist/*

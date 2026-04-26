@@ -1,19 +1,17 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires      = ["maturin>=1,<2"]
+build-backend = "maturin"
 
 [project]
-name = "ferogram"
-version = "0.0.0"
-description = "Python wrapper for ferogram a blazing-fast Rust MTProto library for Telegram clients and bots."
-readme = "README.md"
-license = { text = "MIT OR Apache-2.0" }
-authors = [
-    { name = "Ankit Chaubey", email = "ankitchaubey.dev@gmail.com" }
-]
-keywords = ["telegram", "mtproto", "rust", "client", "bot"]
+name        = "ferogram"
+version     = "0.1.0"
+description = "Python wrapper for ferogram, blazing-fast Rust MTProto library for Telegram."
+readme      = "README.md"
+license     = { text = "MIT OR Apache-2.0" }
+authors     = [{ name = "Ankit Chaubey", email = "ankitchaubey.dev@gmail.com" }]
+keywords    = ["telegram", "mtproto", "rust", "client", "bot"]
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -24,5 +22,9 @@ classifiers = [
 requires-python = ">=3.9"
 
 [project.urls]
-Homepage   = "https://github.com/ankit-chaubey/ferogram"
-Repository = "https://github.com/ankit-chaubey/ferogram"
+Homepage   = "https://github.com/ankit-chaubey/ferogram-py"
+Repository = "https://github.com/ankit-chaubey/ferogram-py"
+
+[tool.maturin]
+module-name   = "ferogram._ferogram"
+features      = ["pyo3/extension-module"]
