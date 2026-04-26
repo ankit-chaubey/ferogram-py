@@ -151,6 +151,9 @@ jobs:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
           ANDROID_API_LEVEL: ${{ matrix.api }}
           PYO3_CROSS_PYTHON_VERSION: "3.12"
+          # Allow an abi3-py312 wheel to load on Python 3.13+ without ABI breakage.
+          # PyO3 0.23 needs this; 0.24+ handles it natively but the flag is harmless.
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
         run: |
           NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
           TARGET=${{ matrix.target }}
@@ -181,6 +184,7 @@ jobs:
           # _sysconfigdata*.py search and failing).
           STUB_DIR=$(mktemp -d)
           $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.12.a"
+          $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.13.a"
           $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.a"
           export RUSTFLAGS="-L native=$STUB_DIR"
 
