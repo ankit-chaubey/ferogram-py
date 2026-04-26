@@ -149,10 +149,9 @@ jobs:
       - name: Build Android wheel
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
-          # generate-import-lib (enabled in Cargo.toml) generates a stub
-          # libpython3.9.a for the linker so we don't need a real Python
-          # Android sysroot. This is the fix for the previous failure:
-          #   ld.lld: error: unable to find library -lpython3.9
+          # PYO3_NO_PYTHON: Android extensions don't link libpython; symbols
+          # are resolved at runtime from the host Python process (e.g. Termux).
+          PYO3_NO_PYTHON: "1"
           PYO3_CROSS_PYTHON_VERSION: "3.9"
         run: |
           NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
