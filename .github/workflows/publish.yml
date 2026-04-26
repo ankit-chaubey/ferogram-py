@@ -150,7 +150,7 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
           ANDROID_API_LEVEL: ${{ matrix.api }}
-          PYO3_CROSS_PYTHON_VERSION: "3.9"
+          PYO3_CROSS_PYTHON_VERSION: "3.12"
         run: |
           NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
           TARGET=${{ matrix.target }}
@@ -173,14 +173,14 @@ jobs:
           export AR_${TARGET_LOWER}=$NDK_BIN/llvm-ar
           export CARGO_TARGET_${TARGET_UPPER}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
 
-          # pyo3 emits -lpython3.9 for abi3 cross-builds. The linker needs a
+          # pyo3 emits -lpython3.12 for abi3 cross-builds. The linker needs a
           # lib to satisfy that reference; at runtime Termux's Python provides
           # the real symbols. Create empty stubs and inject via RUSTFLAGS so
           # the linker finds them without maturin treating the dir as a Python
           # sysroot (which PYO3_CROSS_LIB_DIR would do, triggering a
           # _sysconfigdata*.py search and failing).
           STUB_DIR=$(mktemp -d)
-          $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.9.a"
+          $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.12.a"
           $NDK_BIN/llvm-ar rcs "$STUB_DIR/libpython3.a"
           export RUSTFLAGS="-L native=$STUB_DIR"
 
