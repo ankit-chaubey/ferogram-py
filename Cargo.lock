@@ -347,7 +347,7 @@ dependencies = [
 
 [[package]]
 name = "ferogram-py"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "ferogram",
  "pyo3",

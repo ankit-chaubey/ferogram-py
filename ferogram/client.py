@@ -11,6 +11,7 @@
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
+
 from __future__ import annotations
 
 import asyncio
@@ -27,14 +28,17 @@ from ._ferogram import (
     PollVote, BotStopped, RawUpdate,
 )
 from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
+from ._ferogram import InviteLinkMember, ReadParticipant, AdminLogEvent, StickerSetInfo
+from ._ferogram import BroadcastStats, MegagroupStats, NotifySettings
 from .raw import _tl
-from .raw.generated._tl_schema import _SCHEMA_BY_CID
+from .raw.generated._tl_schema import _SCHEMA, _SCHEMA_BY_CID
+from .raw.proxy import RawProxy, PeerCache, resolve_peer as _resolve_peer_fn
 
 __all__ = ["Client"]
 
 _log = logging.getLogger("ferogram")
 
-_Handler = tuple[Callable, list[Callable]]  # (func, filters)
+_Handler = tuple[Callable, list[Callable]]
 
 _ALL_EVENTS = (
     "message",
@@ -78,6 +82,8 @@ class Client:
         self._password = password
         self._raw: _RustClient | None = None
         self._handlers: dict[str, list[_Handler]] = {e: [] for e in _ALL_EVENTS}
+        self._peer_cache = PeerCache()
+        self.raw         = RawProxy(self)
 
     def _require_creds(self) -> tuple[int, str]:
         if not self.api_id or not self.api_hash:
@@ -93,102 +99,84 @@ class Client:
     # handler decorators
 
     def on_message(self, *filters: Callable) -> Callable:
-        """Decorator: handle incoming messages."""
         def decorator(func: Callable) -> Callable:
             self._handlers["message"].append((func, list(filters)))
             return func
         return decorator
 
     def on_edited_message(self, *filters: Callable) -> Callable:
-        """Decorator: handle edited messages."""
         def decorator(func: Callable) -> Callable:
             self._handlers["edited_message"].append((func, list(filters)))
             return func
         return decorator
 
     def on_message_deleted(self, *filters: Callable) -> Callable:
-        """Decorator: handle message deletions."""
         def decorator(func: Callable) -> Callable:
             self._handlers["message_deleted"].append((func, list(filters)))
             return func
         return decorator
 
     def on_callback_query(self, *filters: Callable) -> Callable:
-        """Decorator: handle inline button presses."""
         def decorator(func: Callable) -> Callable:
             self._handlers["callback_query"].append((func, list(filters)))
             return func
         return decorator
 
     def on_inline_query(self, *filters: Callable) -> Callable:
-        """Decorator: handle @bot inline queries (bots only)."""
         def decorator(func: Callable) -> Callable:
             self._handlers["inline_query"].append((func, list(filters)))
             return func
         return decorator
 
     def on_inline_send(self, *filters: Callable) -> Callable:
-        """Decorator: user chose an inline result (bots only)."""
         def decorator(func: Callable) -> Callable:
             self._handlers["inline_send"].append((func, list(filters)))
             return func
         return decorator
 
     def on_user_status(self, *filters: Callable) -> Callable:
-        """Decorator: user came online or went offline."""
         def decorator(func: Callable) -> Callable:
             self._handlers["user_status"].append((func, list(filters)))
             return func
         return decorator
 
     def on_chat_action(self, *filters: Callable) -> Callable:
-        """Decorator: user is typing / uploading / recording."""
         def decorator(func: Callable) -> Callable:
             self._handlers["chat_action"].append((func, list(filters)))
             return func
         return decorator
 
     def on_participant_update(self, *filters: Callable) -> Callable:
-        """Decorator: member joined, left, was promoted, banned, etc."""
         def decorator(func: Callable) -> Callable:
             self._handlers["participant_update"].append((func, list(filters)))
             return func
         return decorator
 
     def on_join_request(self, *filters: Callable) -> Callable:
-        """Decorator: user requested to join via invite link (bots only)."""
         def decorator(func: Callable) -> Callable:
             self._handlers["join_request"].append((func, list(filters)))
             return func
         return decorator
 
     def on_message_reaction(self, *filters: Callable) -> Callable:
-        """Decorator: reaction added/removed on a bot message (bots only)."""
         def decorator(func: Callable) -> Callable:
             self._handlers["message_reaction"].append((func, list(filters)))
             return func
         return decorator
 
     def on_poll_vote(self, *filters: Callable) -> Callable:
-        """Decorator: user voted in a poll sent by the bot (bots only)."""
         def decorator(func: Callable) -> Callable:
             self._handlers["poll_vote"].append((func, list(filters)))
             return func
         return decorator
 
     def on_bot_stopped(self, *filters: Callable) -> Callable:
-        """Decorator: user stopped or restarted the bot."""
         def decorator(func: Callable) -> Callable:
             self._handlers["bot_stopped"].append((func, list(filters)))
             return func
         return decorator
 
     def on_raw_update(self, *filters: Callable) -> Callable:
-        """Decorator: receive RawUpdate for any TL update not mapped to a typed event.
-
-        Useful for handling obscure update types not yet covered by dedicated
-        handlers. The update object has .constructor_id (u32) and .type_name (str).
-        """
         def decorator(func: Callable) -> Callable:
             self._handlers["raw_update"].append((func, list(filters)))
             return func
@@ -205,8 +193,6 @@ class Client:
                         await result
                 except Exception as exc:
                     _log.error("handler error in %s: %s", event_type, exc, exc_info=True)
-
-    # update loop
 
     async def _run_updates(self) -> None:
         _log.debug("update loop started")
@@ -256,7 +242,6 @@ class Client:
             _log.info("signed out")
 
     async def run_until_disconnected(self) -> None:
-        """Blocking run: start, dispatch updates, stop on Ctrl-C."""
         await self.start()
         try:
             await self._run_updates()
@@ -317,7 +302,6 @@ class Client:
         await self._client.clear_mentions(peer)
 
     async def send_reaction(self, peer: str, message_id: int, emoji: str) -> None:
-        """Send a reaction emoji to a message."""
         await self._client.send_reaction(peer, message_id, emoji)
 
     async def send_chat_action(self, peer: str, action: str) -> None:
@@ -622,13 +606,244 @@ class Client:
     async def toggle_forum(self, peer: str, enabled: bool) -> None:
         await self._client.toggle_forum(peer, enabled)
 
+    async def get_online_count(self, peer: str) -> int:
+        return await self._client.get_online_count(peer)
+
+    async def leave_chat(self, peer: str) -> None:
+        await self._client.leave_chat(peer)
+
+    async def answer_callback_query(self, query_id: int, text: str | None = None, alert: bool = False) -> None:
+        await self._client.answer_callback_query(query_id, text, alert)
+
+    async def answer_inline_query_articles(
+        self,
+        query_id: int,
+        articles: list[tuple[str, str, str]],
+        cache_time: int = 300,
+        is_personal: bool = False,
+    ) -> None:
+        """articles: list of (id, title, message_text)"""
+        await self._client.answer_inline_query_articles(query_id, articles, cache_time, is_personal)
+
+    async def delete_profile_photos(self) -> None:
+        await self._client.delete_profile_photos()
+
+    async def edit_chat_photo(self, peer: str, path: str) -> None:
+        await self._client.edit_chat_photo(peer, path)
+
+    async def edit_chat_default_banned_rights(self, peer: str, restrictions: dict[str, bool]) -> None:
+        """restrictions keys: send_messages, send_media, send_stickers, send_gifs,
+        send_games, send_inline, embed_links, send_polls, change_info, invite_users, pin_messages.
+        True = allowed, False = restricted."""
+        await self._client.edit_chat_default_banned_rights(peer, restrictions)
+
+    async def get_reply_to_message(self, peer: str, msg_id: int) -> Message | None:
+        return await self._client.get_reply_to_message(peer, msg_id)
+
+    async def get_discussion_message(self, peer: str, msg_id: int) -> tuple[list[Message], int, int, int]:
+        """Returns (messages, unread_count, max_id, read_max_id)"""
+        return await self._client.get_discussion_message(peer, msg_id)
+
+    async def get_web_page_preview(self, text: str) -> str | None:
+        """Returns the webpage URL if preview exists, else None."""
+        return await self._client.get_web_page_preview(text)
+
+    async def get_admins_with_invites(self, peer: str) -> list[tuple[int, int]]:
+        """Returns list of (admin_id, invite_count)."""
+        return await self._client.get_admins_with_invites(peer)
+
+    async def get_all_drafts(self) -> None:
+        await self._client.get_all_drafts()
+
+    async def get_reaction_list(self, peer: str, msg_id: int, limit: int = 100) -> list[tuple[int, str]]:
+        """Returns list of (peer_id, reaction) pairs."""
+        return await self._client.get_reaction_list(peer, msg_id, limit)
+
+    async def mute_chat(self, peer: str, mute_until: int) -> None:
+        """mute_until: unix timestamp. Pass 2**31-1 to mute forever, 0 to unmute."""
+        await self._client.mute_chat(peer, mute_until)
+
+    async def unmute_chat(self, peer: str) -> None:
+        await self._client.mute_chat(peer, 0)
+
+    async def get_pinned_dialogs(self, folder_id: int = 0) -> list[int]:
+        """Returns list of peer IDs. folder_id=0=main, 1=archive."""
+        return await self._client.get_pinned_dialogs(folder_id)
+
+    async def get_poll_votes(self, peer: str, msg_id: int, limit: int = 100) -> list[tuple[int, bytes]]:
+        """Returns list of (user_id, option_bytes)."""
+        return await self._client.get_poll_votes(peer, msg_id, limit)
+
+    async def get_custom_emoji_documents(self, document_ids: list[int]) -> list[int]:
+        """Returns document IDs that resolved successfully."""
+        return await self._client.get_custom_emoji_documents(document_ids)
+
+    async def get_game_high_scores(self, peer: str, msg_id: int, user_id: int) -> list[tuple[int, int, int]]:
+        """Returns list of (position, user_id, score)."""
+        return await self._client.get_game_high_scores(peer, msg_id, user_id)
+
+    async def send_invoice(
+        self,
+        peer: str,
+        title: str,
+        description: str,
+        payload: str,
+        currency: str,
+        prices: list[tuple[str, int]],
+        photo_url: str | None = None,
+        need_name: bool = False,
+        need_phone: bool = False,
+        need_email: bool = False,
+        need_shipping_address: bool = False,
+        is_flexible: bool = False,
+    ) -> Message:
+        """prices: list of (label, amount_in_smallest_currency_unit)"""
+        return await self._client.send_invoice(
+            peer, title, description, payload, currency, prices,
+            photo_url, need_name, need_phone, need_email, need_shipping_address, is_flexible,
+        )
+
+    async def send_dice(self, peer: str, emoticon: str = "🎲") -> None:
+        """emoticon: 🎲 🎯 🏀 ⚽ 🎳 🎰"""
+        await self._client.send_dice(peer, emoticon)
+
+    async def get_chat_full(self, peer: str) -> tuple[int, str, int | None]:
+        """Returns (id, about, members_count)."""
+        return await self._client.get_chat_full_raw(peer)
+
+    async def migrate_chat(self, chat_id: int) -> Chat:
+        return await self._client.migrate_chat(chat_id)
+
+    async def resolve_peer(self, peer: str) -> int:
+        """Resolve username/@handle/id string → peer ID."""
+        return await self._client.resolve_peer(peer)
+
+    async def resolve_username(self, username: str) -> int:
+        """Resolve a username (with or without @) → peer ID."""
+        return await self._client.resolve_username(username)
+
+    async def get_history(self, peer: str, limit: int = 100, offset_id: int = 0) -> list[Message]:
+        """Fetch message history. Use offset_id from last result for pagination."""
+        return await self._client.get_history(peer, limit, offset_id)
+
+    async def upload_media(self, peer: str, path: str) -> int | None:
+        """Upload file to Telegram servers. Returns document ID for reuse, or None."""
+        return await self._client.upload_media(peer, path)
+
+    async def download_media(self, peer: str, msg_id: int, path: str) -> str:
+        """Download media from a message to disk. Returns the path."""
+        return await self._client.download_media(peer, msg_id, path)
+
+    async def edit_inline_message(self, dc_id: int, id_bytes: bytes, new_text: str) -> bool:
+        """Edit an inline bot message. id_bytes = serialized InputBotInlineMessageId."""
+        return await self._client.edit_inline_message(dc_id, list(id_bytes), new_text)
+
+    async def answer_inline_query(
+        self,
+        query_id: int,
+        results: list[tuple[str, str, str, str, str | None]],
+        cache_time: int = 300,
+        is_personal: bool = False,
+        next_offset: str | None = None,
+    ) -> None:
+        """results: list of (type, id, title, message_text, thumb_url|None).
+        type: 'article', 'photo', 'document'"""
+        await self._client.answer_inline_query(query_id, results, cache_time, is_personal, next_offset)
+
+    async def export_login_token(self) -> tuple[bytes, int]:
+        """QR login step 1. Returns (token_bytes, expires_unix). Show token as QR."""
+        token, expires = await self._client.export_login_token()
+        return bytes(token), expires
+
+    async def check_qr_login(self, token: bytes) -> str | None:
+        """QR login step 2. Returns username if scanned, None if still pending."""
+        return await self._client.check_qr_login(list(token))
+
+    async def get_privacy(self, key: str) -> list[str]:
+        """key: status_timestamp | chat_invite | call | forwards | profile_photo |
+        phone_number | voice_messages | bio | birthday.
+        Returns list of rule names."""
+        return await self._client.get_privacy(key)
+
+    async def set_privacy(self, key: str, rule: str) -> None:
+        """rule: allow_all | allow_contacts | disallow_all | disallow_contacts"""
+        await self._client.set_privacy(key, rule)
+
+    async def get_notify_settings(self, peer: str) -> NotifySettings:
+        return await self._client.get_notify_settings(peer)
+
+    async def update_notify_settings(
+        self,
+        peer: str,
+        mute_until: int | None = None,
+        silent: bool | None = None,
+        show_previews: bool | None = None,
+    ) -> None:
+        await self._client.update_notify_settings(peer, mute_until, silent, show_previews)
+
+    async def set_chat_reactions(self, peer: str, reactions: str) -> None:
+        """reactions: 'all' | 'none' | comma-separated emoji e.g. '👍,👎,❤'"""
+        await self._client.set_chat_reactions(peer, reactions)
+
+    async def transfer_chat_ownership(self, peer: str, new_owner_id: int) -> None:
+        """Transfer ownership. Account must NOT have 2FA enabled for this to work."""
+        await self._client.transfer_chat_ownership(peer, new_owner_id)
+
+    async def get_broadcast_stats(self, peer: str, dark: bool = False) -> BroadcastStats:
+        return await self._client.get_broadcast_stats(peer, dark)
+
+    async def get_megagroup_stats(self, peer: str, dark: bool = False) -> MegagroupStats:
+        return await self._client.get_megagroup_stats(peer, dark)
+
+    async def _resolve_peer(self, peer: Any) -> dict:
+        """Resolve any peer representation to a TL InputPeer dict."""
+        return await _resolve_peer_fn(self, peer)
+
+    def _populate_cache(self, obj: Any) -> None:
+        """
+        Scan a deserialized TL response dict and store user/channel access_hashes.
+        Called automatically by invoke() so the PeerCache is always warm.
+
+        Covers all response types with users/chats arrays:
+          Updates, messages.Messages, contacts.Contacts,
+          channels.ChannelParticipants, etc.
+
+        Min-flagged entries (access_hash invalid outside message context) are skipped.
+        """
+        if not isinstance(obj, dict):
+            return
+        for u in obj.get("users") or []:
+            if not isinstance(u, dict) or u.get("min"):
+                continue
+            uid = u.get("id")
+            ah  = u.get("access_hash")
+            if uid is not None and ah is not None:
+                self._peer_cache.store_user(uid, ah)
+        for ch in obj.get("chats") or []:
+            if not isinstance(ch, dict) or ch.get("min"):
+                continue
+            cid = ch.get("id")
+            if cid is None:
+                continue
+            ah = ch.get("access_hash")
+            if ah is not None:
+                self._peer_cache.store_channel(cid, ah)
+            else:
+                self._peer_cache.store_chat(cid)
+
     # raw invoke
 
     async def invoke(self, func: Any) -> dict:
-        tl_bytes  = func.to_bytes()
         """Invoke a raw TL function object. Returns a deserialized dict."""
+        tl_bytes   = func.to_bytes() if hasattr(func, "to_bytes") else _tl.serialize_object(func.to_dict(), _SCHEMA)
         resp_bytes = await self._client.invoke_raw(tl_bytes)
-        return _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+        result     = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+        self._populate_cache(result)
+        return result
+
+    async def __call__(self, func: Any) -> dict:
+        """Callable shorthand for invoke()."""
+        return await self.invoke(func)
 
     def __repr__(self) -> str:
         state = "connected" if self._raw else "disconnected"

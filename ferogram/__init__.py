@@ -11,6 +11,7 @@
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
+
 import os
 import sys
 
@@ -28,9 +29,13 @@ from .client import Client
 from . import filters
 from ._ferogram import User, Dialog, ChatMember, UserFull, Message
 from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
+from ._ferogram import InviteLinkMember, ReadParticipant, AdminLogEvent, StickerSetInfo
+from ._ferogram import BroadcastStats, MegagroupStats, NotifySettings
 
 __all__ = [
     "Client", "filters",
     "User", "Dialog", "ChatMember", "UserFull", "Message",
     "Chat", "Authorization", "ForumTopic", "BotInfo",
+    "InviteLinkMember", "ReadParticipant", "AdminLogEvent", "StickerSetInfo",
+    "BroadcastStats", "MegagroupStats", "NotifySettings",
 ]

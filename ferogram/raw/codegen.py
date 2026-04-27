@@ -11,34 +11,40 @@
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
-#!/usr/bin/env python3
-# Parses api.tl and generates raw/functions.py and raw/types.py
+#
 # Run: python -m ferogram.raw.codegen <api.tl> <out_dir>
 
 from __future__ import annotations
-import re, sys, struct
+import re, sys
+from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
 TL_LINE = re.compile(
-    r'^(\w[\w.]*)'         # name (may have namespace like messages.getHistory)
-    r'#([0-9a-fA-F]+)'    # #cid
-    r'((?:\s+[\w.]+:[^\s=]+)*)'  # fields
-    r'\s*=\s*([\w.<>]+);' # = ReturnType
+    r'^(\w[\w.]*)'
+    r'#([0-9a-fA-F]+)'
+    r'((?:\s+[\w.]+:[^\s=]+)*)'
+    r'\s*=\s*([\w.<>]+);'
 )
-
-FIELD_RE = re.compile(r'([\w.]+):([\w?.<>]+)')
+FIELD_RE  = re.compile(r'([\w.]+):([\w?.<>]+)')
+FLAG_FIELD = re.compile(r'flags\.(\d+)\?(.+)')
 
 PRIMITIVES = {"int", "long", "double", "string", "bytes", "Bool",
               "int128", "int256", "true", "True", "Int", "Long"}
 
-FLAG_FIELD = re.compile(r'flags\.(\d+)\?(.+)')
+# TL field names that clash with Python keywords → rename with trailing _
+# We keep to_dict using the original TL name so serialization is unaffected
+import keyword as _kw
+_PY_KEYWORDS = set(_kw.kwlist) | {"True", "False", "None", "self"}
+
+def _safe_param(name: str) -> str:
+    return name + "_" if name in _PY_KEYWORDS else name
 
 
 class Field(NamedTuple):
     name: str
     ftype: str
-    flag_bit: int | None  # None = required
+    flag_bit: int | None
 
 
 class Constructor(NamedTuple):
@@ -53,11 +59,10 @@ def parse_fields(raw: str) -> list[Field]:
     fields = []
     for fname, ftype in FIELD_RE.findall(raw):
         if fname == "flags" and ftype == "#":
-            continue  # skip flags placeholder, we handle it
+            continue
         m = FLAG_FIELD.match(ftype)
         if m:
-            bit, inner = int(m.group(1)), m.group(2)
-            fields.append(Field(fname, inner, bit))
+            fields.append(Field(fname, m.group(2), int(m.group(1))))
         else:
             fields.append(Field(fname, ftype, None))
     return fields
@@ -85,15 +90,20 @@ def parse_tl(path: Path) -> tuple[list[Constructor], list[Constructor]]:
     return types, funcs
 
 
-def py_name(tl_name: str) -> str:
-    # messages.getHistory -> GetHistory (class name)
+import keyword as _keyword
+
+def py_class(tl_name: str) -> str:
     base = tl_name.split(".")[-1]
-    return base[0].upper() + base[1:]
+    result = base[0].upper() + base[1:]
+    # avoid Python keywords and builtins that look like TL names (True, False, None)
+    if _keyword.iskeyword(result) or result in ("True", "False", "None"):
+        result = "Tl" + result
+    return result
 
 
-def namespace(tl_name: str) -> str:
+def ns_of(tl_name: str) -> str:
     parts = tl_name.split(".")
-    return parts[0] if len(parts) > 1 else "base"
+    return parts[0] if len(parts) > 1 else "_base"
 
 
 def ftype_py(ftype: str) -> str:
@@ -105,52 +115,60 @@ def ftype_py(ftype: str) -> str:
     }
     if ftype in mapping:
         return mapping[ftype]
-    if ftype.startswith("Vector<") or ftype.startswith("vector<"):
+    if ftype.startswith(("Vector<", "vector<")):
         inner = ftype[7:-1]
         return f"list[{ftype_py(inner)}]"
-    return "dict"  # nested TL object
+    return "Any"  # TL object - accepts dict or typed instance
 
 
-def render_class(c: Constructor, schema_name: str) -> str:
-    lines = [f"class {py_name(c.name)}:"]
-    # __init__
-    params = []
-    for f in c.fields:
-        ann = ftype_py(f.ftype)
-        if f.flag_bit is not None:
-            params.append(f"        {f.name}: {ann} | None = None,")
-        else:
-            params.append(f"        {f.name}: {ann},")
-    if params:
+def render_class(c: Constructor) -> str:
+    cls = py_class(c.name)
+    lines = [f"class {cls}:"]
+
+    # __init__: required fields first, optional (flag) fields after
+    # This is required by Python: non-default args can't follow default args
+    required = [f for f in c.fields if f.flag_bit is None]
+    optional = [f for f in c.fields if f.flag_bit is not None]
+    if required or optional:
         lines.append("    def __init__(")
         lines.append("        self,")
-        lines.extend(params)
+        for f in required:
+            p = _safe_param(f.name)
+            lines.append(f"        {p}: {ftype_py(f.ftype)},")
+        for f in optional:
+            p = _safe_param(f.name)
+            lines.append(f"        {p}: {ftype_py(f.ftype)} | None = None,")
         lines.append("    ) -> None:")
         for f in c.fields:
-            lines.append(f"        self.{f.name} = {f.name}")
+            p = _safe_param(f.name)
+            lines.append(f"        self.{p} = {p}")
     else:
         lines.append("    def __init__(self) -> None:")
         lines.append("        pass")
 
-    # to_dict
+    # to_dict: _tl._resolve() lets callers pass dicts or typed objects
     lines.append("")
     lines.append("    def to_dict(self) -> dict:")
     lines.append(f'        return {{"_": "{c.name}", **{{')
     for f in c.fields:
-        lines.append(f'            "{f.name}": self.{f.name},')
+        lines.append(f'            "{f.name}": _tl._resolve(self.{_safe_param(f.name)}),')
     lines.append("        }}")
 
     # to_bytes
     lines.append("")
     lines.append("    def to_bytes(self) -> bytes:")
-    lines.append(f"        return _tl.serialize_object(self.to_dict(), _SCHEMA)")
+    lines.append("        return _tl.serialize_object(self.to_dict(), _SCHEMA)")
 
     # __repr__
     lines.append("")
+    preview = ", ".join(
+        f"{f.name}={{self.{_safe_param(f.name)}!r}}"
+        for f in c.fields[:4]
+    )
     lines.append("    def __repr__(self) -> str:")
-    field_repr = ", ".join(f"{f.name}={{self.{f.name}!r}}" for f in c.fields[:4])
-    lines.append(f'        return f"{py_name(c.name)}({field_repr})"')
+    lines.append(f'        return f"{cls}({preview})"')
     lines.append("")
+
     return "\n".join(lines)
 
 
@@ -178,47 +196,97 @@ def build_schema_by_cid(constructors: list[Constructor]) -> str:
     return "\n".join(lines)
 
 
-HEADER = """\
+LICENSE = """\
+# Copyright (c) Ankit Chaubey <ankitchaubey.dev@gmail.com>
+# SPDX-License-Identifier: MIT OR Apache-2.0
+"""
+
+NS_HEADER = """\
 # auto-generated by ferogram raw codegen - do not edit
 from __future__ import annotations
-from .. import _tl as _tl
+from typing import Any
+from ... import tl as _tl
+from .._tl_schema import _SCHEMA
 
 """
+
+
+def write_namespace_pkg(
+    out_pkg: Path,
+    grouped: dict[str, list[Constructor]],
+    schema_str: str,
+) -> None:
+    out_pkg.mkdir(parents=True, exist_ok=True)
+
+    all_classes: list[str] = []
+
+    for ns, constructors in sorted(grouped.items()):
+        mod_file = out_pkg / f"{ns}.py"
+        body = [NS_HEADER]
+        for c in constructors:
+            body.append(render_class(c))
+            all_classes.append(py_class(c.name))
+        mod_file.write_text("\n".join(body))
+
+    # flat imports - re-exports every class from every namespace module
+    init_lines = [
+        LICENSE,
+        "# auto-generated - do not edit",
+        "# Flat imports so both styles work:",
+        "#   raw.functions.messages.GetHistory(...)   ← namespace style",
+        "#   raw.functions.GetHistory(...)            ← flat style (convenience)",
+        "",
+    ]
+    for ns in sorted(grouped):
+        init_lines.append(f"from .{ns} import *  # noqa: F401,F403")
+    init_lines.append("")
+
+    # expose namespace modules as attributes too
+    init_lines.append("# namespace sub-modules")
+    for ns in sorted(grouped):
+        init_lines.append(f"from . import {ns}  # noqa: F401")
+    init_lines.append("")
+
+    (out_pkg / "__init__.py").write_text("\n".join(init_lines))
 
 
 def generate(tl_path: Path, out_dir: Path) -> None:
     types, funcs = parse_tl(tl_path)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    schema_str = build_schema(types + funcs)
-    schema_by_cid_str = build_schema_by_cid(types)
+    all_constructors = types + funcs
+    schema_str     = build_schema(all_constructors)
+    schema_by_cid  = build_schema_by_cid(types)
 
-    # write _tl_schema.py used by both modules
-    schema_file = out_dir / "_tl_schema.py"
-    schema_file.write_text(
+    # _tl_schema.py - unchanged format, used by serializer
+    (out_dir / "_tl_schema.py").write_text(
         "# auto-generated schema - do not edit\n"
         + schema_str + "\n\n"
-        + schema_by_cid_str + "\n"
+        + schema_by_cid + "\n"
     )
 
-    # types.py
-    type_lines = [HEADER, schema_str, "", schema_by_cid_str, "", ""]
+    # group by namespace
+    type_ns: dict[str, list[Constructor]] = defaultdict(list)
+    func_ns: dict[str, list[Constructor]] = defaultdict(list)
     for c in types:
-        type_lines.append(render_class(c, "_SCHEMA"))
-    (out_dir / "types.py").write_text("\n".join(type_lines))
-
-    # functions.py
-    func_lines = [HEADER, schema_str, "", ""]
+        type_ns[ns_of(c.name)].append(c)
     for c in funcs:
-        func_lines.append(render_class(c, "_SCHEMA"))
-    (out_dir / "functions.py").write_text("\n".join(func_lines))
+        func_ns[ns_of(c.name)].append(c)
 
-    # __init__.py for the raw subpackage
-    init = (out_dir / "__init__.py")
-    if not init.exists():
-        init.write_text("from .functions import *  # noqa\nfrom .types import *  # noqa\n")
+    # write types/ and functions/ namespace packages
+    write_namespace_pkg(out_dir / "types",     type_ns, schema_str)
+    write_namespace_pkg(out_dir / "functions", func_ns, schema_str)
 
-    print(f"generated {len(types)} types, {len(funcs)} functions -> {out_dir}")
+    # generated/__init__.py
+    (out_dir / "__init__.py").write_text(
+        LICENSE + "\n"
+        "from . import functions, types\n\n"
+        "__all__ = ['functions', 'types']\n"
+    )
+
+    print(f"generated {len(types)} types, {len(funcs)} functions")
+    print(f"  types namespaces:     {sorted(type_ns)}")
+    print(f"  functions namespaces: {sorted(func_ns)}")
 
 
 if __name__ == "__main__":

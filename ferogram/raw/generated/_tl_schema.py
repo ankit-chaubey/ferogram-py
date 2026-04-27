@@ -11,6 +11,7 @@
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
+
 # auto-generated schema - do not edit
 _SCHEMA = {
     "boolFalse": (0xbc799737, []),

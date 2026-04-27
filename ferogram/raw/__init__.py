@@ -11,13 +11,28 @@
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
-# ferogram.raw - direct access to the Telegram API
-# Public import path:
-#   from ferogram.raw.api.functions import GetHistory
-#   from ferogram.raw.api.types import InputPeerUsername
 
-from . import tl as _tl
-from . import api
+# ferogram.raw - direct Telegram API access
+#
+# Usage:
+#   from ferogram import raw
+#
+#   # namespace style
+#   await client.invoke(raw.functions.messages.GetHistory(
+#       peer=raw.types.InputPeerChannel(channel_id=123, access_hash=456),
+#       limit=10,
+#   ))
+#
+#   # client callable style
+#   await client(raw.functions.messages.GetHistory(
+#       peer=raw.types.InputPeerChannel(channel_id=123, access_hash=456),
+#       limit=10,
+#   ))
+#
+#   # dict style (escape hatch)
+#   await client.invoke({"_": "messages.getHistory", "peer": {...}, "limit": 10})
+
+from . import tl
 from .generated import functions, types
 
-__all__ = ["api", "functions", "types", "_tl"]
+__all__ = ["functions", "types", "tl"]

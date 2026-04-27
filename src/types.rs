@@ -11,8 +11,6 @@
 // If you use or modify this code, keep this notice at the top of the file
 // and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
-// Simple data types returned from account/dialog calls.
-
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -77,8 +75,6 @@ impl Dialog {
     }
 }
 
-// Returned from get_chat_administrators.
-// status: "creator" | "admin" | "member" | "restricted" | "left" | "banned"
 #[pyclass]
 pub struct ChatMember {
     #[pyo3(get)]
@@ -125,7 +121,6 @@ impl ChatMember {
     }
 }
 
-// Returned from get_user_full.
 #[pyclass]
 pub struct UserFull {
     #[pyo3(get)]
@@ -152,7 +147,6 @@ impl UserFull {
     }
 }
 
-// Returned from create_group / create_channel / get_common_chats.
 #[pyclass]
 pub struct Chat {
     #[pyo3(get)]
@@ -213,7 +207,6 @@ pub fn tl_chat_to_py(c: &ferogram::tl::enums::Chat) -> Option<Chat> {
     }
 }
 
-// Returned from get_authorizations.
 #[pyclass]
 pub struct Authorization {
     #[pyo3(get)]
@@ -252,7 +245,6 @@ impl Authorization {
     }
 }
 
-// Returned from get_forum_topics.
 #[pyclass]
 pub struct ForumTopic {
     #[pyo3(get)]
@@ -278,6 +270,7 @@ impl ForumTopic {
     }
 }
 
+// FIX E0599: variant is ::ForumTopic not ::Topic
 pub fn tl_forum_topic_to_py(t: &ferogram::tl::enums::ForumTopic) -> Option<ForumTopic> {
     match t {
         ferogram::tl::enums::ForumTopic::ForumTopic(t) => Some(ForumTopic {
@@ -293,7 +286,6 @@ pub fn tl_forum_topic_to_py(t: &ferogram::tl::enums::ForumTopic) -> Option<Forum
     }
 }
 
-// Returned from get_bot_info.
 #[pyclass]
 pub struct BotInfo {
     #[pyo3(get)]
@@ -311,7 +303,185 @@ impl BotInfo {
     }
 }
 
-// Helper: map tl::types::User -> Python User
+#[pyclass]
+pub struct InviteLinkMember {
+    #[pyo3(get)]
+    pub user_id: i64,
+    #[pyo3(get)]
+    pub date: i32,
+    #[pyo3(get)]
+    pub requested: bool,
+    #[pyo3(get)]
+    pub about: Option<String>,
+}
+
+#[pymethods]
+impl InviteLinkMember {
+    fn __repr__(&self) -> String {
+        format!(
+            "InviteLinkMember(user_id={}, requested={})",
+            self.user_id, self.requested
+        )
+    }
+}
+
+#[pyclass]
+pub struct ReadParticipant {
+    #[pyo3(get)]
+    pub user_id: i64,
+    #[pyo3(get)]
+    pub date: i32,
+}
+
+#[pymethods]
+impl ReadParticipant {
+    fn __repr__(&self) -> String {
+        format!(
+            "ReadParticipant(user_id={}, date={})",
+            self.user_id, self.date
+        )
+    }
+}
+
+#[pyclass]
+pub struct AdminLogEvent {
+    #[pyo3(get)]
+    pub id: i64,
+    #[pyo3(get)]
+    pub date: i32,
+    #[pyo3(get)]
+    pub user_id: i64,
+    #[pyo3(get)]
+    pub action: String,
+}
+
+#[pymethods]
+impl AdminLogEvent {
+    fn __repr__(&self) -> String {
+        format!(
+            "AdminLogEvent(id={}, user_id={}, action={:?})",
+            self.id, self.user_id, self.action
+        )
+    }
+}
+
+// FIX E0609: `animated` and `videos` were removed from TL StickerSet in recent layers.
+// Kept in the Python struct for API compatibility; always reported as false.
+#[pyclass]
+pub struct StickerSetInfo {
+    #[pyo3(get)]
+    pub id: i64,
+    #[pyo3(get)]
+    pub title: String,
+    #[pyo3(get)]
+    pub short_name: String,
+    #[pyo3(get)]
+    pub count: i32,
+    #[pyo3(get)]
+    pub animated: bool,
+    #[pyo3(get)]
+    pub videos: bool,
+    #[pyo3(get)]
+    pub emojis: bool,
+}
+
+#[pymethods]
+impl StickerSetInfo {
+    fn __repr__(&self) -> String {
+        format!(
+            "StickerSetInfo(title={:?}, short_name={:?}, count={})",
+            self.title, self.short_name, self.count
+        )
+    }
+}
+
+#[pyclass]
+pub struct BroadcastStats {
+    #[pyo3(get)]
+    pub period_min_date: i32,
+    #[pyo3(get)]
+    pub period_max_date: i32,
+    #[pyo3(get)]
+    pub followers_current: f64,
+    #[pyo3(get)]
+    pub followers_previous: f64,
+    #[pyo3(get)]
+    pub views_per_post_current: f64,
+    #[pyo3(get)]
+    pub views_per_post_previous: f64,
+    #[pyo3(get)]
+    pub shares_per_post_current: f64,
+    #[pyo3(get)]
+    pub shares_per_post_previous: f64,
+    #[pyo3(get)]
+    pub enabled_notifications_percent: f64,
+}
+
+#[pymethods]
+impl BroadcastStats {
+    fn __repr__(&self) -> String {
+        format!(
+            "BroadcastStats(followers={}, views_per_post={})",
+            self.followers_current, self.views_per_post_current
+        )
+    }
+}
+
+#[pyclass]
+pub struct MegagroupStats {
+    #[pyo3(get)]
+    pub period_min_date: i32,
+    #[pyo3(get)]
+    pub period_max_date: i32,
+    #[pyo3(get)]
+    pub members_current: f64,
+    #[pyo3(get)]
+    pub members_previous: f64,
+    #[pyo3(get)]
+    pub messages_current: f64,
+    #[pyo3(get)]
+    pub messages_previous: f64,
+    #[pyo3(get)]
+    pub viewers_current: f64,
+    #[pyo3(get)]
+    pub viewers_previous: f64,
+    #[pyo3(get)]
+    pub posters_current: f64,
+    #[pyo3(get)]
+    pub posters_previous: f64,
+}
+
+#[pymethods]
+impl MegagroupStats {
+    fn __repr__(&self) -> String {
+        format!(
+            "MegagroupStats(members={}, messages={})",
+            self.members_current, self.messages_current
+        )
+    }
+}
+
+#[pyclass]
+pub struct NotifySettings {
+    #[pyo3(get)]
+    pub mute_until: Option<i32>,
+    #[pyo3(get)]
+    pub silent: Option<bool>,
+    #[pyo3(get)]
+    pub show_previews: Option<bool>,
+}
+
+#[pymethods]
+impl NotifySettings {
+    fn __repr__(&self) -> String {
+        format!(
+            "NotifySettings(mute_until={:?}, silent={:?})",
+            self.mute_until, self.silent
+        )
+    }
+}
+
+// Helper: map ferogram::tl::types::User (raw TL struct) -> Python User
 pub fn tl_user_to_py(u: &ferogram::tl::types::User) -> User {
     User {
         id: u.id,
@@ -320,5 +490,17 @@ pub fn tl_user_to_py(u: &ferogram::tl::types::User) -> User {
         username: u.username.clone(),
         phone: u.phone.clone(),
         bot: u.bot,
+    }
+}
+
+// FIX E0308: Helper for the high-level ferogram::User wrapper (e.g. get_users_by_id).
+pub fn ferogram_user_to_py(u: &ferogram::User) -> User {
+    User {
+        id: u.id(),
+        first_name: u.first_name().unwrap_or("").to_owned(),
+        last_name: u.last_name().map(str::to_owned),
+        username: u.username().map(str::to_owned),
+        phone: u.phone().map(str::to_owned),
+        bot: u.bot(),
     }
 }

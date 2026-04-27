@@ -11,8 +11,6 @@
 // If you use or modify this code, keep this notice at the top of the file
 // and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
-// Rich message object returned from both updates and send calls.
-
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
 use std::sync::Arc;

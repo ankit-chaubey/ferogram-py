@@ -40,6 +40,13 @@ fn _ferogram(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<types::Authorization>()?;
     m.add_class::<types::ForumTopic>()?;
     m.add_class::<types::BotInfo>()?;
+    m.add_class::<types::InviteLinkMember>()?;
+    m.add_class::<types::ReadParticipant>()?;
+    m.add_class::<types::AdminLogEvent>()?;
+    m.add_class::<types::StickerSetInfo>()?;
+    m.add_class::<types::BroadcastStats>()?;
+    m.add_class::<types::MegagroupStats>()?;
+    m.add_class::<types::NotifySettings>()?;
     // update types
     m.add_class::<updates::CallbackQuery>()?;
     m.add_class::<updates::MessageDeletion>()?;
