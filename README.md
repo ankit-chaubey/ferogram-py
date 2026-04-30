@@ -2,9 +2,25 @@
 
 Python bindings for [ferogram](https://github.com/ankit-chaubey/ferogram), a Telegram MTProto client written in Rust.
 
-The Rust core handles crypto, transport, session management, and update processing. The Python layer gives you async/await methods and decorator-based event handlers with no boilerplate.
-
 Built with [PyO3](https://pyo3.rs) and [maturin](https://maturin.rs). Works on Linux, macOS, Windows, and Android (Termux).
+
+---
+
+## What is ferogram-py?
+
+ferogram-py is a Python interface for the ferogram MTProto client.
+
+It uses a Rust core for networking, encryption, session handling, and updates, while exposing a simple async Python API on top.
+
+You can use it to build userbots, bots, or automation tools with access to both high-level methods and raw Telegram APIs.
+
+---
+
+The Rust core handles crypto, transport, session management, and update processing. The Python layer provides async/await methods and decorator-based event handlers with minimal overhead.
+
+> Full API reference: [FEATURES.md](./FEATURES.md)
+
+---
 
 ## Install
 
@@ -44,12 +60,14 @@ pkg install rust clang python
 pip install ferogram --no-binary ferogram
 ```
 
+---
+
 ## Quick start
 
 ```python
 from ferogram import Client, filters
 
-app = Client("mybot", bot_token="123:TOKEN")
+app = Client("mybot", api_id=0, api_hash="", bot_token="123:TOKEN")
 
 @app.on_message(filters.command("start"))
 async def start(client, message):
@@ -58,129 +76,65 @@ async def start(client, message):
 app.run()
 ```
 
-## Handlers
+Credentials can also come from env vars: `API_ID`, `API_HASH`, `BOT_TOKEN`.
 
-ferogram uses decorator-based handlers. Each handler receives the `Client` and the update object.
+---
 
-```python
-@app.on_message(filters.command("start"))
-async def on_start(client, message):
-    await message.reply("Hello!")
-
-@app.on_message(filters.command("help"))
-async def on_help(client, message):
-    await message.reply("Commands: /start /help")
-
-@app.on_edited_message(filters.text)
-async def on_edit(client, message):
-    await message.reply("you edited a message")
-
-@app.on_callback_query(filters.data("btn_ok"))
-async def on_btn(client, query):
-    await query.answer(text="OK!")
-
-@app.on_inline_query()
-async def on_inline(client, query):
-    pass  # handle inline queries
-
-@app.on_user_status()
-async def on_status(client, status):
-    print(status.user_id, status.status)
-
-@app.on_chat_action()
-async def on_action(client, action):
-    pass  # user joined, left, pinned, etc.
-
-@app.on_message_deleted()
-async def on_delete(client, event):
-    pass
-
-@app.on_participant_update()
-async def on_participant(client, event):
-    pass
-
-@app.on_message_reaction()
-async def on_reaction(client, event):
-    pass
-
-@app.on_poll_vote()
-async def on_vote(client, event):
-    pass
-
-@app.on_raw_update()
-async def on_raw(client, update):
-    pass  # every raw TL update
-```
-
-## Filters
-
-Combine filters by passing multiple to the decorator.
+## Client setup
 
 ```python
-filters.all             # every update
-filters.text            # message has text
-filters.photo           # message has a photo
-filters.media           # message has any media
-filters.private         # private chat
-filters.group           # group or channel
-filters.incoming        # not sent by you
-filters.outgoing        # sent by you
-filters.mentioned       # bot was mentioned
-filters.album           # grouped media
+from ferogram import Client
 
-filters.command("start")        # /start
-filters.regex(r"hello|hi")      # text matches pattern
-filters.user(123456)            # from a specific user
-filters.chat(-100123456)        # in a specific chat
-filters.data("btn_ok")          # callback query data
+app = Client(
+    session="mybot",       # session file name (no extension)
+    api_id=123456,
+    api_hash="abc...",
+    bot_token="123:TOKEN", # omit for userbot
+)
 
-filters.and_(f1, f2)    # both must pass
-filters.or_(f1, f2)     # either passes
-filters.not_(f1)        # inverts a filter
+app.run()                          # blocking; starts and loops forever
+# or
+await app.start()
+await app.run_until_disconnected()
+# or as context manager
+async with app as client:
+    ...
 ```
 
-## Messages
+Session is created on first run and reused automatically.
+
+---
+
+## Raw API
+
+Use `client.raw` for convenience. Use class-based calls only when you need full control.
+
+Preferred (namespace proxy, peer strings auto-resolve):
 
 ```python
-# send
-msg = await client.send_message("me", "hello")
-await client.send_html("me", "<b>bold</b>")
-await client.send_markdown("me", "**bold**")
-
-# on the message object
-await message.reply("got it")
-await message.forward_to("me")
-await message.pin()
-await message.edit("updated text")
-await message.delete()
+result = await client.raw.messages.GetHistory(peer="@durov", limit=5)
+result = await client.raw.messages.SendMessage(peer="@user", message="hi")
 ```
 
-## Media
+Class-based (full control):
 
 ```python
-await client.send_photo("me", "photo.jpg", caption="look")
-await client.send_document("me", "file.pdf", caption="report")
+from ferogram.raw.generated.functions.messages import GetHistory
+
+result = await client.invoke(GetHistory(
+    peer=await client.resolve_peer("@durov"),
+    offset_id=0, offset_date=0, add_offset=0,
+    limit=5, max_id=0, min_id=0, hash=0,
+))
+# shorthand
+result = await client(GetHistory(...))
 ```
 
-## Edit and delete
+Results are low-level TL objects (or dict-like structures) matching the Telegram schema. The `generated/` directory is internal codegen output. Direct imports from it are considered advanced usage and may change.
 
-```python
-msg = await client.send_message("me", "draft")
-await client.edit_message("me", msg.id, "updated")
-await client.delete_message(msg.id)
-await client.delete_messages([1, 2, 3])
-```
+All functions and types are available. See [FEATURES.md](./FEATURES.md#raw-api) for all import styles.
 
-## Dialogs and account
-
-```python
-me = await client.get_me()
-print(me.first_name, me.username)
-
-dialogs = await client.get_dialogs(limit=20)
-for d in dialogs:
-    print(d.title, d.unread_count)
-```
+---
 
 ## Userbot
 
@@ -196,38 +150,18 @@ async def echo(client, message):
 app.run()
 ```
 
-## Raw API
+---
 
-Access any Telegram API method directly using the generated TL types.
-
-```python
-from ferogram.raw.api.functions import GetHistory
-from ferogram.raw.api.types import InputPeerUsername
-
-result = await app.invoke(GetHistory(
-    peer=InputPeerUsername(username="durov").to_dict(),
-    offset_id=0,
-    offset_date=0,
-    add_offset=0,
-    limit=10,
-    max_id=0,
-    min_id=0,
-    hash=0,
-))
-for msg in result.get("messages", []):
-    print(msg.get("id"), msg.get("message", "")[:80])
-```
-
-758 functions and 1559 types are available under `ferogram.raw.api.functions` and `ferogram.raw.api.types`.
-
-The `generated/` directory is internal codegen output. Always import from `ferogram.raw.api`.
-
-## Context manager
+## Logging
 
 ```python
-async with Client("session", api_id=..., api_hash=...) as app:
-    await app.send_message("me", "hello")
+import ferogram.logging as fero_log
+
+fero_log.setup()           # INFO to stderr
+fero_log.setup(level=10)   # DEBUG
 ```
+
+---
 
 ## Architecture
 
@@ -244,8 +178,23 @@ ferogram  (Rust, tokio async runtime)
 Telegram MTProto
 ```
 
+---
+
 ## License
 
-MIT OR Apache-2.0
+This project is dual-licensed under:
+
+- MIT License
+- Apache License 2.0
+
+You may choose either license.
+
+You are free to use, modify, and distribute this software (including commercial use), provided that the original license and copyright notice are included.
+
+See `LICENSE-MIT` and `LICENSE-APACHE` for full details.
 
 Developed by [Ankit Chaubey](https://github.com/ankit-chaubey)
+
+---
+
+⭐ Star this repo if you find it useful

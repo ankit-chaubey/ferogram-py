@@ -5,6 +5,38 @@ All client methods are `async`. `peer` accepts `"@username"`, `"me"`, or an inte
 
 ---
 
+## Imports
+
+High-level usage:
+
+```python
+from ferogram import Client
+from ferogram import filters
+from ferogram import ChatAction
+from ferogram import InlineArticle, InlinePhoto, InlineDocument
+from ferogram import InlineMessageId
+from ferogram import PrivacyKey, PrivacyRule
+```
+
+Raw API usage (four styles, see the Raw API section for details):
+
+```python
+# style 1: namespace proxy, no extra import needed
+client.raw.messages.SendMessage(...)
+
+# style 2
+from ferogram.raw import functions
+
+# style 3
+from ferogram.raw.api import functions
+
+# style 4: direct class import
+from ferogram.raw.generated.functions.messages import SendMessage
+from ferogram.raw.generated.types.messages import Messages
+```
+
+---
+
 ## Client Setup
 
 ```python
@@ -451,27 +483,123 @@ await client.warm_peer_cache_from_dialogs()
 
 ## Raw API
 
-**Preferred: peer strings auto-resolve, int fields default to 0:**
+All four styles produce identical TL requests. The difference is only ergonomics and abstraction level.
+
+**Pick one:**
+
+| Style | When to use |
+|---|---|
+| `client.raw` | 90% of cases. Simplest. |
+| `from ferogram.raw import functions` | When you need full explicit control. |
+| `from ferogram.raw.api import functions` | Compatibility only. Do not use for new code. |
+| Direct `generated` import | Advanced use: tooling, debugging, type checking. |
+
+---
+
+### 1. Namespace proxy (recommended)
+
+No extra import. Peer strings auto-resolve. Int fields default to 0.
 
 ```python
-result = await client.raw.messages.GetHistory(peer="@durov", limit=5)
-result = await client.raw.messages.SendMessage(peer="@user", message="hi")
+# send a message
+result = await client.raw.messages.SendMessage(
+    peer="@user",
+    message="Hello",
+    no_webpage=True,
+)
+
+# fetch history
+result = await client.raw.messages.GetHistory(
+    peer="@durov",
+    limit=10,
+)
+
+# get chat info
+result = await client.raw.channels.GetFullChannel(
+    channel="@telegram",
+)
 ```
 
-**Class-based:**
+---
+
+### 2. `functions` import (recommended for explicit control)
+
+Use when you want to be explicit about every field. Peer must be resolved manually.
 
 ```python
-from ferogram.raw.generated.functions.messages import GetHistory
+from ferogram.raw import functions
 
-result = await client.invoke(GetHistory(
-    peer=await client._resolve_peer("@durov"),
-    offset_id=0, offset_date=0, add_offset=0,
-    limit=5, max_id=0, min_id=0, hash=0,
-))
-# shorthand: await client(func)
+# send a message
+result = await client.invoke(
+    functions.messages.SendMessage(
+        peer=await client.resolve_peer("@user"),
+        message="Hello",
+        random_id=0,     # use a unique int per request in production
+        no_webpage=True,
+    )
+)
+
+# fetch history
+result = await client.invoke(
+    functions.messages.GetHistory(
+        peer=await client.resolve_peer("@durov"),
+        offset_id=0,
+        offset_date=0,
+        add_offset=0,
+        limit=10,
+        max_id=0,
+        min_id=0,
+        hash=0,
+    )
+)
+
+# shorthand: await client(...) is equivalent to await client.invoke(...)
+result = await client(functions.users.GetFullUser(id=await client.resolve_peer("@user")))
 ```
 
-Results are plain dicts matching the TL schema.
+---
+
+### 3. `api` import (compatibility only)
+
+Same as style 2. Exists for backward compatibility. Do not use for new code.
+
+```python
+from ferogram.raw.api import functions
+
+result = await client.invoke(
+    functions.messages.SendMessage(
+        peer=await client.resolve_peer("@user"),
+        message="Hello",
+        random_id=0,
+    )
+)
+```
+
+---
+
+### 4. Direct class import (advanced)
+
+Import a specific function or type by name. Useful for tooling, type annotations, or when you only use one or two classes.
+
+```python
+from ferogram.raw.generated.functions.messages import GetHistory, SendMessage
+from ferogram.raw.generated.functions.users import GetFullUser
+
+result = await client.invoke(
+    GetHistory(
+        peer=await client.resolve_peer("@durov"),
+        offset_id=0,
+        offset_date=0,
+        add_offset=0,
+        limit=10,
+        max_id=0,
+        min_id=0,
+        hash=0,
+    )
+)
+```
+
+The `generated/` directory is internal codegen output. Direct imports from it are considered advanced usage and may change between versions.
 
 ---
 
