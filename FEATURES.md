@@ -1,7 +1,8 @@
-# ferogram-py : Feature Reference
+# ferogram-py: Feature Reference
 
-Python bindings for the ferogram MTProto library.  
-All client methods are `async`. `peer` accepts `"@username"`, `"me"`, or an integer ID as a string.
+Python bindings for the ferogram MTProto client.
+
+All client methods are async. The `peer` parameter accepts "@username", "me", or a numeric ID (int or string).
 
 ---
 
@@ -18,7 +19,7 @@ from ferogram import InlineMessageId
 from ferogram import PrivacyKey, PrivacyRule
 ```
 
-Raw API usage (four styles, see the Raw API section for details):
+Raw API usage (four styles, see the [Raw API](https://github.com/ankit-chaubey/ferogram-py/edit/main/FEATURES.md#raw-api) section for details):
 
 ```python
 # style 1: namespace proxy, no extra import needed
@@ -92,7 +93,10 @@ Handler signature: `async def handler(client, update):`
 
 ## Filters
 
-Import: `from ferogram import filters`
+Import: 
+```
+from ferogram import filters
+```
 
 **Message**
 
@@ -631,3 +635,8 @@ ChatAction.RECORD_ROUND
 ChatAction.UPLOAD_ROUND
 ChatAction.CANCEL
 ```
+---
+
+Thanks for reading.
+
+Have a great experience with ferogram.
