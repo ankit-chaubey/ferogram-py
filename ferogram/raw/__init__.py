@@ -33,6 +33,7 @@
 #   await client.invoke({"_": "messages.getHistory", "peer": {...}, "limit": 10})
 
 from . import tl
+_tl = tl
 from .generated import functions, types
 
-__all__ = ["functions", "types", "tl"]
+__all__ = ["functions", "types", "tl", "_tl"]
