@@ -504,3 +504,73 @@ pub fn ferogram_user_to_py(u: &ferogram::User) -> User {
         bot: u.bot(),
     }
 }
+
+#[pyclass(get_all)]
+#[derive(Clone, Debug)]
+pub struct ShippingQuery {
+    pub query_id: i64,
+    pub user_id: i64,
+    pub payload: Vec<u8>,
+    pub street_line1: String,
+    pub city: String,
+    pub country_iso2: String,
+}
+
+#[pymethods]
+impl ShippingQuery {
+    fn __repr__(&self) -> String {
+        format!(
+            "ShippingQuery(query_id={}, user_id={})",
+            self.query_id, self.user_id
+        )
+    }
+}
+
+#[pyclass(get_all)]
+#[derive(Clone, Debug)]
+pub struct PreCheckoutQuery {
+    pub query_id: i64,
+    pub user_id: i64,
+    pub payload: Vec<u8>,
+    pub currency: String,
+    pub total_amount: i64,
+    pub shipping_option_id: Option<String>,
+}
+
+#[pymethods]
+impl PreCheckoutQuery {
+    fn __repr__(&self) -> String {
+        format!(
+            "PreCheckoutQuery(query_id={}, user_id={})",
+            self.query_id, self.user_id
+        )
+    }
+}
+
+#[pyclass(get_all)]
+#[derive(Clone, Debug)]
+pub struct ChatBoost {
+    pub peer_id: i64,
+    pub qts: i32,
+}
+
+#[pymethods]
+impl ChatBoost {
+    fn __repr__(&self) -> String {
+        format!("ChatBoost(peer_id={}, qts={})", self.peer_id, self.qts)
+    }
+}
+
+#[pyclass(get_all)]
+#[derive(Clone, Debug)]
+pub struct MiniAppSession {
+    pub url: String,
+    pub query_id: Option<i64>,
+}
+
+#[pymethods]
+impl MiniAppSession {
+    fn __repr__(&self) -> String {
+        format!("MiniAppSession(url={:?})", self.url)
+    }
+}

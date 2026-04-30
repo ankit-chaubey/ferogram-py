@@ -13,11 +13,10 @@
 
 # Raw API usage example
 # Use this for any method not covered by a high-level wrapper.
+# Peer strings are resolved automatically by the raw proxy.
 
 import asyncio
 from ferogram import Client
-from ferogram.raw.generated.functions import GetHistory
-from ferogram.raw.generated.types import InputPeerUsername
 
 app = Client("ferogram")
 
@@ -25,16 +24,10 @@ app = Client("ferogram")
 async def main():
     await app.start()
 
-    result = await app.invoke(GetHistory(
-        peer=InputPeerUsername(username="durov").to_dict(),
-        offset_id=0,
-        offset_date=0,
-        add_offset=0,
+    result = await app.raw.messages.GetHistory(
+        peer="@durov",
         limit=5,
-        max_id=0,
-        min_id=0,
-        hash=0,
-    ))
+    )
 
     for msg in result.get("messages", []):
         print(msg.get("id"), msg.get("message", "")[:80])

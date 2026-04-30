@@ -31,10 +31,10 @@ async def main():
     await app.edit_message("me", msg.id, "edited message")
 
     # send html
-    await app.send_html("me", "<b>bold</b> and <i>italic</i>")
+    await app.send_message("me", "<b>bold</b> and <i>italic</i>", parse_mode="html")
 
     # send markdown
-    await app.send_markdown("me", "**bold** and _italic_")
+    await app.send_message("me", "**bold** and _italic_", parse_mode="markdown")
 
     # delete the message
     await app.delete_message(msg.id)

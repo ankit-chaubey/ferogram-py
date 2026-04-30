@@ -26,7 +26,7 @@ async def main():
         print(f"Logged in as {me.full_name} (@{me.username})")
 
         # set online
-        await app.update_status(offline=False)
+        await app.set_online()
 
         # show contacts
         contacts = await app.get_contacts()
@@ -39,7 +39,7 @@ async def main():
             print(f"Bio: {full.about or 'no bio'}")
 
         # update our own profile
-        await app.update_profile(about="Built with ferogram.")
+        await app.set_profile(about="Built with ferogram.")
 
 
 asyncio.run(main())

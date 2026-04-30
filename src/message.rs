@@ -59,6 +59,17 @@ pub struct Message {
     #[pyo3(get)]
     pub reply_count: Option<i32>,
     pub(crate) client: Option<Arc<ferogram::Client>>,
+    pub(crate) _inner_markup: Option<ferogram::tl::enums::ReplyMarkup>,
+}
+
+// Internal helper: build an InputMessage from text + optional parse_mode
+
+fn make_input(text: String, parse_mode: Option<&str>) -> ferogram::InputMessage {
+    match parse_mode {
+        Some("html") => ferogram::InputMessage::html(text),
+        Some("markdown") | Some("md") => ferogram::InputMessage::markdown(text),
+        _ => ferogram::InputMessage::text(&text),
+    }
 }
 
 #[pymethods]
@@ -85,7 +96,17 @@ impl Message {
         self.reply_to_message_id.is_some()
     }
 
-    fn reply<'py>(&self, py: Python<'py>, text: String) -> PyResult<Bound<'py, PyAny>> {
+    // reply - send to the same chat, quoting this message
+    //
+    // parse_mode: None (plain) | "html" | "markdown" / "md"
+
+    #[pyo3(signature = (text, parse_mode = None))]
+    fn reply<'py>(
+        &self,
+        py: Python<'py>,
+        text: String,
+        parse_mode: Option<String>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let client = self
             .client
             .clone()
@@ -93,92 +114,49 @@ impl Message {
         let chat_id = self.chat_id.to_string();
         let reply_id = self.id;
         future_into_py(py, async move {
+            let input = make_input(text, parse_mode.as_deref()).reply_to(Some(reply_id));
             let msg = client
-                .send_message_to_peer_ex(
-                    chat_id.as_str(),
-                    &ferogram::InputMessage::text(&text).reply_to(Some(reply_id)),
-                )
+                .send_message(chat_id.as_str(), input)
                 .await
                 .map_err(py_err)?;
             Ok(from_incoming(msg, Some(client)))
         })
     }
 
-    fn reply_html<'py>(&self, py: Python<'py>, html: String) -> PyResult<Bound<'py, PyAny>> {
-        let client = self
-            .client
-            .clone()
-            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
-        let chat_id = self.chat_id.to_string();
-        let reply_id = self.id;
-        future_into_py(py, async move {
-            let msg = client
-                .send_message_to_peer_ex(
-                    chat_id.as_str(),
-                    &ferogram::InputMessage::html(html).reply_to(Some(reply_id)),
-                )
-                .await
-                .map_err(py_err)?;
-            Ok(from_incoming(msg, Some(client)))
-        })
-    }
+    // respond - send to the same chat without quoting
+    //
+    // parse_mode: None (plain) | "html" | "markdown" / "md"
 
-    fn reply_markdown<'py>(&self, py: Python<'py>, md: String) -> PyResult<Bound<'py, PyAny>> {
-        let client = self
-            .client
-            .clone()
-            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
-        let chat_id = self.chat_id.to_string();
-        let reply_id = self.id;
-        future_into_py(py, async move {
-            let msg = client
-                .send_message_to_peer_ex(
-                    chat_id.as_str(),
-                    &ferogram::InputMessage::markdown(md).reply_to(Some(reply_id)),
-                )
-                .await
-                .map_err(py_err)?;
-            Ok(from_incoming(msg, Some(client)))
-        })
-    }
-
-    fn respond<'py>(&self, py: Python<'py>, text: String) -> PyResult<Bound<'py, PyAny>> {
+    #[pyo3(signature = (text, parse_mode = None))]
+    fn respond<'py>(
+        &self,
+        py: Python<'py>,
+        text: String,
+        parse_mode: Option<String>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let client = self
             .client
             .clone()
             .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
         let chat_id = self.chat_id.to_string();
         future_into_py(py, async move {
-            let msg = client.send_message(&chat_id, &text).await.map_err(py_err)?;
+            let input = make_input(text, parse_mode.as_deref());
+            let msg = client.send_message(chat_id, input).await.map_err(py_err)?;
             Ok(from_incoming(msg, Some(client)))
         })
     }
 
-    fn respond_html<'py>(&self, py: Python<'py>, html: String) -> PyResult<Bound<'py, PyAny>> {
-        let client = self
-            .client
-            .clone()
-            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
-        let chat_id = self.chat_id.to_string();
-        future_into_py(py, async move {
-            let msg = client.send_html(chat_id, &html).await.map_err(py_err)?;
-            Ok(from_incoming(msg, Some(client)))
-        })
-    }
+    // edit - replace this message's text in-place
+    //
+    // parse_mode: None (plain) | "html" | "markdown" / "md"
 
-    fn respond_markdown<'py>(&self, py: Python<'py>, md: String) -> PyResult<Bound<'py, PyAny>> {
-        let client = self
-            .client
-            .clone()
-            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
-        let chat_id = self.chat_id.to_string();
-        future_into_py(py, async move {
-            let msg = client.send_markdown(chat_id, &md).await.map_err(py_err)?;
-            Ok(from_incoming(msg, Some(client)))
-        })
-    }
-
-    fn edit<'py>(&self, py: Python<'py>, new_text: String) -> PyResult<Bound<'py, PyAny>> {
+    #[pyo3(signature = (new_text, parse_mode = None))]
+    fn edit<'py>(
+        &self,
+        py: Python<'py>,
+        new_text: String,
+        parse_mode: Option<String>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         let client = self
             .client
             .clone()
@@ -186,45 +164,23 @@ impl Message {
         let peer = self.chat_id.to_string();
         let id = self.id;
         future_into_py(py, async move {
-            client
-                .edit_message(peer, id, &new_text)
-                .await
-                .map_err(py_err)?;
+            match parse_mode.as_deref() {
+                Some("html") | Some("markdown") | Some("md") => {
+                    let input = make_input(new_text, parse_mode.as_deref());
+                    client.edit_message(peer, id, input).await.map_err(py_err)?;
+                }
+                _ => {
+                    client
+                        .edit_message(peer, id, new_text.as_str())
+                        .await
+                        .map_err(py_err)?;
+                }
+            }
             Ok(())
         })
     }
 
-    fn edit_html<'py>(&self, py: Python<'py>, html: String) -> PyResult<Bound<'py, PyAny>> {
-        let client = self
-            .client
-            .clone()
-            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
-        let peer = self.chat_id.to_string();
-        let id = self.id;
-        future_into_py(py, async move {
-            client
-                .edit_message_ex(peer, id, ferogram::InputMessage::html(html))
-                .await
-                .map_err(py_err)?;
-            Ok(())
-        })
-    }
-
-    fn edit_markdown<'py>(&self, py: Python<'py>, md: String) -> PyResult<Bound<'py, PyAny>> {
-        let client = self
-            .client
-            .clone()
-            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
-        let peer = self.chat_id.to_string();
-        let id = self.id;
-        future_into_py(py, async move {
-            client
-                .edit_message_ex(peer, id, ferogram::InputMessage::markdown(md))
-                .await
-                .map_err(py_err)?;
-            Ok(())
-        })
-    }
+    // Other message actions
 
     fn delete<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let client = self
@@ -233,7 +189,7 @@ impl Message {
             .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
         let ids = vec![self.id];
         future_into_py(py, async move {
-            client.delete_messages(ids, true).await.map_err(py_err)?;
+            client.delete_messages(&ids, true).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -262,10 +218,7 @@ impl Message {
         let peer = self.chat_id.to_string();
         let id = self.id;
         future_into_py(py, async move {
-            client
-                .pin_message(peer, id, false, false, false)
-                .await
-                .map_err(py_err)?;
+            client.pin_message(peer, id, false).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -301,6 +254,188 @@ impl Message {
             Ok(())
         })
     }
+    /// Reload this message from the server and return the updated copy.
+    /// Usage: msg = await msg.refetch()
+    fn refetch<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let client = self
+            .client
+            .clone()
+            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
+        let peer = self.chat_id.to_string();
+        let id = self.id;
+        future_into_py(py, async move {
+            let msgs = client
+                .get_messages_by_id(peer, &[id])
+                .await
+                .map_err(py_err)?;
+            Ok(msgs
+                .into_iter()
+                .next()
+                .map(|m| from_incoming(m, Some(client))))
+        })
+    }
+}
+
+#[allow(dead_code)]
+impl Message {
+    // internal helpers for click_button / find_button (not exposed to Python)
+    fn _callback_data_at(&self, row: usize, col: usize) -> Option<Vec<u8>> {
+        let rows = self._keyboard_rows()?;
+        let btn_row = match rows.get(row)? {
+            ferogram::tl::enums::KeyboardButtonRow::KeyboardButtonRow(r) => &r.buttons,
+        };
+        if let Some(ferogram::tl::enums::KeyboardButton::Callback(b)) = btn_row.get(col) {
+            Some(b.data.clone())
+        } else {
+            None
+        }
+    }
+    fn _callback_data_by_text(&self, text: &str) -> Option<Vec<u8>> {
+        for row in self._keyboard_rows()? {
+            let buttons = match row {
+                ferogram::tl::enums::KeyboardButtonRow::KeyboardButtonRow(r) => &r.buttons,
+            };
+            for btn in buttons {
+                if let ferogram::tl::enums::KeyboardButton::Callback(b) = btn {
+                    if b.text == text {
+                        return Some(b.data.clone());
+                    }
+                }
+            }
+        }
+        None
+    }
+    fn _keyboard_rows(&self) -> Option<&Vec<ferogram::tl::enums::KeyboardButtonRow>> {
+        match self._inner_markup.as_ref()? {
+            ferogram::tl::enums::ReplyMarkup::ReplyInlineMarkup(k) => Some(&k.rows),
+            _ => None,
+        }
+    }
+
+    /// Find a button by type and value, returns (row, col) or None.
+    /// filter_type: "pos" | "text" | "data"
+    /// For "pos": filter_value is "row,col" e.g. "0,1"
+    /// For "text": filter_value is the button label
+    /// For "data": filter_value is the callback data as a hex string
+    fn find_button(&self, filter_type: &str, filter_value: &str) -> Option<(usize, usize)> {
+        let markup = match &self._inner_markup {
+            Some(m) => m,
+            None => return None,
+        };
+        let rows = match markup {
+            ferogram::tl::enums::ReplyMarkup::ReplyInlineMarkup(k) => &k.rows,
+            _ => return None,
+        };
+        match filter_type {
+            "pos" => {
+                let parts: Vec<usize> = filter_value
+                    .split(',')
+                    .filter_map(|s| s.trim().parse().ok())
+                    .collect();
+                if parts.len() == 2 {
+                    Some((parts[0], parts[1]))
+                } else {
+                    None
+                }
+            }
+            "text" => {
+                for (ri, row) in rows.iter().enumerate() {
+                    let buttons = match row {
+                        ferogram::tl::enums::KeyboardButtonRow::KeyboardButtonRow(r) => &r.buttons,
+                    };
+                    for (ci, btn) in buttons.iter().enumerate() {
+                        let lbl = match btn {
+                            ferogram::tl::enums::KeyboardButton::Callback(b) => b.text.as_str(),
+                            ferogram::tl::enums::KeyboardButton::Url(b) => b.text.as_str(),
+                            _ => continue,
+                        };
+                        if lbl == filter_value {
+                            return Some((ri, ci));
+                        }
+                    }
+                }
+                None
+            }
+            "data" => {
+                let want = hex::decode(filter_value).unwrap_or_default();
+                for (ri, row) in rows.iter().enumerate() {
+                    let buttons = match row {
+                        ferogram::tl::enums::KeyboardButtonRow::KeyboardButtonRow(r) => &r.buttons,
+                    };
+                    for (ci, btn) in buttons.iter().enumerate() {
+                        if let ferogram::tl::enums::KeyboardButton::Callback(b) = btn {
+                            if b.data == want {
+                                return Some((ri, ci));
+                            }
+                        }
+                    }
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Click a button by type and value. Returns true if the click succeeded.
+    /// filter_type: "pos" | "text" | "data"
+    /// For "pos": filter_value is "row,col"
+    /// For "text": filter_value is the button label
+    /// For "data": filter_value is the callback data as hex
+    fn click_button<'py>(
+        &self,
+        py: Python<'py>,
+        filter_type: String,
+        filter_value: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = self
+            .client
+            .clone()
+            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
+        let peer = self.chat_id.to_string();
+        let msg_id = self.id;
+
+        let data: Vec<u8> = match filter_type.as_str() {
+            "pos" => {
+                let parts: Vec<usize> = filter_value
+                    .split(',')
+                    .filter_map(|s| s.trim().parse().ok())
+                    .collect();
+                if parts.len() != 2 {
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        "pos filter_value must be 'row,col'",
+                    ));
+                }
+                self._callback_data_at(parts[0], parts[1]).ok_or_else(|| {
+                    pyo3::exceptions::PyValueError::new_err("no button at position")
+                })?
+            }
+            "text" => self._callback_data_by_text(&filter_value).ok_or_else(|| {
+                pyo3::exceptions::PyValueError::new_err("no button with that text")
+            })?,
+            "data" => hex::decode(&filter_value)
+                .map_err(|_| pyo3::exceptions::PyValueError::new_err("data must be hex-encoded"))?,
+            _ => {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "filter_type must be 'pos', 'text', or 'data'",
+                ));
+            }
+        };
+
+        future_into_py(py, async move {
+            let msgs = client
+                .get_messages_by_id(peer, &[msg_id])
+                .await
+                .map_err(py_err)?;
+            let msg = msgs
+                .into_iter()
+                .next()
+                .ok_or_else(|| py_err("message not found"))?;
+            msg.click_button(ferogram::update::ButtonFilter::Data(&data))
+                .await
+                .map_err(py_err)?;
+            Ok(true)
+        })
+    }
 }
 
 pub fn from_incoming(
@@ -313,7 +448,7 @@ pub fn from_incoming(
         date: m.date(),
         edit_date: m.edit_date(),
         chat_id: m.chat_id(),
-        from_id: m.from_id(),
+        from_id: m.sender_user_id(),
         outgoing: m.outgoing(),
         mentioned: m.mentioned(),
         pinned: m.pinned(),
@@ -328,5 +463,6 @@ pub fn from_incoming(
         view_count: m.view_count(),
         reply_count: m.reply_count(),
         client,
+        _inner_markup: m.reply_markup().cloned(),
     }
 }

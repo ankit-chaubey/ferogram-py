@@ -16,6 +16,7 @@ use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
 use std::sync::Arc;
 
+use crate::types::{ChatBoost, PreCheckoutQuery, ShippingQuery};
 use crate::{message::from_incoming, py_err};
 
 // helpers
@@ -495,6 +496,47 @@ pub fn update_to_py(
                     user_id: b.user_id,
                     date: b.date,
                     stopped: b.stopped,
+                }
+            )
+        }
+        ferogram::update::Update::ShippingQuery(q) => {
+            let addr = &q.shipping_address;
+            ok!(
+                "shipping_query",
+                ShippingQuery {
+                    query_id: q.query_id,
+                    user_id: q.user_id,
+                    payload: q.payload.clone(),
+                    street_line1: addr.street_line1.clone(),
+                    city: addr.city.clone(),
+                    country_iso2: addr.country_iso2.clone(),
+                }
+            )
+        }
+        ferogram::update::Update::PreCheckoutQuery(q) => {
+            ok!(
+                "pre_checkout_query",
+                PreCheckoutQuery {
+                    query_id: q.query_id,
+                    user_id: q.user_id,
+                    payload: q.payload.clone(),
+                    currency: q.currency.clone(),
+                    total_amount: q.total_amount,
+                    shipping_option_id: q.shipping_option_id.clone(),
+                }
+            )
+        }
+        ferogram::update::Update::ChatBoost(b) => {
+            let peer_id = match &b.peer {
+                ferogram::tl::enums::Peer::User(u) => u.user_id,
+                ferogram::tl::enums::Peer::Chat(c) => c.chat_id,
+                ferogram::tl::enums::Peer::Channel(c) => c.channel_id,
+            };
+            ok!(
+                "chat_boost",
+                ChatBoost {
+                    peer_id,
+                    qts: b.qts,
                 }
             )
         }

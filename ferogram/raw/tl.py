@@ -16,7 +16,6 @@ from __future__ import annotations
 import struct
 from typing import Any
 
-# ── primitives ────────────────────────────────────────────────────────────────
 
 def _pack_uint32(v: int) -> bytes: return struct.pack("<I", v & 0xFFFFFFFF)
 def _pack_int32(v: int)  -> bytes: return struct.pack("<i", v)
@@ -35,7 +34,6 @@ def _pack_bytes(b: bytes) -> bytes:
         pad = (4 - n % 4) % 4
     return header + b + b"\x00" * pad
 
-# ── resolve ───────────────────────────────────────────────────────────────────
 
 def _resolve(v: Any) -> Any:
     """
@@ -53,7 +51,6 @@ def _resolve(v: Any) -> Any:
         return [_resolve(i) for i in v]
     return v
 
-# ── serializer ────────────────────────────────────────────────────────────────
 
 def serialize(obj: Any, schema: dict) -> bytes:
     if isinstance(obj, bool):
@@ -113,7 +110,6 @@ def _serialize_field(val: Any, ftype: str, schema: dict) -> bytes:
     return serialize(val, schema)
 
 
-# ── deserializer ─────────────────────────────────────────────────────────────
 
 def deserialize(data: bytes, schema_by_cid: dict) -> Any:
     result, _ = _read_value(data, 0, schema_by_cid)

@@ -4,12 +4,12 @@ build-backend = "maturin"
 
 [project]
 name        = "ferogram"
-version     = "0.1.7"
+version     = "0.1.8"
 description = "Python wrapper for ferogram, blazing-fast Rust MTProto library for Telegram."
 readme      = "README.md"
 license     = { text = "MIT OR Apache-2.0" }
 authors     = [{ name = "Ankit Chaubey", email = "ankitchaubey.dev@gmail.com" }]
-keywords    = ["telegram", "mtproto", "rust", "client", "bot"]
+keywords    = ["telegram", "mtproto", "rust", "client", "bot", "ferogram"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -22,8 +22,11 @@ classifiers = [
 requires-python = ">=3.9"
 
 [project.urls]
-Homepage   = "https://github.com/ankit-chaubey/ferogram-py"
-Repository = "https://github.com/ankit-chaubey/ferogram-py"
+Homepage      = "https://github.com/ankit-chaubey/ferogram-py"
+Source        = "https://github.com/ankit-chaubey/ferogram-py"
+Documentation = "https://github.com/ankit-chaubey/ferogram-py#readme"
+Tracker       = "https://github.com/ankit-chaubey/ferogram-py/issues"
+Author        = "https://github.com/ankit-chaubey"
 
 [tool.maturin]
 module-name   = "ferogram._ferogram"

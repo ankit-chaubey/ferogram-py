@@ -1,6 +1,6 @@
 [package]
 name        = "ferogram-py"
-version     = "0.1.7"
+version     = "0.1.8"
 edition     = "2024"
 description = "Python bindings for ferogram (Rust MTProto)"
 license     = "MIT OR Apache-2.0"
@@ -10,7 +10,8 @@ name       = "_ferogram"
 crate-type = ["cdylib"]
 
 [dependencies]
-ferogram            = { git = "https://github.com/ankit-chaubey/ferogram", branch = "main" }
+hex                 = "0.4"
+ferogram            = "0.3.6"
 pyo3                = { version = "0.24", features = ["extension-module", "abi3-py313"] }
 pyo3-async-runtimes = { version = "0.24", features = ["tokio-runtime"] }
 tokio               = { version = "1", features = ["full"] }

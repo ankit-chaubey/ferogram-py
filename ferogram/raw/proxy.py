@@ -12,20 +12,11 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 """
-ferogram Style 4 - the cleanest raw API:
+Raw TL API proxy. Usage:
 
     await client.raw.messages.GetHistory(peer="@durov", limit=10)
 
-Three things happen automatically:
-  1. Peer is resolved  → "@durov" becomes InputPeerUsername dict
-  2. Boring ints fill  → offset_id, hash, etc. become 0
-  3. random_id gen     → SendMessage gets a random_id if you skip it
-
-Proxy chain:
-  client.raw                        → RawProxy
-  client.raw.messages               → NamespaceProxy("messages")
-  client.raw.messages.GetHistory    → MethodCaller("messages", "GetHistory")
-  client.raw.messages.GetHistory(…) → resolve + fill + invoke
+Peer fields auto-resolve, required int fields default to 0, random_id is auto-generated.
 """
 from __future__ import annotations
 
@@ -33,7 +24,6 @@ import random
 import re
 from typing import Any
 
-# ── field auto-default rules ──────────────────────────────────────────────────
 _INT_TYPES   = {"int", "long", "int32", "int64", "int128", "int256", "Int", "Long"}
 _FLOAT_TYPES = {"double"}
 _STR_TYPES   = {"string"}
@@ -45,7 +35,7 @@ _MISSING = object()
 
 
 def _auto_default(ftype: str) -> Any:
-    """Return a zero-value for a required primitive field, or _MISSING for TL objects."""
+    """Return zero-value for required primitive field, or _MISSING for TL objects."""
     if ftype in _INT_TYPES:     return 0
     if ftype in _FLOAT_TYPES:   return 0.0
     if ftype in _STR_TYPES:     return ""
@@ -55,11 +45,9 @@ def _auto_default(ftype: str) -> Any:
     return _MISSING  # TL object - user must provide
 
 
-# ── peer-like field names ─────────────────────────────────────────────────────
 _PEER_FIELDS = {"peer", "channel", "participant", "user_id", "from_id", "send_as"}
 
 
-# ── TL name derivation ────────────────────────────────────────────────────────
 def _tl_name(namespace: str, class_name: str) -> str:
     """("messages", "GetHistory") → "messages.getHistory"
        ("_base",    "InputPeer")  → "inputPeer"
@@ -70,10 +58,9 @@ def _tl_name(namespace: str, class_name: str) -> str:
     return f"{namespace}.{snake}"
 
 
-# ── proxy chain ───────────────────────────────────────────────────────────────
 
 class RawProxy:
-    """client.raw - exposes every TL namespace as an attribute."""
+    """Exposes every TL namespace as an attribute."""
 
     def __init__(self, client: Any) -> None:
         self._client = client
@@ -85,7 +72,7 @@ class RawProxy:
 
 
 class NamespaceProxy:
-    """client.raw.messages - exposes every function in that namespace."""
+    """Exposes every function in the given namespace."""
 
     def __init__(self, client: Any, namespace: str) -> None:
         self._client    = client
@@ -101,15 +88,7 @@ class NamespaceProxy:
 
 
 class MethodCaller:
-    """
-    client.raw.messages.GetHistory(peer="@durov", limit=10)
-
-    Steps before invoking:
-      1. Resolve peer-like fields (str/int → typed dict)
-      2. Auto-fill required primitive fields with zero defaults
-      3. Auto-generate random_id for send functions
-      4. Build typed object and call client.invoke()
-    """
+    """Resolves peers, auto-fills primitive defaults, and invokes the TL function."""
 
     def __init__(self, client: Any, namespace: str, method: str) -> None:
         self._client    = client
@@ -140,7 +119,6 @@ class MethodCaller:
 
         _cid, schema_fields = _SCHEMA[tl_key]
 
-        # step 1: resolve peer-like fields
         for fname, ftype, flag_bit in schema_fields:
             if fname not in kwargs:
                 continue
@@ -149,7 +127,6 @@ class MethodCaller:
                     and not hasattr(kwargs[fname], "to_dict")):
                 kwargs[fname] = await self._client._resolve_peer(kwargs[fname])
 
-        # step 2: auto-fill required primitive fields
         for fname, ftype, flag_bit in schema_fields:
             if flag_bit is not None:
                 continue           # optional - skip
@@ -159,11 +136,9 @@ class MethodCaller:
             if default is not _MISSING:
                 kwargs[fname] = default
 
-        # step 3: auto random_id
         if "random_id" in {f[0] for f in schema_fields} and "random_id" not in kwargs:
             kwargs["random_id"] = random.randint(-(2**63), 2**63 - 1)
 
-        # step 4: build + invoke
         try:
             fn = cls(**kwargs)
         except TypeError as e:
@@ -178,15 +153,9 @@ class MethodCaller:
         return f"MethodCaller({self._namespace!r}, {self._method!r})"
 
 
-# ── PeerCache ─────────────────────────────────────────────────────────────────
 
 class PeerCache:
-    """
-    Lightweight access_hash cache.
-    Wire into client update processing:
-        client._peer_cache.store_user(id, access_hash)
-        client._peer_cache.store_channel(id, access_hash)
-    """
+    """access_hash cache for users, channels, and basic groups."""
 
     def __init__(self) -> None:
         self._users:    dict[int, int] = {}    # user_id    → access_hash
@@ -212,21 +181,9 @@ class PeerCache:
         return chat_id in self._chats
 
 
-# ── peer resolver ─────────────────────────────────────────────────────────────
 
 async def resolve_peer(client: Any, peer: Any) -> dict:
-    """
-    Convert any peer representation to a TL InputPeer dict.
-
-      "me" / "self"        → inputPeerSelf
-      "@username"          → inputPeerUsername
-      "username"           → inputPeerUsername
-      123456789  (user)    → inputPeerUser    (cache → live lookup)
-      -123456789 (chat)    → inputPeerChat
-      -100xxx    (channel) → inputPeerChannel (cache → live lookup)
-      typed TL object      → .to_dict()
-      dict                 → passthrough
-    """
+    """Convert any peer representation to a TL InputPeer dict."""
     if isinstance(peer, dict):
         return peer
     if hasattr(peer, "to_dict"):
@@ -244,13 +201,28 @@ async def resolve_peer(client: Any, peer: Any) -> dict:
 
 
 async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
+    if hasattr(client._raw, "get_input_peer"):
+        rust_result = await client._raw.get_input_peer(peer_id)
+        if rust_result is not None:
+            return rust_result
+
     cache: PeerCache = client._peer_cache
 
-    # positive → user
     if peer_id > 0:
         ah = cache.get_user(peer_id)
         if ah is not None:
             return {"_": "inputPeerUser", "user_id": peer_id, "access_hash": ah}
+    else:
+        abs_id = abs(peer_id)
+        if abs_id > 1_000_000_000:
+            channel_id = abs_id - 1_000_000_000
+            ah = cache.get_channel(channel_id)
+            if ah is not None:
+                return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
+        else:
+            return {"_": "inputPeerChat", "chat_id": abs(peer_id)}
+
+    if peer_id > 0:
         result = await client.invoke(_make_get_users([peer_id]))
         users  = result.get("users") or (result if isinstance(result, list) else [result])
         for u in users:
@@ -259,15 +231,9 @@ async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
                 cache.store_user(peer_id, ah)
                 return {"_": "inputPeerUser", "user_id": peer_id, "access_hash": ah}
         raise ValueError(f"User {peer_id} not found")
-
-    abs_id = abs(peer_id)
-
-    # -100xxxxxxxxxx → channel / megagroup
-    if abs_id > 1_000_000_000:
+    else:
+        abs_id = abs(peer_id)
         channel_id = abs_id - 1_000_000_000
-        ah = cache.get_channel(channel_id)
-        if ah is not None:
-            return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
         result = await client.invoke(_make_get_channels([peer_id]))
         chats  = result.get("chats") or []
         for ch in chats:
@@ -276,9 +242,6 @@ async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
                 cache.store_channel(channel_id, ah)
                 return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
         raise ValueError(f"Channel {peer_id} not found")
-
-    # small negative → basic group
-    return {"_": "inputPeerChat", "chat_id": abs_id}
 
 
 def _make_get_users(user_ids: list[int]) -> dict:

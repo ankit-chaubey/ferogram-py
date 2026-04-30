@@ -27,7 +27,6 @@ def _make(fn: Callable) -> Filter:
     return fn
 
 
-# message filters
 
 all       = _make(lambda _: True)
 private   = _make(lambda m: getattr(m, "is_private", None) or (m.from_id is not None and m.chat_id == m.from_id))
@@ -98,7 +97,6 @@ def chat(*chat_ids: int) -> Filter:
     return _make(lambda m: getattr(m, "chat_id", None) in ids)
 
 
-# callback query filters
 
 def data(value: str) -> Filter:
     return _make(lambda q: getattr(q, "data", None) == value)
@@ -113,7 +111,6 @@ def data_startswith(prefix: str) -> Filter:
     return _make(lambda q: (getattr(q, "data", "") or "").startswith(prefix))
 
 
-# inline query filters
 
 def inline(pattern: str | re.Pattern | None = None, flags: int = 0) -> Filter:
     if pattern is None:
@@ -122,7 +119,6 @@ def inline(pattern: str | re.Pattern | None = None, flags: int = 0) -> Filter:
     return _make(lambda q: bool(compiled.search(getattr(q, "query", "") or "")))
 
 
-# user status filters
 
 online  = _make(lambda s: getattr(s, "online", False))
 offline = _make(lambda s: not getattr(s, "online", True))
@@ -132,7 +128,6 @@ def status(value: str) -> Filter:
     return _make(lambda s: getattr(s, "status", None) == value)
 
 
-# chat action filters
 
 def action(name: str) -> Filter:
     return _make(lambda a: getattr(a, "action", None) == name)
@@ -140,14 +135,12 @@ def action(name: str) -> Filter:
 typing = action("typing")
 
 
-# reaction filters
 
 def reaction(*emojis: str) -> Filter:
     s = set(emojis)
     return _make(lambda r: bool(set(getattr(r, "new_reactions", [])) & s))
 
 
-# participant update filters
 
 def participant_status(*statuses: str) -> Filter:
     s = set(statuses)
@@ -156,7 +149,6 @@ def participant_status(*statuses: str) -> Filter:
     return check
 
 
-# raw update filters
 
 def constructor(cid: int) -> Filter:
     return _make(lambda r: getattr(r, "constructor_id", None) == cid)
@@ -166,7 +158,6 @@ def update_type(name: str) -> Filter:
     return _make(lambda r: getattr(r, "type_name", None) == name)
 
 
-# logic combinators
 
 def and_(*filters: Filter) -> Filter:
     return _make(lambda m: all(f(m) for f in filters))
@@ -185,7 +176,6 @@ OR  = or_
 NOT = not_
 
 
-# message length filters
 
 def min_length(n: int) -> Filter:
     def check(m: Any) -> bool:
@@ -201,16 +191,13 @@ def max_length(n: int) -> Filter:
     return check
 
 
-# bot filters
 
 bot     = _make(lambda m: getattr(getattr(m, "sender", None), "bot", False))
 no_bot  = _make(lambda m: not getattr(getattr(m, "sender", None), "bot", False))
 
-# scheduled message filter
 
 scheduled = _make(lambda m: getattr(m, "date", 0) == 0)
 
-# poll vote filter (by position index)
 
 def vote_position(index: int) -> Filter:
     return _make(lambda v: index in getattr(v, "positions", []))

@@ -13,9 +13,10 @@
 
 """Demonstrates all update handler types and the logging module."""
 import ferogram
+import ferogram.logging as fero_log
 from ferogram import filters
 
-ferogram.log.setup()  # optional: enables debug/info output to stderr
+fero_log.setup()  # optional: enables debug/info output to stderr
 
 app = ferogram.Client(session="demo")
 

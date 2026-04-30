@@ -24,8 +24,9 @@ from ._ferogram import Client as _RustClient, PasswordToken, User, Dialog, ChatM
 from ._ferogram import Message, CallbackQuery
 from ._ferogram import (
     MessageDeletion, InlineQuery, InlineSend, UserStatus,
-    ChatAction, ParticipantUpdate, JoinRequest, MessageReaction,
+    ParticipantUpdate, JoinRequest, MessageReaction,
     PollVote, BotStopped, RawUpdate,
+    ShippingQuery, PreCheckoutQuery, ChatBoost, MiniAppSession,
 )
 from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
 from ._ferogram import InviteLinkMember, ReadParticipant, AdminLogEvent, StickerSetInfo
@@ -33,6 +34,11 @@ from ._ferogram import BroadcastStats, MegagroupStats, NotifySettings
 from .raw import _tl
 from .raw.generated._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 from .raw.proxy import RawProxy, PeerCache, resolve_peer as _resolve_peer_fn
+from .types import (
+    ChatAction, PrivacyKey, PrivacyRule,
+    InlineMessageId, InlineArticle, InlinePhoto, InlineDocument,
+    _inline_result_to_tuple,
+)
 
 __all__ = ["Client"]
 
@@ -55,11 +61,14 @@ _ALL_EVENTS = (
     "poll_vote",
     "bot_stopped",
     "raw_update",
+    "shipping_query",
+    "pre_checkout_query",
+    "chat_boost",
 )
 
-_AUDIO_MIME  = "audio/mpeg"
-_VIDEO_MIME  = "video/mp4"
-_VOICE_MIME  = "audio/ogg"
+_AUDIO_MIME   = "audio/mpeg"
+_VIDEO_MIME   = "video/mp4"
+_VOICE_MIME   = "audio/ogg"
 _STICKER_MIME = "image/webp"
 
 
@@ -96,7 +105,6 @@ class Client:
             raise RuntimeError("Call await app.start() first.")
         return self._raw
 
-    # handler decorators
 
     def on_message(self, *filters: Callable) -> Callable:
         def decorator(func: Callable) -> Callable:
@@ -176,13 +184,30 @@ class Client:
             return func
         return decorator
 
+    def on_shipping_query(self, *filters: Callable) -> Callable:
+        def decorator(fn: Callable) -> Callable:
+            self._handlers["shipping_query"].append((fn, list(filters)))
+            return fn
+        return decorator
+
+    def on_pre_checkout_query(self, *filters: Callable) -> Callable:
+        def decorator(fn: Callable) -> Callable:
+            self._handlers["pre_checkout_query"].append((fn, list(filters)))
+            return fn
+        return decorator
+
+    def on_chat_boost(self, *filters: Callable) -> Callable:
+        def decorator(fn: Callable) -> Callable:
+            self._handlers["chat_boost"].append((fn, list(filters)))
+            return fn
+        return decorator
+
     def on_raw_update(self, *filters: Callable) -> Callable:
         def decorator(func: Callable) -> Callable:
             self._handlers["raw_update"].append((func, list(filters)))
             return func
         return decorator
 
-    # dispatch
 
     async def _dispatch(self, event_type: str, update: Any) -> None:
         for func, fltrs in self._handlers.get(event_type, []):
@@ -205,7 +230,6 @@ class Client:
             _log.debug("dispatching %s", event_type)
             asyncio.create_task(self._dispatch(event_type, update))
 
-    # lifecycle
 
     async def start(self) -> "Client":
         if self._raw is not None:
@@ -260,24 +284,30 @@ class Client:
     async def __aexit__(self, *_: Any) -> None:
         pass
 
-    # messaging
 
-    async def send_message(self, peer: str, text: str) -> Message:
+    async def send_message(
+        self,
+        peer: str,
+        text: str,
+        *,
+        parse_mode: str | None = None,
+    ) -> Message:
+        """Send a text message. parse_mode: None (plain), 'html', or 'markdown'/'md'."""
+        if parse_mode == "html":
+            return await self._client.send_html(peer, text)
+        if parse_mode in ("markdown", "md"):
+            return await self._client.send_markdown(peer, text)
         return await self._client.send_message(peer, text)
 
-    async def send_html(self, peer: str, html: str) -> Message:
-        return await self._client.send_html(peer, html)
-
-    async def send_markdown(self, peer: str, md: str) -> Message:
-        return await self._client.send_markdown(peer, md)
-
     async def send_to_self(self, text: str) -> None:
+        """Send a plain-text message to Saved Messages (yourself)."""
         await self._client.send_to_self(text)
 
     async def edit_message(self, peer: str, message_id: int, new_text: str) -> None:
         await self._client.edit_message(peer, message_id, new_text)
 
     async def delete_message(self, message_id: int, revoke: bool = True) -> None:
+        """Delete a single message. Alias for delete_messages([message_id])."""
         await self._client.delete_messages([message_id], revoke)
 
     async def delete_messages(self, message_ids: list[int], revoke: bool = True) -> None:
@@ -304,39 +334,32 @@ class Client:
     async def send_reaction(self, peer: str, message_id: int, emoji: str) -> None:
         await self._client.send_reaction(peer, message_id, emoji)
 
-    async def send_chat_action(self, peer: str, action: str) -> None:
-        """Send a typing indicator or other chat action.
-
-        action: "typing" | "upload_photo" | "record_video" | "upload_video" |
-                "record_audio" | "upload_audio" | "upload_document" |
-                "choose_sticker" | "record_round" | "upload_round" | "cancel"
-        """
-        await self._client.send_chat_action(peer, action)
+    async def send_chat_action(self, peer: str, action: "ChatAction | str") -> None:
+        """Send a chat action. Accepts ChatAction enum or plain string."""
+        await self._client.send_chat_action(peer, str(action))
 
     async def get_messages_by_id(self, peer: str, message_ids: list[int]) -> list[Message]:
         return await self._client.get_messages_by_id(peer, message_ids)
 
-    async def send_dice(self, peer: str, emoji: str = "\U0001f3b2") -> None:
-        """Send a dice/slot/dart/etc. emoji that animates on Telegram.
+    async def send_dice(self, peer: str, emoticon: str = "🎲") -> None:
+        """Send an animated dice/game emoji.
 
-        Common emoji values: "\\U0001f3b2" (dice), "\\U0001f3af" (dart),
-        "\\U0001f3c0" (basketball), "\\u26bd" (football), "\\U0001f3b3" (bowling)
+        Common values: 🎲 (dice)  🎯 (dart)  🏀 (basketball)  ⚽ (football)  🎳 (bowling)  🎰 (slot)
         """
-        await self._client.send_dice(peer, emoji)
+        await self._client.send_dice(peer, emoticon)
 
     async def delete_dialog(self, peer: str) -> None:
         await self._client.delete_dialog(peer)
 
-    async def get_online_count(self, peer: str) -> int:
-        return await self._client.get_online_count(peer)
-
-    # chat membership
 
     async def join_chat(self, peer: str) -> None:
         await self._client.join_chat(peer)
 
     async def leave_chat(self, peer: str) -> None:
         await self._client.leave_chat(peer)
+
+    async def get_online_count(self, peer: str) -> int:
+        return await self._client.get_online_count(peer)
 
     async def get_chat_administrators(self, peer: str) -> list[ChatMember]:
         return await self._client.get_chat_administrators(peer)
@@ -353,7 +376,6 @@ class Client:
     async def unpin_dialog(self, peer: str) -> None:
         await self._client.unpin_dialog(peer)
 
-    # contacts / blocking
 
     async def block_user(self, peer: str) -> None:
         await self._client.block_user(peer)
@@ -364,27 +386,12 @@ class Client:
     async def get_contacts(self) -> list[User]:
         return await self._client.get_contacts()
 
-    # account
 
     async def get_users_by_id(self, user_ids: list[int]) -> list[User | None]:
         return await self._client.get_users_by_id(user_ids)
 
     async def get_user_full(self, user_id: int) -> UserFull:
         return await self._client.get_user_full(user_id)
-
-    async def update_profile(
-        self,
-        first_name: str | None = None,
-        last_name: str | None = None,
-        about: str | None = None,
-    ) -> None:
-        await self._client.update_profile(first_name, last_name, about)
-
-    async def update_username(self, username: str) -> None:
-        await self._client.update_username(username)
-
-    async def update_status(self, offline: bool = False) -> None:
-        await self._client.update_status(offline)
 
     async def get_me(self) -> User:
         return await self._client.get_me()
@@ -395,44 +402,47 @@ class Client:
     async def export_session_string(self) -> str:
         return await self._client.export_session_string()
 
-    # media
 
     async def send_photo(self, peer: str, path: str, caption: str = "") -> Message:
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         return await self._client.send_photo(peer, path, caption)
 
+    async def send_file(self, peer: str, path: str, caption: str = "", mime_type: str | None = None) -> Message:
+        """Send any file. mime_type controls how Telegram displays it."""
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"No such file: {path!r}")
+        return await self._client.send_file(peer, path, caption, mime_type)
+
     async def send_document(self, peer: str, path: str, caption: str = "", mime_type: str | None = None) -> Message:
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         return await self._client.send_document(peer, path, caption, mime_type)
 
-    async def send_file(self, peer: str, path: str, caption: str = "", mime_type: str | None = None) -> Message:
-        if not os.path.isfile(path):
-            raise FileNotFoundError(f"No such file: {path!r}")
-        return await self._client.send_file(peer, path, caption, mime_type)
-
     async def send_audio(self, peer: str, path: str, caption: str = "") -> Message:
+        """Send an audio file (audio/mpeg). Alias for send_file(..., mime_type='audio/mpeg')."""
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         return await self._client.send_document(peer, path, caption, _AUDIO_MIME)
 
     async def send_video(self, peer: str, path: str, caption: str = "") -> Message:
+        """Send a video file (video/mp4). Alias for send_file(..., mime_type='video/mp4')."""
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         return await self._client.send_document(peer, path, caption, _VIDEO_MIME)
 
     async def send_voice(self, peer: str, path: str, caption: str = "") -> Message:
+        """Send a voice message (audio/ogg). Alias for send_file(..., mime_type='audio/ogg')."""
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         return await self._client.send_document(peer, path, caption, _VOICE_MIME)
 
     async def send_sticker(self, peer: str, path: str) -> Message:
+        """Send a WebP sticker. Alias for send_file(..., mime_type='image/webp')."""
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         return await self._client.send_document(peer, path, "", _STICKER_MIME)
 
-    # search
 
     async def search_messages(self, peer: str, query: str, limit: int = 100) -> list[Message]:
         return await self._client.search_messages(peer, query, limit)
@@ -440,16 +450,13 @@ class Client:
     async def search_global(self, query: str, limit: int = 100) -> list[Message]:
         return await self._client.search_global(query, limit)
 
-    # chat creation / management
 
     async def create_group(self, title: str, user_ids: list[int]) -> Chat:
         return await self._client.create_group(title, user_ids)
 
     async def create_channel(self, title: str, about: str = "", broadcast: bool = True) -> Chat:
+        """Create a broadcast channel (broadcast=True) or supergroup (broadcast=False)."""
         return await self._client.create_channel(title, about, broadcast)
-
-    async def create_supergroup(self, title: str, about: str = "") -> Chat:
-        return await self._client.create_channel(title, about, False)
 
     async def delete_channel(self, peer: str) -> None:
         await self._client.delete_channel(peer)
@@ -473,21 +480,10 @@ class Client:
     async def delete_chat_history(self, peer: str, max_id: int = 0, revoke: bool = False) -> None:
         await self._client.delete_chat_history(peer, max_id, revoke)
 
-    # join requests
+    async def migrate_chat(self, chat_id: int) -> Chat:
+        return await self._client.migrate_chat(chat_id)
 
-    async def approve_join_request(self, peer: str, user_id: int) -> None:
-        await self._client.approve_join_request(peer, user_id)
 
-    async def reject_join_request(self, peer: str, user_id: int) -> None:
-        await self._client.reject_join_request(peer, user_id)
-
-    async def approve_all_join_requests(self, peer: str) -> None:
-        await self._client.approve_all_join_requests(peer)
-
-    async def reject_all_join_requests(self, peer: str) -> None:
-        await self._client.reject_all_join_requests(peer)
-
-    # contacts
 
     async def add_contact(self, user_id: int, first_name: str, last_name: str = "", phone: str = "") -> None:
         await self._client.add_contact(user_id, first_name, last_name, phone)
@@ -502,7 +498,6 @@ class Client:
     async def get_common_chats(self, user_id: int, limit: int = 100) -> list[Chat]:
         return await self._client.get_common_chats(user_id, limit)
 
-    # account / sessions
 
     async def get_authorizations(self) -> list[Authorization]:
         return await self._client.get_authorizations()
@@ -510,7 +505,6 @@ class Client:
     async def terminate_session(self, hash: int) -> None:
         await self._client.terminate_session(hash)
 
-    # messages
 
     async def get_scheduled_messages(self, peer: str) -> list[Message]:
         return await self._client.get_scheduled_messages(peer)
@@ -521,7 +515,13 @@ class Client:
     async def translate_messages(self, peer: str, msg_ids: list[int], to_lang: str) -> list[str]:
         return await self._client.translate_messages(peer, msg_ids, to_lang)
 
-    # drafts
+    async def get_reply_to_message(self, peer: str, msg_id: int) -> Message | None:
+        return await self._client.get_reply_to_message(peer, msg_id)
+
+    async def get_discussion_message(self, peer: str, msg_id: int) -> tuple[list[Message], int, int, int]:
+        """Returns (messages, unread_count, max_id, read_max_id)"""
+        return await self._client.get_discussion_message(peer, msg_id)
+
 
     async def save_draft(self, peer: str, text: str) -> None:
         await self._client.save_draft(peer, text)
@@ -529,7 +529,6 @@ class Client:
     async def clear_all_drafts(self) -> None:
         await self._client.clear_all_drafts()
 
-    # polls
 
     async def send_poll(
         self,
@@ -547,7 +546,10 @@ class Client:
         """options: list of raw option bytes from the poll answer (e.g. [b'\\x00'])"""
         await self._client.send_vote(peer, msg_id, options)
 
-    # reactions
+    async def get_poll_votes(self, peer: str, msg_id: int, limit: int = 100) -> list[tuple[int, bytes]]:
+        """Returns list of (user_id, option_bytes)."""
+        return await self._client.get_poll_votes(peer, msg_id, limit)
+
 
     async def read_reactions(self, peer: str) -> None:
         await self._client.read_reactions(peer)
@@ -555,7 +557,10 @@ class Client:
     async def clear_recent_reactions(self) -> None:
         await self._client.clear_recent_reactions()
 
-    # bot commands / info
+    async def get_reaction_list(self, peer: str, msg_id: int, limit: int = 100) -> list[tuple[int, str]]:
+        """Returns list of (peer_id, reaction) pairs."""
+        return await self._client.get_reaction_list(peer, msg_id, limit)
+
 
     async def set_bot_commands(self, commands: list[tuple[str, str]], lang_code: str = "") -> None:
         """commands: list of (command, description) pairs"""
@@ -576,7 +581,22 @@ class Client:
     async def get_bot_info(self, lang_code: str = "") -> BotInfo:
         return await self._client.get_bot_info(lang_code)
 
-    # forum topics
+    async def answer_callback_query(self, query_id: int, text: str | None = None, alert: bool = False) -> None:
+        await self._client.answer_callback_query(query_id, text, alert)
+
+
+    async def answer_inline_query(
+        self,
+        query_id: int,
+        results: "list[InlineArticle | InlinePhoto | InlineDocument | tuple]",
+        cache_time: int = 300,
+        is_personal: bool = False,
+        next_offset: str | None = None,
+    ) -> None:
+        """Answer an inline query. Accepts InlineArticle/InlinePhoto/InlineDocument or raw tuples."""
+        raw = [_inline_result_to_tuple(r) for r in results]
+        await self._client.answer_inline_query(query_id, raw, cache_time, is_personal, next_offset)
+
 
     async def get_forum_topics(self, peer: str, limit: int = 100) -> list[ForumTopic]:
         return await self._client.get_forum_topics(peer, limit)
@@ -606,30 +626,64 @@ class Client:
     async def toggle_forum(self, peer: str, enabled: bool) -> None:
         await self._client.toggle_forum(peer, enabled)
 
-    async def get_online_count(self, peer: str) -> int:
-        return await self._client.get_online_count(peer)
 
-    async def leave_chat(self, peer: str) -> None:
-        await self._client.leave_chat(peer)
+    async def mute_chat(self, peer: str, mute_until: int) -> None:
+        """Mute notifications until unix timestamp. 2**31-1 to mute forever, 0 to unmute."""
+        await self._client.mute_chat(peer, mute_until)
 
-    async def answer_callback_query(self, query_id: int, text: str | None = None, alert: bool = False) -> None:
-        await self._client.answer_callback_query(query_id, text, alert)
+    async def unmute_chat(self, peer: str) -> None:
+        """Unmute notifications. Alias for mute_chat(peer, 0)."""
+        await self._client.mute_chat(peer, 0)
 
-    async def answer_inline_query_articles(
+    async def get_notify_settings(self, peer: str) -> NotifySettings:
+        return await self._client.get_notify_settings(peer)
+
+    async def update_notify_settings(
         self,
-        query_id: int,
-        articles: list[tuple[str, str, str]],
-        cache_time: int = 300,
-        is_personal: bool = False,
+        peer: str,
+        mute_until: int | None = None,
+        silent: bool | None = None,
+        show_previews: bool | None = None,
     ) -> None:
-        """articles: list of (id, title, message_text)"""
-        await self._client.answer_inline_query_articles(query_id, articles, cache_time, is_personal)
+        await self._client.update_notify_settings(peer, mute_until, silent, show_previews)
+
+
+    async def get_privacy(self, key: "PrivacyKey | str") -> list[str]:
+        """Get privacy rules for a setting. Accepts PrivacyKey enum or string."""
+        return await self._client.get_privacy(str(key))
+
+    async def set_privacy(self, key: "PrivacyKey | str", rule: "PrivacyRule | str") -> None:
+        """Set a privacy rule. Accepts PrivacyKey/PrivacyRule enums or strings."""
+        await self._client.set_privacy(str(key), str(rule))
+
+
+    async def upload_media(self, peer: str, path: str) -> int | None:
+        """Upload a file to Telegram servers. Returns document ID for reuse, or None."""
+        return await self._client.upload_media(peer, path)
+
+    async def download_media(self, peer: str, msg_id: int, path: str) -> str:
+        """Download media from a message to disk. Returns the final path."""
+        return await self._client.download_media(peer, msg_id, path)
+
+    async def edit_chat_photo(self, peer: str, path: str) -> None:
+        await self._client.edit_chat_photo(peer, path)
 
     async def delete_profile_photos(self) -> None:
         await self._client.delete_profile_photos()
 
-    async def edit_chat_photo(self, peer: str, path: str) -> None:
-        await self._client.edit_chat_photo(peer, path)
+
+    async def edit_inline_message(
+        self,
+        msg_id: "InlineMessageId | tuple[int, bytes]",
+        new_text: str,
+    ) -> bool:
+        """Edit an inline bot message. Accepts InlineMessageId or (dc_id, id_bytes) tuple."""
+        if isinstance(msg_id, InlineMessageId):
+            dc_id, id_bytes = msg_id.dc_id, msg_id.id_bytes
+        else:
+            dc_id, id_bytes = msg_id
+        return await self._client.edit_inline_message(dc_id, list(id_bytes), new_text)
+
 
     async def edit_chat_default_banned_rights(self, peer: str, restrictions: dict[str, bool]) -> None:
         """restrictions keys: send_messages, send_media, send_stickers, send_gifs,
@@ -637,42 +691,33 @@ class Client:
         True = allowed, False = restricted."""
         await self._client.edit_chat_default_banned_rights(peer, restrictions)
 
-    async def get_reply_to_message(self, peer: str, msg_id: int) -> Message | None:
-        return await self._client.get_reply_to_message(peer, msg_id)
+    async def set_chat_reactions(self, peer: str, reactions: str) -> None:
+        """reactions: 'all' | 'none' | comma-separated emoji e.g. '👍,👎,❤'"""
+        await self._client.set_chat_reactions(peer, reactions)
 
-    async def get_discussion_message(self, peer: str, msg_id: int) -> tuple[list[Message], int, int, int]:
-        """Returns (messages, unread_count, max_id, read_max_id)"""
-        return await self._client.get_discussion_message(peer, msg_id)
+    async def transfer_chat_ownership(self, peer: str, new_owner_id: int) -> None:
+        """Transfer ownership. Account must NOT have 2FA enabled for this to work."""
+        await self._client.transfer_chat_ownership(peer, new_owner_id)
 
-    async def get_web_page_preview(self, text: str) -> str | None:
-        """Returns the webpage URL if preview exists, else None."""
-        return await self._client.get_web_page_preview(text)
+
+    async def get_broadcast_stats(self, peer: str, dark: bool = False) -> BroadcastStats:
+        return await self._client.get_broadcast_stats(peer, dark)
+
+    async def get_megagroup_stats(self, peer: str, dark: bool = False) -> MegagroupStats:
+        return await self._client.get_megagroup_stats(peer, dark)
+
+
+    async def get_chat_full(self, peer: str) -> tuple[int, str, int | None]:
+        """Returns (id, about, members_count)."""
+        return await self._client.get_chat_full_raw(peer)
 
     async def get_admins_with_invites(self, peer: str) -> list[tuple[int, int]]:
         """Returns list of (admin_id, invite_count)."""
         return await self._client.get_admins_with_invites(peer)
 
-    async def get_all_drafts(self) -> None:
-        await self._client.get_all_drafts()
-
-    async def get_reaction_list(self, peer: str, msg_id: int, limit: int = 100) -> list[tuple[int, str]]:
-        """Returns list of (peer_id, reaction) pairs."""
-        return await self._client.get_reaction_list(peer, msg_id, limit)
-
-    async def mute_chat(self, peer: str, mute_until: int) -> None:
-        """mute_until: unix timestamp. Pass 2**31-1 to mute forever, 0 to unmute."""
-        await self._client.mute_chat(peer, mute_until)
-
-    async def unmute_chat(self, peer: str) -> None:
-        await self._client.mute_chat(peer, 0)
-
     async def get_pinned_dialogs(self, folder_id: int = 0) -> list[int]:
         """Returns list of peer IDs. folder_id=0=main, 1=archive."""
         return await self._client.get_pinned_dialogs(folder_id)
-
-    async def get_poll_votes(self, peer: str, msg_id: int, limit: int = 100) -> list[tuple[int, bytes]]:
-        """Returns list of (user_id, option_bytes)."""
-        return await self._client.get_poll_votes(peer, msg_id, limit)
 
     async def get_custom_emoji_documents(self, document_ids: list[int]) -> list[int]:
         """Returns document IDs that resolved successfully."""
@@ -681,6 +726,10 @@ class Client:
     async def get_game_high_scores(self, peer: str, msg_id: int, user_id: int) -> list[tuple[int, int, int]]:
         """Returns list of (position, user_id, score)."""
         return await self._client.get_game_high_scores(peer, msg_id, user_id)
+
+    async def get_web_page_preview(self, text: str) -> str | None:
+        """Returns the webpage URL if a preview exists, else None."""
+        return await self._client.get_web_page_preview(text)
 
     async def send_invoice(
         self,
@@ -703,16 +752,45 @@ class Client:
             photo_url, need_name, need_phone, need_email, need_shipping_address, is_flexible,
         )
 
-    async def send_dice(self, peer: str, emoticon: str = "🎲") -> None:
-        """emoticon: 🎲 🎯 🏀 ⚽ 🎳 🎰"""
-        await self._client.send_dice(peer, emoticon)
 
-    async def get_chat_full(self, peer: str) -> tuple[int, str, int | None]:
-        """Returns (id, about, members_count)."""
-        return await self._client.get_chat_full_raw(peer)
+    async def set_profile(self, first_name: str | None = None, last_name: str | None = None, about: str | None = None) -> None:
+        await self._client.set_profile(first_name, last_name, about)
 
-    async def migrate_chat(self, chat_id: int) -> Chat:
-        return await self._client.migrate_chat(chat_id)
+    async def set_username(self, username: str) -> None:
+        await self._client.set_username(username)
+
+    async def set_online(self) -> None:
+        await self._client.set_online()
+
+    async def set_offline(self) -> None:
+        await self._client.set_offline()
+
+    async def mark_dialog_read(self, peer: str) -> None:
+        await self._client.mark_dialog_read(peer)
+
+    async def sync_drafts(self) -> None:
+        """Push all drafts as update events (0.3.6 name for get_all_drafts)."""
+        await self._client.sync_drafts()
+
+    async def get_message_history(self, peer: str, limit: int = 100, offset_id: int = 0) -> list[Message]:
+        """Stable public name for get_history."""
+        return await self._client.get_message_history(peer, limit, offset_id)
+
+    async def join_request(self, peer: str, user_id: int, approve: bool) -> None:
+        """Approve or reject a join request. Replaces approve_join_request / reject_join_request."""
+        await self._client.join_request(peer, user_id, approve)
+
+    async def all_join_requests(self, peer: str, approve: bool, link: str | None = None) -> None:
+        """Bulk approve/reject. Replaces approve_all_join_requests / reject_all_join_requests."""
+        await self._client.all_join_requests(peer, approve, link)
+
+    async def open_mini_app(self, peer: str, app_type: str = "main", app_value: str = "") -> MiniAppSession:
+        """Open a bot mini-app. app_type: main|url|simple. Returns MiniAppSession."""
+        return await self._client.open_mini_app(peer, app_type, app_value)
+
+    async def warm_peer_cache_from_dialogs(self) -> None:
+        """Warm the Rust peer cache via GetDialogs. Call once on fresh sessions when integer peer resolution is needed before any update arrives."""
+        await self._raw.warm_peer_cache_from_dialogs()
 
     async def resolve_peer(self, peer: str) -> int:
         """Resolve username/@handle/id string → peer ID."""
@@ -721,34 +799,6 @@ class Client:
     async def resolve_username(self, username: str) -> int:
         """Resolve a username (with or without @) → peer ID."""
         return await self._client.resolve_username(username)
-
-    async def get_history(self, peer: str, limit: int = 100, offset_id: int = 0) -> list[Message]:
-        """Fetch message history. Use offset_id from last result for pagination."""
-        return await self._client.get_history(peer, limit, offset_id)
-
-    async def upload_media(self, peer: str, path: str) -> int | None:
-        """Upload file to Telegram servers. Returns document ID for reuse, or None."""
-        return await self._client.upload_media(peer, path)
-
-    async def download_media(self, peer: str, msg_id: int, path: str) -> str:
-        """Download media from a message to disk. Returns the path."""
-        return await self._client.download_media(peer, msg_id, path)
-
-    async def edit_inline_message(self, dc_id: int, id_bytes: bytes, new_text: str) -> bool:
-        """Edit an inline bot message. id_bytes = serialized InputBotInlineMessageId."""
-        return await self._client.edit_inline_message(dc_id, list(id_bytes), new_text)
-
-    async def answer_inline_query(
-        self,
-        query_id: int,
-        results: list[tuple[str, str, str, str, str | None]],
-        cache_time: int = 300,
-        is_personal: bool = False,
-        next_offset: str | None = None,
-    ) -> None:
-        """results: list of (type, id, title, message_text, thumb_url|None).
-        type: 'article', 'photo', 'document'"""
-        await self._client.answer_inline_query(query_id, results, cache_time, is_personal, next_offset)
 
     async def export_login_token(self) -> tuple[bytes, int]:
         """QR login step 1. Returns (token_bytes, expires_unix). Show token as QR."""
@@ -759,56 +809,16 @@ class Client:
         """QR login step 2. Returns username if scanned, None if still pending."""
         return await self._client.check_qr_login(list(token))
 
-    async def get_privacy(self, key: str) -> list[str]:
-        """key: status_timestamp | chat_invite | call | forwards | profile_photo |
-        phone_number | voice_messages | bio | birthday.
-        Returns list of rule names."""
-        return await self._client.get_privacy(key)
-
-    async def set_privacy(self, key: str, rule: str) -> None:
-        """rule: allow_all | allow_contacts | disallow_all | disallow_contacts"""
-        await self._client.set_privacy(key, rule)
-
-    async def get_notify_settings(self, peer: str) -> NotifySettings:
-        return await self._client.get_notify_settings(peer)
-
-    async def update_notify_settings(
-        self,
-        peer: str,
-        mute_until: int | None = None,
-        silent: bool | None = None,
-        show_previews: bool | None = None,
-    ) -> None:
-        await self._client.update_notify_settings(peer, mute_until, silent, show_previews)
-
-    async def set_chat_reactions(self, peer: str, reactions: str) -> None:
-        """reactions: 'all' | 'none' | comma-separated emoji e.g. '👍,👎,❤'"""
-        await self._client.set_chat_reactions(peer, reactions)
-
-    async def transfer_chat_ownership(self, peer: str, new_owner_id: int) -> None:
-        """Transfer ownership. Account must NOT have 2FA enabled for this to work."""
-        await self._client.transfer_chat_ownership(peer, new_owner_id)
-
-    async def get_broadcast_stats(self, peer: str, dark: bool = False) -> BroadcastStats:
-        return await self._client.get_broadcast_stats(peer, dark)
-
-    async def get_megagroup_stats(self, peer: str, dark: bool = False) -> MegagroupStats:
-        return await self._client.get_megagroup_stats(peer, dark)
 
     async def _resolve_peer(self, peer: Any) -> dict:
         """Resolve any peer representation to a TL InputPeer dict."""
         return await _resolve_peer_fn(self, peer)
 
     def _populate_cache(self, obj: Any) -> None:
-        """
-        Scan a deserialized TL response dict and store user/channel access_hashes.
-        Called automatically by invoke() so the PeerCache is always warm.
+        """Scan a deserialized TL response and store user/channel access_hashes.
 
-        Covers all response types with users/chats arrays:
-          Updates, messages.Messages, contacts.Contacts,
-          channels.ChannelParticipants, etc.
-
-        Min-flagged entries (access_hash invalid outside message context) are skipped.
+        Called automatically by invoke() so the PeerCache stays warm.
+        Min-flagged entries are skipped (access_hash invalid outside message context).
         """
         if not isinstance(obj, dict):
             return
@@ -831,7 +841,6 @@ class Client:
             else:
                 self._peer_cache.store_chat(cid)
 
-    # raw invoke
 
     async def invoke(self, func: Any) -> dict:
         """Invoke a raw TL function object. Returns a deserialized dict."""

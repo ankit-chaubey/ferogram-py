@@ -31,11 +31,25 @@ from ._ferogram import User, Dialog, ChatMember, UserFull, Message
 from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
 from ._ferogram import InviteLinkMember, ReadParticipant, AdminLogEvent, StickerSetInfo
 from ._ferogram import BroadcastStats, MegagroupStats, NotifySettings
+from .types import (
+    ChatAction,
+    PrivacyKey,
+    PrivacyRule,
+    InlineMessageId,
+    InlineArticle,
+    InlinePhoto,
+    InlineDocument,
+)
 
 __all__ = [
+    # Core
     "Client", "filters",
+    # Rust types
     "User", "Dialog", "ChatMember", "UserFull", "Message",
     "Chat", "Authorization", "ForumTopic", "BotInfo",
     "InviteLinkMember", "ReadParticipant", "AdminLogEvent", "StickerSetInfo",
     "BroadcastStats", "MegagroupStats", "NotifySettings",
+    # Typed wrappers
+    "ChatAction", "PrivacyKey", "PrivacyRule",
+    "InlineMessageId", "InlineArticle", "InlinePhoto", "InlineDocument",
 ]
