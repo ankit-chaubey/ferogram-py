@@ -45,21 +45,37 @@ pub struct ClientBuilder {
     pub api_id: i32,
     pub api_hash: String,
     pub session: String,
+    pub allow_zero_hash: bool,
 }
 
 #[pymethods]
 impl ClientBuilder {
+    /// For bots only: skip needing a cached access hash.
+    /// Do NOT enable on user accounts.
+    fn experimental_allow_zero_hash(mut slf: PyRefMut<'_, Self>) -> PyRefMut<'_, Self> {
+        slf.allow_zero_hash = true;
+        slf
+    }
+
     fn connect<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let (api_id, api_hash, session) =
-            (self.api_id, self.api_hash.clone(), self.session.clone());
+        let (api_id, api_hash, session, allow_zero_hash) = (
+            self.api_id,
+            self.api_hash.clone(),
+            self.session.clone(),
+            self.allow_zero_hash,
+        );
         future_into_py(py, async move {
-            let (client, shutdown) = ferogram::Client::builder()
+            let mut builder = ferogram::Client::builder()
                 .api_id(api_id)
                 .api_hash(api_hash)
-                .session(session)
-                .connect()
-                .await
-                .map_err(py_err)?;
+                .session(session);
+            if allow_zero_hash {
+                builder = builder.experimental_features(ferogram::ExperimentalFeatures {
+                    allow_zero_hash: true,
+                    ..Default::default()
+                });
+            }
+            let (client, shutdown) = builder.connect().await.map_err(py_err)?;
             Ok(crate::client::make_client(client, shutdown))
         })
     }

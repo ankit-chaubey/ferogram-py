@@ -18,6 +18,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::{auth::*, message::from_incoming, py_err, types::*};
+use ferogram::PeerExt;
 use ferogram::tl;
 
 #[pyclass]
@@ -78,6 +79,7 @@ impl Client {
             api_id,
             api_hash,
             session,
+            allow_zero_hash: false,
         }
     }
 
@@ -238,8 +240,8 @@ impl Client {
     fn send_to_self<'py>(&self, py: Python<'py>, text: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.send_to_self(text).await.map_err(py_err)?;
-            Ok(())
+            let m = c.send_to_self(text).await.map_err(py_err)?;
+            Ok(from_incoming(m, Some(c)))
         })
     }
 
@@ -283,9 +285,14 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.forward_messages(destination, &message_ids, source)
-                .await
-                .map_err(py_err)?;
+            c.forward_messages(
+                destination,
+                &message_ids,
+                source,
+                ferogram::ForwardOptions::default(),
+            )
+            .await
+            .map_err(py_err)?;
             Ok(())
         })
     }
@@ -1340,7 +1347,12 @@ impl Client {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let msgs = c
-                .forward_messages(destination, &message_ids, source)
+                .forward_messages(
+                    destination,
+                    &message_ids,
+                    source,
+                    ferogram::ForwardOptions::default(),
+                )
                 .await
                 .map_err(py_err)?;
             Ok(msgs
@@ -2464,22 +2476,11 @@ impl Client {
             let pairs: Vec<(i64, Vec<u8>)> = result
                 .votes
                 .into_iter()
-                .map(|v| {
-                    fn peer_id(p: &tl::enums::Peer) -> i64 {
-                        match p {
-                            tl::enums::Peer::User(u) => u.user_id,
-                            tl::enums::Peer::Chat(c) => c.chat_id,
-                            tl::enums::Peer::Channel(ch) => ch.channel_id,
-                        }
-                    }
-                    match v {
-                        tl::enums::MessagePeerVote::MessagePeerVote(x) => {
-                            (peer_id(&x.peer), x.option)
-                        }
-                        tl::enums::MessagePeerVote::InputOption(x) => (peer_id(&x.peer), vec![]),
-                        tl::enums::MessagePeerVote::Multiple(x) => {
-                            (peer_id(&x.peer), x.options.into_iter().flatten().collect())
-                        }
+                .map(|v| match v {
+                    tl::enums::MessagePeerVote::MessagePeerVote(x) => (x.peer.bare_id(), x.option),
+                    tl::enums::MessagePeerVote::InputOption(x) => (x.peer.bare_id(), vec![]),
+                    tl::enums::MessagePeerVote::Multiple(x) => {
+                        (x.peer.bare_id(), x.options.into_iter().flatten().collect())
                     }
                 })
                 .collect();
@@ -2551,22 +2552,22 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let price_refs: Vec<(&str, i64)> =
-                prices.iter().map(|(l, a)| (l.as_str(), *a)).collect();
             let msg = c
                 .send_invoice(
                     peer,
                     title,
                     description,
                     payload,
-                    currency,
-                    &price_refs,
-                    photo_url,
-                    need_name,
-                    need_phone,
-                    need_email,
-                    need_shipping_address,
-                    is_flexible,
+                    ferogram::InvoiceOptions {
+                        currency,
+                        prices,
+                        photo_url,
+                        need_name,
+                        need_phone,
+                        need_email,
+                        need_shipping_address,
+                        is_flexible,
+                    },
                 )
                 .await
                 .map_err(py_err)?;

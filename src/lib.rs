@@ -60,7 +60,7 @@ fn _ferogram(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<updates::PollVote>()?;
     m.add_class::<updates::BotStopped>()?;
     m.add_class::<updates::RawUpdate>()?;
-    // new in 0.3.6
+    // new in 0.3.6 / updated in 0.3.7 (binding v0.2.0)
     m.add_class::<types::ShippingQuery>()?;
     m.add_class::<types::PreCheckoutQuery>()?;
     m.add_class::<types::ChatBoost>()?;

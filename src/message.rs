@@ -203,7 +203,7 @@ impl Message {
         let ids = vec![self.id];
         future_into_py(py, async move {
             client
-                .forward_messages(peer, &ids, src)
+                .forward_messages(peer, &ids, src, ferogram::ForwardOptions::default())
                 .await
                 .map_err(py_err)?;
             Ok(())

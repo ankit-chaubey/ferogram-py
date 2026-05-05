@@ -11,6 +11,7 @@
 // If you use or modify this code, keep this notice at the top of the file
 // and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
+use ferogram::PeerExt;
 use ferogram::tl;
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -20,14 +21,6 @@ use crate::types::{ChatBoost, PreCheckoutQuery, ShippingQuery};
 use crate::{message::from_incoming, py_err};
 
 // helpers
-
-fn peer_to_id(p: &tl::enums::Peer) -> i64 {
-    match p {
-        tl::enums::Peer::User(u) => u.user_id,
-        tl::enums::Peer::Chat(c) => c.chat_id,
-        tl::enums::Peer::Channel(c) => c.channel_id,
-    }
-}
 
 fn reaction_str(r: &tl::enums::Reaction) -> String {
     match r {
@@ -378,7 +371,7 @@ pub fn update_to_py(
             )
         }
         ferogram::update::Update::CallbackQuery(q) => {
-            let chat_id = q.chat_peer.as_ref().map(peer_to_id);
+            let chat_id = q.chat_peer.as_ref().map(|p| p.bare_id());
             ok!(
                 "callback_query",
                 CallbackQuery {
@@ -399,7 +392,7 @@ pub fn update_to_py(
                     user_id: q.user_id,
                     query: q.query,
                     offset: q.offset,
-                    peer_id: q.peer.as_ref().map(peer_to_id),
+                    peer_id: q.peer.as_ref().map(|p| p.bare_id()),
                 }
             )
         }
@@ -437,7 +430,7 @@ pub fn update_to_py(
             ok!(
                 "chat_action",
                 ChatAction {
-                    peer_id: peer_to_id(&a.peer),
+                    peer_id: a.peer.bare_id(),
                     user_id: a.user_id,
                     action: action_str(&a.action).to_string(),
                 }
@@ -459,7 +452,7 @@ pub fn update_to_py(
             ok!(
                 "join_request",
                 JoinRequest {
-                    peer_id: peer_to_id(&r.peer),
+                    peer_id: r.peer.bare_id(),
                     user_id: r.user_id,
                     about: r.about,
                     date: r.date,
@@ -470,10 +463,10 @@ pub fn update_to_py(
             ok!(
                 "message_reaction",
                 MessageReaction {
-                    peer_id: peer_to_id(&r.peer),
+                    peer_id: r.peer.bare_id(),
                     msg_id: r.msg_id,
                     date: r.date,
-                    actor_id: peer_to_id(&r.actor),
+                    actor_id: r.actor.bare_id(),
                     old_reactions: r.old_reactions.iter().map(reaction_str).collect(),
                     new_reactions: r.new_reactions.iter().map(reaction_str).collect(),
                 }
@@ -484,7 +477,7 @@ pub fn update_to_py(
                 "poll_vote",
                 PollVote {
                     poll_id: v.poll_id,
-                    peer_id: peer_to_id(&v.peer),
+                    peer_id: v.peer.bare_id(),
                     positions: v.positions,
                 }
             )
