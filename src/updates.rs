@@ -319,6 +319,24 @@ impl BotStopped {
     }
 }
 
+/// A bot received a guest-chat inline query (bots only).
+#[pyclass]
+pub struct GuestChatQuery {
+    #[pyo3(get)]
+    pub query_id: i64,
+    #[pyo3(get)]
+    pub qts: i32,
+    #[allow(dead_code)]
+    pub(crate) client: Arc<ferogram::Client>,
+}
+
+#[pymethods]
+impl GuestChatQuery {
+    fn __repr__(&self) -> String {
+        format!("GuestChatQuery(query_id={})", self.query_id)
+    }
+}
+
 // raw fallback for unmapped update types
 #[pyclass]
 pub struct RawUpdate {
@@ -530,6 +548,16 @@ pub fn update_to_py(
                 ChatBoost {
                     peer_id,
                     qts: b.qts,
+                }
+            )
+        }
+        ferogram::update::Update::GuestChatQuery(q) => {
+            ok!(
+                "guest_chat_query",
+                GuestChatQuery {
+                    query_id: q.query_id,
+                    qts: q.qts,
+                    client,
                 }
             )
         }

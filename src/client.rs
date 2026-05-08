@@ -1124,7 +1124,18 @@ impl Client {
     // polls
 
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(signature = (peer, question, answers, quiz = false, correct_index = None, multiple_choice = false))]
+    #[pyo3(signature = (
+        peer, question, answers,
+        quiz = false,
+        correct_index = None,
+        multiple_choice = false,
+        public_voters = false,
+        shuffle_answers = false,
+        hide_results_until_close = false,
+        close_period = None,
+        close_date = None,
+        solution = None,
+    ))]
     fn send_poll<'py>(
         &self,
         py: Python<'py>,
@@ -1134,14 +1145,84 @@ impl Client {
         quiz: bool,
         correct_index: Option<usize>,
         multiple_choice: bool,
+        public_voters: bool,
+        shuffle_answers: bool,
+        hide_results_until_close: bool,
+        close_period: Option<i32>,
+        close_date: Option<i32>,
+        solution: Option<String>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let refs: Vec<&str> = answers.iter().map(String::as_str).collect();
-            c.send_poll(peer, question, &refs, quiz, correct_index, multiple_choice)
+            let mut builder = ferogram::PollBuilder::new(question).answers(answers);
+            if quiz {
+                builder = builder.quiz(true);
+            }
+            if let Some(idx) = correct_index {
+                builder = builder.correct_index(idx);
+            }
+            if multiple_choice {
+                builder = builder.multiple_choice(true);
+            }
+            if public_voters {
+                builder = builder.public_voters(true);
+            }
+            if shuffle_answers {
+                builder = builder.shuffle_answers(true);
+            }
+            if hide_results_until_close {
+                builder = builder.hide_results_until_close(true);
+            }
+            if let Some(secs) = close_period {
+                builder = builder.close_period(secs);
+            }
+            if let Some(ts) = close_date {
+                builder = builder.close_date(ts);
+            }
+            if let Some(text) = solution {
+                builder = builder.solution(text);
+            }
+            c.send_poll(peer, builder).await.map_err(py_err)?;
+            Ok(())
+        })
+    }
+
+    fn delete_reaction<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        msg_id: i32,
+        participant: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            c.delete_reaction(peer, msg_id, participant)
                 .await
                 .map_err(py_err)?;
             Ok(())
+        })
+    }
+
+    fn get_poll_stats<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        msg_id: i32,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            let stats = c.get_poll_stats(peer, msg_id).await.map_err(py_err)?;
+            let json = match stats.votes_graph {
+                tl::enums::StatsGraph::StatsGraph(g) => {
+                    let tl::enums::DataJson::DataJson(dj) = g.json;
+                    dj.data
+                }
+                tl::enums::StatsGraph::Async(a) => format!("async:{}", a.token),
+                tl::enums::StatsGraph::Error(e) => {
+                    return Err(pyo3::exceptions::PyRuntimeError::new_err(e.error));
+                }
+            };
+            Ok(json)
         })
     }
 
@@ -2420,8 +2501,8 @@ impl Client {
                     silent: None,
                     mute_until: Some(mute_until),
                     sound: None,
-                    stories_muted: false,
-                    stories_hide_sender: false,
+                    stories_muted: Some(false),
+                    stories_hide_sender: Some(false),
                     stories_sound: None,
                 },
             );
@@ -2940,8 +3021,8 @@ impl Client {
                     silent,
                     mute_until,
                     sound: None,
-                    stories_muted: false,
-                    stories_hide_sender: false,
+                    stories_muted: Some(false),
+                    stories_hide_sender: Some(false),
                     stories_sound: None,
                 },
             );

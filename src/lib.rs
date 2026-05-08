@@ -65,5 +65,7 @@ fn _ferogram(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<types::PreCheckoutQuery>()?;
     m.add_class::<types::ChatBoost>()?;
     m.add_class::<types::MiniAppSession>()?;
+    // new in 0.3.9 (binding v0.2.1)
+    m.add_class::<updates::GuestChatQuery>()?;
     Ok(())
 }

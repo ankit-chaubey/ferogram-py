@@ -4,7 +4,6 @@ Python bindings for the ferogram MTProto client.
 
 All client methods are async. The `peer` parameter accepts "@username", "me", or a numeric ID (int or string).
 
----
 
 ## Imports
 
@@ -36,7 +35,6 @@ from ferogram.raw.generated.functions.messages import SendMessage
 from ferogram.raw.generated.types.messages import Messages
 ```
 
----
 
 ## Client Setup
 
@@ -61,7 +59,6 @@ async with app as client:
 
 Credentials can also come from env vars: `API_ID`, `API_HASH`, `BOT_TOKEN`.
 
----
 
 ## Event Handlers
 
@@ -84,12 +81,12 @@ Decorators to register handlers. Each accepts zero or more filters.
 @app.on_shipping_query(*filters)
 @app.on_pre_checkout_query(*filters)
 @app.on_chat_boost(*filters)
+@app.on_guest_chat_query(*filters)
 @app.on_raw_update(*filters)
 ```
 
 Handler signature: `async def handler(client, update):`
 
----
 
 ## Filters
 
@@ -184,13 +181,23 @@ filters.or_(f1, f2)
 filters.not_(f1)
 ```
 
----
 
 ## Messaging
 
 ```python
 await client.send_message(peer, text, parse_mode=None)
 # parse_mode: None (plain) | "html" | "markdown"
+# Note: "markdown" uses MarkdownV2 format since ferogram 0.3.9.
+#   __text__ = Underline (was Italic in V1)
+#   ~text~   = Strike    (was ~~text~~ in V1)
+#   > text   = Blockquote (new)
+#   **> text = Expandable blockquote (new)
+# HTML parse_mode supports these tags:
+#   <b>, <strong>, <i>, <em>, <u>, <ins>, <s>, <del>, <strike>
+#   <tg-spoiler>, <span class="tg-spoiler">
+#   <blockquote>, <blockquote expandable>
+#   <tg-time unix="N" format="F">, <tg-emoji emoji-id="N">
+#   <code>, <pre>, <pre><code class="language-X">
 
 await client.send_to_self(text)
 await client.edit_message(peer, message_id, new_text)
@@ -210,6 +217,7 @@ await client.send_reaction(peer, message_id, emoji)
 await client.read_reactions(peer)
 await client.clear_recent_reactions()
 await client.get_reaction_list(peer, msg_id, limit=100) # -> [(peer_id, emoji)]
+await client.delete_reaction(peer, msg_id, participant) # report/remove a user's reaction
 await client.mark_as_read(peer)
 await client.clear_mentions(peer)
 await client.send_chat_action(peer, "typing")           # or ChatAction.TYPING
@@ -236,7 +244,6 @@ await message.react(emoji)
 `reply_to_message_id`, `via_bot_id`, `grouped_id`, `has_media`, `has_photo`, `has_document`,
 `is_forwarded`, `post_author`, `view_count`, `reply_count`
 
----
 
 ## Media
 
@@ -254,7 +261,6 @@ await client.edit_chat_photo(peer, path)
 await client.delete_profile_photos()
 ```
 
----
 
 ## Polls
 
@@ -262,12 +268,19 @@ await client.delete_profile_photos()
 await client.send_poll(
     peer, question, answers=["A", "B", "C"],
     quiz=False, correct_index=None, multiple_choice=False,
+    public_voters=False, shuffle_answers=False,
+    hide_results_until_close=False,
+    close_period=None,   # auto-close after N seconds (1-600)
+    close_date=None,     # auto-close at unix timestamp
+    solution=None,       # explanation shown after quiz answer
 )
 await client.send_vote(peer, msg_id, options=[b"\x00"])
 await client.get_poll_votes(peer, msg_id, limit=100)    # -> [(user_id, option_bytes)]
+await client.get_poll_results(peer, msg_id, poll_hash)
+await client.get_poll_stats(peer, msg_id)               # -> views count (int)
+await client.delete_reaction(peer, msg_id, participant) # report/remove a user's reaction
 ```
 
----
 
 ## Inline Bots
 
@@ -286,7 +299,6 @@ from ferogram import InlineMessageId
 await client.edit_inline_message(InlineMessageId(dc_id=2, id_bytes=b"..."), "new text")
 ```
 
----
 
 ## Chats & Groups
 
@@ -324,7 +336,6 @@ await client.mark_dialog_read(peer)
 
 `user_id`, `first_name`, `last_name`, `username`, `bot`, `status`, `admin_rank`, `full_name`
 
----
 
 ## Forum Topics
 
@@ -335,7 +346,6 @@ await client.edit_forum_topic(peer, topic_id, title=None, closed=None, hidden=No
 await client.delete_forum_topic_history(peer, top_msg_id)
 ```
 
----
 
 ## Join Requests
 
@@ -344,7 +354,6 @@ await client.join_request(peer, user_id, approve=True)
 await client.all_join_requests(peer, approve=True, link=None)
 ```
 
----
 
 ## Account & Profile
 
@@ -364,7 +373,6 @@ await client.export_session_string()                # -> str
 
 `id`, `first_name`, `last_name`, `username`, `phone`, `bot`, `full_name`, `mention`
 
----
 
 ## Contacts & Blocking
 
@@ -378,7 +386,6 @@ await client.unblock_user(peer)
 await client.get_blocked_users(limit=100)           # -> [int]
 ```
 
----
 
 ## Search
 
@@ -387,7 +394,6 @@ await client.search_messages(peer, query, limit=100)
 await client.search_global(query, limit=100)
 ```
 
----
 
 ## Drafts
 
@@ -397,7 +403,6 @@ await client.clear_all_drafts()
 await client.sync_drafts()
 ```
 
----
 
 ## Notifications
 
@@ -408,7 +413,6 @@ await client.get_notify_settings(peer)
 await client.update_notify_settings(peer, mute_until=None, silent=None, show_previews=None)
 ```
 
----
 
 ## Privacy
 
@@ -424,7 +428,6 @@ await client.set_privacy(PrivacyKey.PHONE_NUMBER, PrivacyRule.ALLOW_CONTACTS)
 
 **PrivacyRule:** `ALLOW_ALL`, `ALLOW_CONTACTS`, `DISALLOW_ALL`, `DISALLOW_CONTACTS`
 
----
 
 ## Sessions & Auth
 
@@ -437,7 +440,6 @@ token, expires = await client.export_login_token()
 username = await client.check_qr_login(token)   # None if still pending
 ```
 
----
 
 ## Bot Management
 
@@ -449,7 +451,6 @@ await client.get_bot_info(lang_code="")
 await client.open_mini_app(peer, app_type="main", app_value="")   # -> MiniAppSession
 ```
 
----
 
 ## Stats
 
@@ -457,9 +458,9 @@ await client.open_mini_app(peer, app_type="main", app_value="")   # -> MiniAppSe
 await client.get_broadcast_stats(peer)
 await client.get_megagroup_stats(peer)
 await client.get_game_high_scores(peer, msg_id, user_id)  # -> [(position, user_id, score)]
+await client.get_poll_stats(peer, msg_id)                 # -> views count (int)
 ```
 
----
 
 ## Payments
 
@@ -473,7 +474,6 @@ await client.send_invoice(
 )
 ```
 
----
 
 ## Peer Resolution
 
@@ -483,7 +483,6 @@ await client.resolve_username(username)         # -> int
 await client.warm_peer_cache_from_dialogs()
 ```
 
----
 
 ## Raw API
 
@@ -498,7 +497,6 @@ All four styles produce identical TL requests. The difference is only ergonomics
 | `from ferogram.raw.api import functions` | Compatibility only. Do not use for new code. |
 | Direct `generated` import | Advanced use: tooling, debugging, type checking. |
 
----
 
 ### 1. Namespace proxy (recommended)
 
@@ -524,7 +522,6 @@ result = await client.raw.channels.GetFullChannel(
 )
 ```
 
----
 
 ### 2. `functions` import (recommended for explicit control)
 
@@ -561,7 +558,6 @@ result = await client.invoke(
 result = await client(functions.users.GetFullUser(id=await client.resolve_peer("@user")))
 ```
 
----
 
 ### 3. `api` import (compatibility only)
 
@@ -579,7 +575,6 @@ result = await client.invoke(
 )
 ```
 
----
 
 ### 4. Direct class import (advanced)
 
@@ -605,7 +600,6 @@ result = await client.invoke(
 
 The `generated/` directory is internal codegen output. Direct imports from it are considered advanced usage and may change between versions.
 
----
 
 ## Logging
 
@@ -616,7 +610,18 @@ fero_log.setup()            # INFO to stderr
 fero_log.setup(level=10)   # DEBUG
 ```
 
----
+
+## GuestChatQuery
+
+Fired when a bot receives a guest-chat inline query (`updateBotGuestChatQuery`). Bots only.
+
+```python
+@app.on_guest_chat_query()
+async def handler(client, query):
+    # query.query_id  int
+    # query.qts       int
+    pass
+```
 
 ## ChatAction
 
@@ -635,8 +640,4 @@ ChatAction.RECORD_ROUND
 ChatAction.UPLOAD_ROUND
 ChatAction.CANCEL
 ```
----
 
-Thanks for reading.
-
-Have a great experience with ferogram.
