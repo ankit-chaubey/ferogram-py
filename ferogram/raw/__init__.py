@@ -35,5 +35,6 @@
 from . import tl
 _tl = tl
 from .generated import functions, types
+from .generated._tl_schema import LAYER
 
-__all__ = ["functions", "types", "tl", "_tl"]
+__all__ = ["functions", "types", "tl", "_tl", "LAYER"]

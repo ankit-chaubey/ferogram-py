@@ -1,3 +1,5 @@
+# auto-generated - do not edit
+
 # Copyright (c) Ankit Chaubey <ankitchaubey.dev@gmail.com>
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
@@ -10,7 +12,6 @@
 #
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
-
 
 from . import functions, types
 

@@ -1,3 +1,6 @@
+# auto-generated - do not edit
+
+
 # Copyright (c) Ankit Chaubey <ankitchaubey.dev@gmail.com>
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
@@ -11,14 +14,13 @@
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
-
-# auto-generated - do not edit
 # Flat imports so both styles work:
 #   raw.functions.messages.GetHistory(...)   ← namespace style
 #   raw.functions.GetHistory(...)            ← flat style (convenience)
 
 from ._base import *  # noqa: F401,F403
 from .account import *  # noqa: F401,F403
+from .aicompose import *  # noqa: F401,F403
 from .auth import *  # noqa: F401,F403
 from .bots import *  # noqa: F401,F403
 from .channels import *  # noqa: F401,F403
@@ -43,6 +45,7 @@ from .users import *  # noqa: F401,F403
 # namespace sub-modules
 from . import _base  # noqa: F401
 from . import account  # noqa: F401
+from . import aicompose  # noqa: F401
 from . import auth  # noqa: F401
 from . import bots  # noqa: F401
 from . import channels  # noqa: F401

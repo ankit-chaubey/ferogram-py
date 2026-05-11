@@ -19,20 +19,40 @@ from ... import tl as _tl
 from .._tl_schema import _SCHEMA
 
 
-class SuggestedShortName:
-    def __init__(
-        self,
-        short_name: str,
-    ) -> None:
-        self.short_name = short_name
+class TonesNotModified:
+    def __init__(self) -> None:
+        pass
 
     def to_dict(self) -> dict:
-        return {"_": "stickers.suggestedShortName", **{
-            "short_name": _tl._resolve(self.short_name),
+        return {"_": "aicompose.tonesNotModified", **{
         }}
 
     def to_bytes(self) -> bytes:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"SuggestedShortName(short_name={self.short_name!r})"
+        return f"TonesNotModified()"
+
+class Tones:
+    def __init__(
+        self,
+        hash: int,
+        tones: list[Any],
+        users: list[Any],
+    ) -> None:
+        self.hash = hash
+        self.tones = tones
+        self.users = users
+
+    def to_dict(self) -> dict:
+        return {"_": "aicompose.tones", **{
+            "hash": _tl._resolve(self.hash),
+            "tones": _tl._resolve(self.tones),
+            "users": _tl._resolve(self.users),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"Tones(hash={self.hash!r}, tones={self.tones!r}, users={self.users!r})"
