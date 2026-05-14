@@ -16,6 +16,7 @@ use pyo3::prelude::*;
 
 pub mod auth;
 pub mod client;
+pub mod keyboards;
 pub mod message;
 pub mod raw;
 pub mod types;
@@ -67,5 +68,12 @@ fn _ferogram(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<types::MiniAppSession>()?;
     // new in 0.3.9 (binding v0.2.1)
     m.add_class::<updates::GuestChatQuery>()?;
+    // keyboard builders (binding v0.2.2)
+    m.add_class::<keyboards::InlineButton>()?;
+    m.add_class::<keyboards::InlineKeyboard>()?;
+    m.add_class::<keyboards::ReplyButton>()?;
+    m.add_class::<keyboards::ReplyKeyboard>()?;
+    m.add_class::<keyboards::RemoveKeyboard>()?;
+    m.add_class::<keyboards::ForceReply>()?;
     Ok(())
 }

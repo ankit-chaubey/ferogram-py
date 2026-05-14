@@ -146,6 +146,10 @@ pub struct InlineSend {
     pub query: String,
     #[pyo3(get)]
     pub result_id: String,
+    #[pyo3(get)]
+    pub msg_id_bytes: Option<Vec<u8>>,
+    #[pyo3(get)]
+    pub msg_id_dc: Option<i32>,
 }
 
 #[pymethods]
@@ -415,12 +419,25 @@ pub fn update_to_py(
             )
         }
         ferogram::update::Update::InlineSend(s) => {
+            let (msg_id_bytes, msg_id_dc) = match &s.msg_id {
+                Some(tl::enums::InputBotInlineMessageId::InputBotInlineMessageId(id)) => {
+                    use ferogram::tl::Serializable;
+                    (Some(id.to_bytes()), Some(id.dc_id))
+                }
+                Some(tl::enums::InputBotInlineMessageId::Id64(id)) => {
+                    use ferogram::tl::Serializable;
+                    (Some(id.to_bytes()), Some(id.dc_id))
+                }
+                None => (None, None),
+            };
             ok!(
                 "inline_send",
                 InlineSend {
                     user_id: s.user_id,
                     query: s.query,
                     result_id: s.id,
+                    msg_id_bytes,
+                    msg_id_dc,
                 }
             )
         }

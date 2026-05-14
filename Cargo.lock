@@ -274,9 +274,9 @@ dependencies = [
 
 [[package]]
 name = "ferogram"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08d5a9e0d5162e8eb981904b15c41d7f3089640632d51a3ffcab7713c4df409b"
+checksum = "0b72cbc599397f85947c77d7807db9b40baa047598ef17fb7b3425adf980ce48"
 dependencies = [
  "async-trait",
  "base64",
@@ -314,9 +314,9 @@ dependencies = [
 
 [[package]]
 name = "ferogram-connect"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cdc49607faad2862b676b010b02e27d13ba2047d2253362cdf958c10efff92a"
+checksum = "48614f5825a4e069d8daf80998d0bda2c02b7e92e6116c789054ceef82568fd1"
 dependencies = [
  "ferogram-crypto",
  "ferogram-mtproto",
@@ -334,9 +334,9 @@ dependencies = [
 
 [[package]]
 name = "ferogram-crypto"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9df71920e40c6b6938df3ac0f4e85fe13968b48f0cbb0d0c06d98020384b02b"
+checksum = "7e27eef45ed7600e3b93442602f1acbc82c86cbbd8be33395c64962333f4a9fe"
 dependencies = [
  "aes",
  "ctr",
@@ -349,9 +349,9 @@ dependencies = [
 
 [[package]]
 name = "ferogram-fsm"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "751b3d201d60c38679fb363022bc65646144943b79bc17e37997d8738e2f5143"
+checksum = "b06529ae56dbc45a50f10709572fa127c5c2a58132f4b1eaa90c826e51ae40a6"
 dependencies = [
  "async-trait",
  "dashmap",
@@ -362,9 +362,9 @@ dependencies = [
 
 [[package]]
 name = "ferogram-mtproto"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4aa9b9d4bf5a80270e8ee81e65055c8ed7de9b4887df7d94de48d18564c692c"
+checksum = "f14d5196b3f81974f7f990c822475354af4dd46a0d49c2d648e492c6084105a5"
 dependencies = [
  "ferogram-crypto",
  "ferogram-tl-types",
@@ -377,9 +377,9 @@ dependencies = [
 
 [[package]]
 name = "ferogram-mtsender"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c577e17c573111afe208b935c0a91ab51ab4df4040366010b3b4418d1fbdfecc"
+checksum = "f884b7cf4ff1a380559b057f569d6d884ec74405fda6f97ba79265f42ab22b3b"
 dependencies = [
  "ferogram-connect",
  "ferogram-crypto",
@@ -397,9 +397,9 @@ dependencies = [
 
 [[package]]
 name = "ferogram-parsers"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2616847253ad2b3c90b18f18d8f9239275c295a378ed4cd24bddaec50df3550e"
+checksum = "699accf665ae781947b041f9400f1a388ede032feb0a84c97247f1e6a79e1d31"
 dependencies = [
  "ferogram-tl-types",
  "pulldown-cmark",
@@ -407,7 +407,7 @@ dependencies = [
 
 [[package]]
 name = "ferogram-py"
-version = "0.2.1"
+version = "0.2.3"
 dependencies = [
  "ferogram",
  "hex",
@@ -418,9 +418,9 @@ dependencies = [
 
 [[package]]
 name = "ferogram-session"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de8ac1fbffd7bb698fe3d78038edae17544220d2cf41fe583304efa61a551e94"
+checksum = "672fed4cda1078020cdfe3b0a76408224ba4dc265b26093d02342777d68cfb5f"
 dependencies = [
  "base64",
  "tracing",
@@ -428,24 +428,24 @@ dependencies = [
 
 [[package]]
 name = "ferogram-tl-gen"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9278407f5912be09141fa7827e39dd72851213ecf4b7c1462094a1012ffdef9"
+checksum = "b2c5767cecedb0e1df8f7c53f4dc1bfe0a3b686eb89bf4da26fa2d610e04fe8e"
 dependencies = [
  "ferogram-tl-parser",
 ]
 
 [[package]]
 name = "ferogram-tl-parser"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2a592a2437f71ddda9ba45971bb70019c16a4cf5dd9afe941a7125232db1ff8"
+checksum = "9b655e882facfe8fb8326b4c63ac511089ce89f38c6b208111004256e2888483"
 
 [[package]]
 name = "ferogram-tl-types"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1b23759e460988fda70e73ed25ae4bf633e3430c60f8fbe4620198536238bd7"
+checksum = "ed947864a8bdea862a8336a691d957f2ab8dfd8d08063a90d77d0b70f753705f"
 dependencies = [
  "ferogram-tl-gen",
  "ferogram-tl-parser",

@@ -92,10 +92,15 @@ class InlineArticle:
     id: str
     title: str
     message_text: str
+    description: str | None = None
+    url: str | None = None
     thumb_url: str | None = None
+    reply_markup: object = None
 
     def _to_tuple(self) -> tuple:
-        return ("article", self.id, self.title, self.message_text, self.thumb_url)
+        return ("article", self.id, self.title, self.message_text,
+                self.description, self.url, self.thumb_url,
+                None, None, None, None, self.reply_markup)
 
 
 @dataclass
@@ -105,10 +110,19 @@ class InlinePhoto:
     id: str
     title: str
     message_text: str
+    photo_url: str
+    photo_width: int = 0
+    photo_height: int = 0
+    description: str | None = None
     thumb_url: str | None = None
+    mime_type: str = "image/jpeg"
+    reply_markup: object = None
 
     def _to_tuple(self) -> tuple:
-        return ("photo", self.id, self.title, self.message_text, self.thumb_url)
+        return ("photo", self.id, self.title, self.message_text,
+                self.description, None, self.thumb_url,
+                self.photo_url, self.photo_width, self.photo_height,
+                self.mime_type, self.reply_markup)
 
 
 @dataclass
@@ -118,10 +132,16 @@ class InlineDocument:
     id: str
     title: str
     message_text: str
+    document_url: str
+    mime_type: str
+    description: str | None = None
     thumb_url: str | None = None
+    reply_markup: object = None
 
     def _to_tuple(self) -> tuple:
-        return ("document", self.id, self.title, self.message_text, self.thumb_url)
+        return ("document", self.id, self.title, self.message_text,
+                self.description, self.document_url, self.thumb_url,
+                None, 0, 0, self.mime_type, self.reply_markup)
 
 
 # Internal helper

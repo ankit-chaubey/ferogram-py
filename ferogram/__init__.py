@@ -31,6 +31,8 @@ from ._ferogram import User, Dialog, ChatMember, UserFull, Message
 from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
 from ._ferogram import InviteLinkMember, ReadParticipant, AdminLogEvent, StickerSetInfo
 from ._ferogram import BroadcastStats, MegagroupStats, NotifySettings
+from ._ferogram import InlineButton, InlineKeyboard, ReplyButton, ReplyKeyboard
+from ._ferogram import RemoveKeyboard, ForceReply
 from .types import (
     ChatAction,
     PrivacyKey,
@@ -49,6 +51,10 @@ __all__ = [
     "Chat", "Authorization", "ForumTopic", "BotInfo",
     "InviteLinkMember", "ReadParticipant", "AdminLogEvent", "StickerSetInfo",
     "BroadcastStats", "MegagroupStats", "NotifySettings",
+    # Keyboard builders
+    "InlineButton", "InlineKeyboard",
+    "ReplyButton", "ReplyKeyboard",
+    "RemoveKeyboard", "ForceReply",
     # Typed wrappers
     "ChatAction", "PrivacyKey", "PrivacyRule",
     "InlineMessageId", "InlineArticle", "InlinePhoto", "InlineDocument",

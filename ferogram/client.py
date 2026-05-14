@@ -82,13 +82,53 @@ class Client:
         bot_token: str | None = None,
         phone: str | None = None,
         password: str | None = None,
+        proxy: str | None = None,
+        allow_ipv6: bool = False,
+        dc_addr: str | None = None,
+        probe_transport: bool = False,
+        resilient_connect: bool = False,
+        catch_up: bool = False,
+        pfs: bool = False,
+        device: str | None = None,
+        system_version: str | None = None,
+        app_version: str | None = None,
+        lang_code: str | None = None,
+        system_lang_code: str | None = None,
+        lang_pack: str | None = None,
+        session_string: str | None = None,
+        in_memory: bool = False,
+        update_queue_capacity: int | None = None,
+        update_overflow: str | None = None,
+        low_memory_mode: bool = False,
+        allow_missing_channel_hash: bool = False,
+        auto_resolve_peers: bool = False,
     ) -> None:
-        self.session   = session
-        self.api_id    = api_id or int(os.environ.get("API_ID", 0)) or None
-        self.api_hash  = api_hash or os.environ.get("API_HASH")
-        self.bot_token = bot_token or os.environ.get("BOT_TOKEN")
-        self._phone    = phone
-        self._password = password
+        self.session                  = session
+        self.api_id                   = api_id or int(os.environ.get("API_ID", 0)) or None
+        self.api_hash                 = api_hash or os.environ.get("API_HASH")
+        self.bot_token                = bot_token or os.environ.get("BOT_TOKEN")
+        self._phone                   = phone
+        self._password                = password
+        self.proxy                    = proxy
+        self.allow_ipv6               = allow_ipv6
+        self.dc_addr                  = dc_addr
+        self.probe_transport          = probe_transport
+        self.resilient_connect        = resilient_connect
+        self.catch_up                 = catch_up
+        self.pfs                      = pfs
+        self.device                   = device
+        self.system_version           = system_version
+        self.app_version              = app_version
+        self.lang_code                = lang_code
+        self.system_lang_code         = system_lang_code
+        self.lang_pack                = lang_pack
+        self.session_string           = session_string
+        self.in_memory                = in_memory
+        self.update_queue_capacity    = update_queue_capacity
+        self.update_overflow          = update_overflow
+        self.low_memory_mode          = low_memory_mode
+        self.allow_missing_channel_hash = allow_missing_channel_hash
+        self.auto_resolve_peers       = auto_resolve_peers
         self._raw: _RustClient | None = None
         self._handlers: dict[str, list[_Handler]] = {e: [] for e in _ALL_EVENTS}
         self._peer_cache = PeerCache()
@@ -237,7 +277,28 @@ class Client:
         api_id, api_hash = self._require_creds()
         session_path = self.session if self.session.endswith(".session") else self.session + ".session"
         _log.info("connecting (session=%r)", session_path)
-        self._raw = await _RustClient.builder(api_id, api_hash, session_path).connect()
+        builder = _RustClient.builder(api_id, api_hash, session_path)
+        builder.proxy                      = self.proxy
+        builder.allow_ipv6                 = self.allow_ipv6
+        builder.dc_addr                    = self.dc_addr
+        builder.probe_transport            = self.probe_transport
+        builder.resilient_connect          = self.resilient_connect
+        builder.catch_up                   = self.catch_up
+        builder.pfs                        = self.pfs
+        builder.device_model               = self.device
+        builder.system_version             = self.system_version
+        builder.app_version                = self.app_version
+        builder.lang_code                  = self.lang_code
+        builder.system_lang_code           = self.system_lang_code
+        builder.lang_pack                  = self.lang_pack
+        builder.session_string             = self.session_string
+        builder.in_memory                  = self.in_memory
+        builder.update_queue_capacity      = self.update_queue_capacity
+        builder.update_overflow            = self.update_overflow
+        builder.low_memory_mode            = self.low_memory_mode
+        builder.allow_missing_channel_hash = self.allow_missing_channel_hash
+        builder.auto_resolve_peers         = self.auto_resolve_peers
+        self._raw = await builder.connect()
         if not await self._raw.is_authorized():
             if self.bot_token:
                 await self._raw.bot_sign_in(self.bot_token)
@@ -291,13 +352,18 @@ class Client:
         text: str,
         *,
         parse_mode: str | None = None,
+        reply_markup=None,
     ) -> Message:
-        """Send a text message. parse_mode: None (plain), 'html', or 'markdown'/'md'."""
+        """Send a text message.
+
+        parse_mode: None (plain), 'html', or 'markdown'/'md'.
+        reply_markup: InlineKeyboard, ReplyKeyboard, RemoveKeyboard, or ForceReply.
+        """
         if parse_mode == "html":
-            return await self._client.send_html(peer, text)
+            return await self._client.send_html(peer, text, reply_markup)
         if parse_mode in ("markdown", "md"):
-            return await self._client.send_markdown(peer, text)
-        return await self._client.send_message(peer, text)
+            return await self._client.send_markdown(peer, text, reply_markup)
+        return await self._client.send_message(peer, text, reply_markup)
 
     async def send_to_self(self, text: str) -> None:
         """Send a plain-text message to Saved Messages (yourself)."""
@@ -341,6 +407,10 @@ class Client:
     async def get_messages_by_id(self, peer: str, message_ids: list[int]) -> list[Message]:
         return await self._client.get_messages_by_id(peer, message_ids)
 
+    async def get_message(self, peer: str, msg_id: int) -> Message | None:
+        msgs = await self._client.get_messages_by_id(peer, [msg_id])
+        return msgs[0] if msgs else None
+
     async def send_dice(self, peer: str, emoticon: str = "🎲") -> None:
         """Send an animated dice/game emoji.
 
@@ -363,6 +433,53 @@ class Client:
 
     async def get_chat_administrators(self, peer: str) -> list[ChatMember]:
         return await self._client.get_chat_administrators(peer)
+
+    async def get_participants(
+        self, peer: str, limit: int = 200
+    ) -> list[ChatMember]:
+        return await self._client.get_participants(peer, limit)
+
+    async def get_participants_filtered(
+        self,
+        peer: str,
+        filter: str = "recent",
+        limit: int = 200,
+    ) -> list[ChatMember]:
+        return await self._client.get_participants_filtered(peer, filter, limit)
+
+    async def kick_participant(self, peer: str, user: str) -> None:
+        await self._client.kick_participant(peer, user)
+
+    async def ban_participant(self, peer: str, user: str) -> None:
+        await self._client.ban_participant(peer, user)
+
+    async def ban_participant_until(
+        self, peer: str, user: str, until_date: int
+    ) -> None:
+        await self._client.ban_participant_until(peer, user, until_date)
+
+    async def promote_participant(
+        self, peer: str, user: str,
+        rights: list[str] | None = None,
+    ) -> None:
+        await self._client.promote_participant(peer, user, rights or [])
+
+    async def demote_participant(self, peer: str, user: str) -> None:
+        await self._client.demote_participant(peer, user)
+
+    async def get_profile_photos(
+        self, peer: str, limit: int = 100
+    ) -> list[tuple[int, int, int]]:
+        """Returns list of (file_id, access_hash, dc_id)."""
+        return await self._client.get_profile_photos(peer, limit)
+
+    async def search_peer(self, query: str) -> list[str]:
+        """Search among locally cached contacts and peers."""
+        return await self._client.search_peer(query)
+
+    def signal_network_restored(self) -> None:
+        """Tell the client network is back. Triggers immediate reconnect."""
+        self._client.signal_network_restored()
 
     async def archive_chat(self, peer: str) -> None:
         await self._client.archive_chat(peer)
@@ -449,6 +566,53 @@ class Client:
 
     async def search_global(self, query: str, limit: int = 100) -> list[Message]:
         return await self._client.search_global(query, limit)
+
+
+    async def iter_dialogs(self, *, limit: int | None = None):
+        """Async generator over all dialogs, most recent first.
+
+        Fetches up to `limit` dialogs. Without a limit, fetches up to 5000.
+        True server-side pagination requires raw GetDialogs offsets; add that
+        if you need to walk truly massive dialog lists.
+        """
+        fetch_limit = limit if limit is not None else 5000
+        dialogs = await self._client.get_dialogs(fetch_limit)
+        for d in dialogs:
+            yield d
+
+    async def iter_messages(self, peer: str, *, limit: int | None = None, offset_id: int = 0):
+        """Async generator over message history, newest first."""
+        remaining = limit
+        cur_offset = offset_id
+        batch = 100
+        while True:
+            chunk_size = batch if remaining is None else min(batch, remaining)
+            if chunk_size <= 0:
+                return
+            msgs = await self._client.get_message_history(peer, chunk_size, cur_offset)
+            if not msgs:
+                return
+            for m in msgs:
+                yield m
+            if remaining is not None:
+                remaining -= len(msgs)
+                if remaining <= 0:
+                    return
+            if len(msgs) < chunk_size:
+                return
+            cur_offset = msgs[-1].id
+
+    async def iter_reaction_users(self, peer: str, msg_id: int, *, reaction: str | None = None):
+        """Async generator over users who reacted to a message."""
+        offset: str | None = None
+        batch = 100
+        while True:
+            page = await self._client.iter_reaction_users(peer, msg_id, reaction, batch, offset)
+            for r in page.reactions:
+                yield r
+            if not getattr(page, "next_offset", None):
+                return
+            offset = page.next_offset
 
 
     async def create_group(self, title: str, user_ids: list[int]) -> Chat:
@@ -550,6 +714,9 @@ class Client:
         """Returns list of (user_id, option_bytes)."""
         return await self._client.get_poll_votes(peer, msg_id, limit)
 
+    async def get_poll_results(self, peer: str, msg_id: int, poll_hash: int) -> None:
+        """Fetch and cache the latest poll results from Telegram."""
+        await self._client.get_poll_results(peer, msg_id, poll_hash)
 
     async def read_reactions(self, peer: str) -> None:
         await self._client.read_reactions(peer)
@@ -560,6 +727,10 @@ class Client:
     async def get_reaction_list(self, peer: str, msg_id: int, limit: int = 100) -> list[tuple[int, str]]:
         """Returns list of (peer_id, reaction) pairs."""
         return await self._client.get_reaction_list(peer, msg_id, limit)
+
+    async def delete_reaction(self, peer: str, msg_id: int, participant: str) -> None:
+        """Remove a specific user's reaction from a message. Admin only."""
+        await self._client.delete_reaction(peer, msg_id, participant)
 
 
     async def set_bot_commands(self, commands: list[tuple[str, str]], lang_code: str = "") -> None:
@@ -592,10 +763,25 @@ class Client:
         cache_time: int = 300,
         is_personal: bool = False,
         next_offset: str | None = None,
+        switch_pm: "tuple[str, str] | None" = None,
     ) -> None:
         """Answer an inline query. Accepts InlineArticle/InlinePhoto/InlineDocument or raw tuples."""
         raw = [_inline_result_to_tuple(r) for r in results]
-        await self._client.answer_inline_query(query_id, raw, cache_time, is_personal, next_offset)
+        await self._client.answer_inline_query(
+            query_id, raw, cache_time, is_personal, next_offset, switch_pm, None
+        )
+
+    async def answer_inline_query_articles(
+        self,
+        query_id: int,
+        articles: "list[tuple[str, str, str]]",
+        cache_time: int = 300,
+        is_personal: bool = False,
+        next_offset: str | None = None,
+    ) -> None:
+        await self._client.answer_inline_query_articles(
+            query_id, articles, cache_time, is_personal, next_offset
+        )
 
 
     async def get_forum_topics(self, peer: str, limit: int = 100) -> list[ForumTopic]:
@@ -676,13 +862,14 @@ class Client:
         self,
         msg_id: "InlineMessageId | tuple[int, bytes]",
         new_text: str,
+        reply_markup=None,
     ) -> bool:
         """Edit an inline bot message. Accepts InlineMessageId or (dc_id, id_bytes) tuple."""
         if isinstance(msg_id, InlineMessageId):
             dc_id, id_bytes = msg_id.dc_id, msg_id.id_bytes
         else:
             dc_id, id_bytes = msg_id
-        return await self._client.edit_inline_message(dc_id, list(id_bytes), new_text)
+        return await self._client.edit_inline_message(dc_id, list(id_bytes), new_text, reply_markup)
 
 
     async def edit_chat_default_banned_rights(self, peer: str, restrictions: dict[str, bool]) -> None:
@@ -809,6 +996,15 @@ class Client:
         """QR login step 2. Returns username if scanned, None if still pending."""
         return await self._client.check_qr_login(list(token))
 
+    async def is_authorized(self) -> bool:
+        """Return True if the current session is authenticated."""
+        return await self._client.is_authorized()
+
+    async def login_bot(self, token: str) -> None:
+        """Sign in as a bot after start(). Saves session on success."""
+        await self._client.bot_sign_in(token)
+        await self._client.save_session()
+
 
     async def _resolve_peer(self, peer: Any) -> dict:
         """Resolve any peer representation to a TL InputPeer dict."""
@@ -840,6 +1036,102 @@ class Client:
                 self._peer_cache.store_channel(cid, ah)
             else:
                 self._peer_cache.store_chat(cid)
+
+
+    async def invite_links(
+        self,
+        peer: str,
+        *,
+        primary_only: bool = False,
+        revoked: bool = False,
+        limit: int = 100,
+    ):
+        """Return invite links for a chat.
+
+        primary_only=True: export/get the permanent primary link (single object).
+        primary_only=False: return all links created by the current admin (list).
+        """
+        if primary_only:
+            return await self._client.export_invite_link(peer, None, None, False, None)
+        me = await self._client.get_me()
+        return await self._client.get_invite_links(peer, me.id, revoked, limit, None, None)
+
+    async def iter_invite_links(self, peer: str, *, revoked: bool = False):
+        """Async generator over all invite links created by the current admin."""
+        me = await self._client.get_me()
+        offset_date: int | None = None
+        offset_link: str | None = None
+        batch = 100
+        while True:
+            links = await self._client.get_invite_links(
+                peer, me.id, revoked, batch, offset_date, offset_link
+            )
+            if not links:
+                return
+            for link in links:
+                yield link
+            if len(links) < batch:
+                return
+            last = links[-1]
+            offset_date = getattr(last, "date", None)
+            offset_link = getattr(last, "link", None)
+            if not offset_link:
+                return
+
+    async def iter_invite_link_members(self, peer: str, link: str, *, requested: bool = False):
+        """Async generator over users who joined via an invite link."""
+        offset_date = 0
+        offset_user_id = 0
+        batch = 100
+        while True:
+            members = await self._client.get_invite_link_members(
+                peer, link, requested, batch, offset_date, offset_user_id
+            )
+            if not members:
+                return
+            for m in members:
+                yield m
+            if len(members) < batch:
+                return
+            last = members[-1]
+            offset_date = getattr(last, "date", 0)
+            offset_user_id = getattr(last, "user_id", 0)
+
+    async def edit_invite_link(
+        self,
+        peer: str,
+        link: str,
+        *,
+        expire_date: int | None = None,
+        usage_limit: int | None = None,
+        request_needed: bool | None = None,
+        title: str | None = None,
+    ):
+        """Edit an existing invite link. Returns the updated link object."""
+        return await self._client.edit_invite_link(
+            peer, link, expire_date, usage_limit, request_needed, title
+        )
+
+    async def revoke_invite_link(self, peer: str, link: str):
+        """Revoke an invite link. Returns the revoked link object."""
+        return await self._client.revoke_invite_link(peer, link)
+
+    async def delete_invite_link(self, peer: str, link: str) -> None:
+        """Permanently delete a (previously revoked) invite link."""
+        await self._client.delete_invite_link(peer, link)
+
+    async def clear_revoked_invite_links(self, peer: str) -> None:
+        """Delete all revoked invite links created by the current admin."""
+        me = await self._client.get_me()
+        await self._client.delete_revoked_invite_links(peer, me.id)
+
+    async def resolve_invite_link(self, link: str):
+        """Peek at an invite link without joining. Returns chat info."""
+        return await self._client.check_invite(link)
+
+    async def join_invite_link(self, link: str):
+        """Join a chat by invite link. Returns the InputPeer of the joined chat."""
+        return await self._client.join_by_invite(link)
 
 
     async def invoke(self, func: Any) -> dict:

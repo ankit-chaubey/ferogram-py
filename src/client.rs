@@ -17,7 +17,7 @@ use pyo3_async_runtimes::tokio::future_into_py;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::{auth::*, message::from_incoming, py_err, types::*};
+use crate::{auth::*, keyboards::extract_markup, message::from_incoming, py_err, types::*};
 use ferogram::PeerExt;
 use ferogram::tl;
 
@@ -80,6 +80,26 @@ impl Client {
             api_hash,
             session,
             allow_zero_hash: false,
+            proxy: None,
+            allow_ipv6: false,
+            dc_addr: None,
+            probe_transport: false,
+            resilient_connect: false,
+            catch_up: false,
+            pfs: false,
+            device_model: None,
+            system_version: None,
+            app_version: None,
+            lang_code: None,
+            system_lang_code: None,
+            lang_pack: None,
+            session_string: None,
+            in_memory: false,
+            update_queue_capacity: None,
+            update_overflow: None,
+            low_memory_mode: false,
+            allow_missing_channel_hash: false,
+            auto_resolve_peers: false,
         }
     }
 
@@ -195,10 +215,16 @@ impl Client {
         py: Python<'py>,
         peer: String,
         text: String,
+        reply_markup: Option<Bound<'py, PyAny>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let m = c.send_message(peer, text).await.map_err(py_err)?;
+            let mut msg = ferogram::InputMessage::text(&text);
+            if let Some(rm) = markup {
+                msg = msg.reply_markup(rm);
+            }
+            let m = c.send_message(peer, msg).await.map_err(py_err)?;
             Ok(from_incoming(m, Some(c)))
         })
     }
@@ -208,13 +234,17 @@ impl Client {
         py: Python<'py>,
         peer: String,
         html: String,
+        reply_markup: Option<Bound<'py, PyAny>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
+            let mut msg = ferogram::InputMessage::html(html);
+            if let Some(rm) = markup {
+                msg = msg.reply_markup(rm);
+            }
             Ok(from_incoming(
-                c.send_message(peer, ferogram::InputMessage::html(html))
-                    .await
-                    .map_err(py_err)?,
+                c.send_message(peer, msg).await.map_err(py_err)?,
                 Some(c),
             ))
         })
@@ -225,13 +255,17 @@ impl Client {
         py: Python<'py>,
         peer: String,
         md: String,
+        reply_markup: Option<Bound<'py, PyAny>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
+            let mut msg = ferogram::InputMessage::markdown(md);
+            if let Some(rm) = markup {
+                msg = msg.reply_markup(rm);
+            }
             Ok(from_incoming(
-                c.send_message(peer, ferogram::InputMessage::markdown(md))
-                    .await
-                    .map_err(py_err)?,
+                c.send_message(peer, msg).await.map_err(py_err)?,
                 Some(c),
             ))
         })
@@ -476,6 +510,228 @@ impl Client {
                 .collect();
             Ok(result)
         })
+    }
+
+    fn get_participants<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        limit: i32,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            let list = c.get_participants(peer, limit).await.map_err(py_err)?;
+            let result: Vec<ChatMember> = list
+                .iter()
+                .map(|p| {
+                    let (status_s, rank) = participant_status(p);
+                    ChatMember {
+                        user_id: p.user.id,
+                        first_name: p.user.first_name.clone().unwrap_or_default(),
+                        last_name: p.user.last_name.clone(),
+                        username: p.user.username.clone(),
+                        bot: p.user.bot,
+                        status: status_s.to_string(),
+                        admin_rank: rank,
+                    }
+                })
+                .collect();
+            Ok(result)
+        })
+    }
+
+    fn get_participants_filtered<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        filter: String,
+        limit: i32,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let tl_filter = match filter.as_str() {
+            "recent" => tl::enums::ChannelParticipantsFilter::ChannelParticipantsRecent,
+            "admins" => tl::enums::ChannelParticipantsFilter::ChannelParticipantsAdmins,
+            "kicked" => tl::enums::ChannelParticipantsFilter::ChannelParticipantsKicked(
+                tl::types::ChannelParticipantsKicked { q: String::new() },
+            ),
+            "banned" => tl::enums::ChannelParticipantsFilter::ChannelParticipantsBanned(
+                tl::types::ChannelParticipantsBanned { q: String::new() },
+            ),
+            "bots" => tl::enums::ChannelParticipantsFilter::ChannelParticipantsBots,
+            other => {
+                return Err(py_err(format!(
+                    "filter must be recent|admins|kicked|banned|bots, got {other:?}"
+                )));
+            }
+        };
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            let list = c
+                .get_participants_filtered(peer, Some(tl_filter), limit)
+                .await
+                .map_err(py_err)?;
+            let result: Vec<ChatMember> = list
+                .iter()
+                .map(|p| {
+                    let (status_s, rank) = participant_status(p);
+                    ChatMember {
+                        user_id: p.user.id,
+                        first_name: p.user.first_name.clone().unwrap_or_default(),
+                        last_name: p.user.last_name.clone(),
+                        username: p.user.username.clone(),
+                        bot: p.user.bot,
+                        status: status_s.to_string(),
+                        admin_rank: rank,
+                    }
+                })
+                .collect();
+            Ok(result)
+        })
+    }
+
+    fn kick_participant<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        user: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let uid: i64 = user
+            .parse()
+            .map_err(|_| py_err("user must be a numeric ID"))?;
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            c.kick_participant(peer, uid).await.map_err(py_err)?;
+            Ok(())
+        })
+    }
+
+    fn ban_participant<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        user: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let uid: i64 = user
+            .parse()
+            .map_err(|_| py_err("user must be a numeric ID"))?;
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            c.ban_participant(peer, uid).await.map_err(py_err)?;
+            Ok(())
+        })
+    }
+
+    fn ban_participant_until<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        user: String,
+        until_date: i32,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let uid: i64 = user
+            .parse()
+            .map_err(|_| py_err("user must be a numeric ID"))?;
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            c.ban_participant_until(peer, uid, until_date)
+                .await
+                .map_err(py_err)?;
+            Ok(())
+        })
+    }
+
+    fn promote_participant<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        user: String,
+        rights: Vec<String>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let uid: i64 = user
+            .parse()
+            .map_err(|_| py_err("user must be a numeric ID"))?;
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            c.set_admin_rights(peer, uid, |mut b| {
+                if rights.is_empty() {
+                    b = ferogram::participants::AdminRightsBuilder::full_admin();
+                } else {
+                    for r in &rights {
+                        b = match r.as_str() {
+                            "change_info" => b.change_info(true),
+                            "post_messages" => b.post_messages(true),
+                            "edit_messages" => b.edit_messages(true),
+                            "delete_messages" => b.delete_messages(true),
+                            "ban_users" => b.ban_users(true),
+                            "invite_users" => b.invite_users(true),
+                            "pin_messages" => b.pin_messages(true),
+                            "add_admins" => b.add_admins(true),
+                            "manage_call" => b.manage_call(true),
+                            _ => b,
+                        };
+                    }
+                }
+                b
+            })
+            .await
+            .map_err(py_err)?;
+            Ok(())
+        })
+    }
+
+    fn demote_participant<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        user: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let uid: i64 = user
+            .parse()
+            .map_err(|_| py_err("user must be a numeric ID"))?;
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            c.demote_participant(peer, uid).await.map_err(py_err)?;
+            Ok(())
+        })
+    }
+
+    fn get_profile_photos<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        limit: i32,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            let photos = c.get_profile_photos(peer, limit).await.map_err(py_err)?;
+            let result: Vec<(i64, i64, i32)> = photos
+                .into_iter()
+                .filter_map(|p| match p {
+                    tl::enums::Photo::Photo(ph) => Some((ph.id, ph.access_hash, ph.dc_id)),
+                    tl::enums::Photo::Empty(_) => None,
+                })
+                .collect();
+            Ok(result)
+        })
+    }
+
+    fn search_peer<'py>(&self, py: Python<'py>, query: String) -> PyResult<Bound<'py, PyAny>> {
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            let peers = c.search_peer(&query).await.map_err(py_err)?;
+            let result: Vec<String> = peers
+                .into_iter()
+                .map(|p| match p {
+                    tl::enums::Peer::User(u) => u.user_id.to_string(),
+                    tl::enums::Peer::Chat(ch) => ch.chat_id.to_string(),
+                    tl::enums::Peer::Channel(ch) => ch.channel_id.to_string(),
+                })
+                .collect();
+            Ok(result)
+        })
+    }
+
+    fn signal_network_restored(&self) {
+        self.inner.signal_network_restored();
     }
 
     fn archive_chat<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
@@ -2229,8 +2485,6 @@ impl Client {
         })
     }
 
-    // answer_inline_query: results as JSON strings (each a serialized InputBotInlineResult)
-    // For the Python layer we expose a simplified article-only helper
     fn answer_inline_query_articles<'py>(
         &self,
         py: Python<'py>,
@@ -2238,10 +2492,10 @@ impl Client {
         articles: Vec<(String, String, String)>,
         cache_time: i32,
         is_personal: bool,
+        next_offset: Option<String>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            // articles: Vec<(id, title, message_text)>
             let results = articles
                 .into_iter()
                 .map(|(id, title, msg)| {
@@ -2267,7 +2521,7 @@ impl Client {
                     )
                 })
                 .collect();
-            c.answer_inline_query(query_id, results, cache_time, is_personal, None)
+            c.answer_inline_query(query_id, results, cache_time, is_personal, next_offset)
                 .await
                 .map_err(py_err)?;
             Ok(())
@@ -2862,15 +3116,15 @@ impl Client {
         })
     }
 
-    // edit inline message (id as bytes = serialized InputBotInlineMessageId)
-
     fn edit_inline_message<'py>(
         &self,
         py: Python<'py>,
         dc_id: i32,
         id_bytes: Vec<u8>,
         new_text: String,
+        reply_markup: Option<Bound<'py, PyAny>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             use ferogram::tl::{Cursor, Deserializable};
@@ -2878,55 +3132,178 @@ impl Client {
             let id = tl::enums::InputBotInlineMessageId::deserialize(&mut cur).map_err(py_err)?;
             let _ = dc_id;
             let ok = c
-                .edit_inline_message(id, &new_text, None)
+                .edit_inline_message(id, &new_text, markup)
                 .await
                 .map_err(py_err)?;
             Ok(ok)
         })
     }
 
-    // full answer_inline_query: results as list of (type, id, title, message_text, [thumb_url])
-    // type: "article" | "photo" | "document"
-
     fn answer_inline_query<'py>(
         &self,
         py: Python<'py>,
         query_id: i64,
-        results: Vec<(String, String, String, String, Option<String>)>,
+        results: Vec<(
+            String,
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            i32,
+            i32,
+            Option<String>,
+            Option<PyObject>,
+        )>,
         cache_time: i32,
         is_personal: bool,
         next_offset: Option<String>,
+        switch_pm: Option<(String, String)>,
+        switch_webview: Option<(String, String)>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let extracted: Vec<_> = results
+            .into_iter()
+            .map(
+                |(
+                    type_,
+                    id,
+                    title,
+                    msg,
+                    desc,
+                    url,
+                    thumb_url,
+                    media_url,
+                    width,
+                    height,
+                    mime,
+                    markup_obj,
+                )| {
+                    let markup = markup_obj
+                        .as_ref()
+                        .map(|o| extract_markup(o.bind(py)))
+                        .transpose()?;
+                    Ok::<_, PyErr>((
+                        type_, id, title, msg, desc, url, thumb_url, media_url, width, height,
+                        mime, markup,
+                    ))
+                },
+            )
+            .collect::<PyResult<_>>()?;
+
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let tl_results = results
+            fn make_web_doc(url: &str, mime: &str) -> tl::enums::InputWebDocument {
+                tl::enums::InputWebDocument::InputWebDocument(tl::types::InputWebDocument {
+                    url: url.to_owned(),
+                    size: 0,
+                    mime_type: mime.to_owned(),
+                    attributes: vec![],
+                })
+            }
+
+            let mut has_photo = false;
+            let tl_results: Vec<_> = extracted
                 .into_iter()
-                .map(|(type_, id, title, msg, _thumb)| {
-                    tl::enums::InputBotInlineResult::InputBotInlineResult(
-                        tl::types::InputBotInlineResult {
-                            id,
-                            r#type: type_,
-                            title: Some(title),
-                            description: None,
-                            url: None,
-                            thumb: None,
-                            content: None,
-                            send_message: tl::enums::InputBotInlineMessage::Text(
-                                tl::types::InputBotInlineMessageText {
-                                    no_webpage: false,
-                                    invert_media: false,
-                                    message: msg,
-                                    entities: None,
-                                    reply_markup: None,
+                .map(
+                    |(
+                        type_,
+                        id,
+                        title,
+                        msg,
+                        desc,
+                        url,
+                        thumb_url,
+                        media_url,
+                        _width,
+                        _height,
+                        mime,
+                        reply_markup,
+                    )| {
+                        let send_message = tl::enums::InputBotInlineMessage::Text(
+                            tl::types::InputBotInlineMessageText {
+                                no_webpage: false,
+                                invert_media: false,
+                                message: msg,
+                                entities: None,
+                                reply_markup,
+                            },
+                        );
+                        let thumb = thumb_url.as_deref().map(|u| make_web_doc(u, "image/jpeg"));
+                        match type_.as_str() {
+                            "photo" => {
+                                has_photo = true;
+                                let photo_mime = mime.unwrap_or_else(|| "image/jpeg".into());
+                                let content =
+                                    media_url.as_deref().map(|u| make_web_doc(u, &photo_mime));
+                                tl::enums::InputBotInlineResult::InputBotInlineResult(
+                                    tl::types::InputBotInlineResult {
+                                        id,
+                                        r#type: "photo".into(),
+                                        title: Some(title),
+                                        description: desc,
+                                        url,
+                                        thumb,
+                                        content,
+                                        send_message,
+                                    },
+                                )
+                            }
+                            "document" => {
+                                let doc_mime =
+                                    mime.unwrap_or_else(|| "application/octet-stream".into());
+                                let content =
+                                    media_url.as_deref().map(|u| make_web_doc(u, &doc_mime));
+                                tl::enums::InputBotInlineResult::InputBotInlineResult(
+                                    tl::types::InputBotInlineResult {
+                                        id,
+                                        r#type: "document".into(),
+                                        title: Some(title),
+                                        description: desc,
+                                        url,
+                                        thumb,
+                                        content,
+                                        send_message,
+                                    },
+                                )
+                            }
+                            _ => tl::enums::InputBotInlineResult::InputBotInlineResult(
+                                tl::types::InputBotInlineResult {
+                                    id,
+                                    r#type: "article".into(),
+                                    title: Some(title),
+                                    description: desc,
+                                    url,
+                                    thumb,
+                                    content: None,
+                                    send_message,
                                 },
                             ),
-                        },
-                    )
-                })
+                        }
+                    },
+                )
                 .collect();
-            c.answer_inline_query(query_id, tl_results, cache_time, is_personal, next_offset)
-                .await
-                .map_err(py_err)?;
+
+            let tl_switch_pm = switch_pm.map(|(text, start_param)| {
+                tl::enums::InlineBotSwitchPm::InlineBotSwitchPm(tl::types::InlineBotSwitchPm {
+                    text,
+                    start_param,
+                })
+            });
+
+            let req = tl::functions::messages::SetInlineBotResults {
+                gallery: has_photo,
+                private: is_personal,
+                query_id,
+                results: tl_results,
+                cache_time,
+                next_offset,
+                switch_pm: tl_switch_pm,
+                switch_webview: None,
+            };
+            let _ = switch_webview;
+            c.invoke(&req).await.map_err(py_err)?;
             Ok(())
         })
     }
