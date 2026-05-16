@@ -253,7 +253,6 @@ await client.send_message(peer, text, parse_mode=None, reply_markup=None)
 #   <tg-time unix="N" format="F">, <tg-emoji emoji-id="N">
 #   <code>, <pre>, <pre><code class="language-X">
 
-await client.send_to_self(text)
 await client.edit_message(peer, message_id, new_text)
 await client.delete_message(message_id, revoke=True)
 await client.delete_messages([id1, id2], revoke=True)

@@ -210,85 +210,119 @@ impl Client {
 
     // messaging
 
+    #[pyo3(signature = (
+        peer, text,
+        parse_mode = None,
+        reply_markup = None,
+        reply_to = None,
+        silent = false,
+        background = false,
+        clear_draft = false,
+        no_webpage = false,
+        invert_media = false,
+        schedule_date = None,
+        schedule_once_online = false,
+    ))]
     fn send_message<'py>(
         &self,
         py: Python<'py>,
         peer: String,
         text: String,
+        parse_mode: Option<String>,
         reply_markup: Option<Bound<'py, PyAny>>,
+        reply_to: Option<i32>,
+        silent: bool,
+        background: bool,
+        clear_draft: bool,
+        no_webpage: bool,
+        invert_media: bool,
+        schedule_date: Option<i32>,
+        schedule_once_online: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let mut msg = ferogram::InputMessage::text(&text);
+            let mut msg = match parse_mode.as_deref() {
+                Some("html") | Some("HTML") => ferogram::InputMessage::html(&text),
+                Some("markdown") | Some("md") | Some("Markdown") => {
+                    ferogram::InputMessage::markdown(&text)
+                }
+                _ => ferogram::InputMessage::text(&text),
+            };
             if let Some(rm) = markup {
                 msg = msg.reply_markup(rm);
+            }
+            if let Some(id) = reply_to {
+                msg = msg.reply_to(Some(id));
+            }
+            if silent {
+                msg = msg.silent(true);
+            }
+            if background {
+                msg = msg.background(true);
+            }
+            if clear_draft {
+                msg = msg.clear_draft(true);
+            }
+            if no_webpage {
+                msg = msg.no_webpage(true);
+            }
+            if invert_media {
+                msg = msg.invert_media(true);
+            }
+            if schedule_once_online {
+                msg = msg.schedule_once_online();
+            } else if let Some(ts) = schedule_date {
+                msg = msg.schedule_date(Some(ts));
             }
             let m = c.send_message(peer, msg).await.map_err(py_err)?;
             Ok(from_incoming(m, Some(c)))
         })
     }
 
-    fn send_html<'py>(
-        &self,
-        py: Python<'py>,
-        peer: String,
-        html: String,
-        reply_markup: Option<Bound<'py, PyAny>>,
-    ) -> PyResult<Bound<'py, PyAny>> {
-        let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
-        let c = Arc::clone(&self.inner);
-        future_into_py(py, async move {
-            let mut msg = ferogram::InputMessage::html(html);
-            if let Some(rm) = markup {
-                msg = msg.reply_markup(rm);
-            }
-            Ok(from_incoming(
-                c.send_message(peer, msg).await.map_err(py_err)?,
-                Some(c),
-            ))
-        })
-    }
-
-    fn send_markdown<'py>(
-        &self,
-        py: Python<'py>,
-        peer: String,
-        md: String,
-        reply_markup: Option<Bound<'py, PyAny>>,
-    ) -> PyResult<Bound<'py, PyAny>> {
-        let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
-        let c = Arc::clone(&self.inner);
-        future_into_py(py, async move {
-            let mut msg = ferogram::InputMessage::markdown(md);
-            if let Some(rm) = markup {
-                msg = msg.reply_markup(rm);
-            }
-            Ok(from_incoming(
-                c.send_message(peer, msg).await.map_err(py_err)?,
-                Some(c),
-            ))
-        })
-    }
-
-    fn send_to_self<'py>(&self, py: Python<'py>, text: String) -> PyResult<Bound<'py, PyAny>> {
-        let c = Arc::clone(&self.inner);
-        future_into_py(py, async move {
-            let m = c.send_to_self(text).await.map_err(py_err)?;
-            Ok(from_incoming(m, Some(c)))
-        })
-    }
-
+    #[pyo3(signature = (
+        peer, message_id, new_text,
+        parse_mode = None,
+        reply_markup = None,
+        no_webpage = false,
+        invert_media = false,
+        schedule_date = None,
+    ))]
     fn edit_message<'py>(
         &self,
         py: Python<'py>,
         peer: String,
         message_id: i32,
         new_text: String,
+        parse_mode: Option<String>,
+        reply_markup: Option<Bound<'py, PyAny>>,
+        no_webpage: bool,
+        invert_media: bool,
+        schedule_date: Option<i32>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.edit_message(peer, message_id, new_text)
+            let mut msg = match parse_mode.as_deref() {
+                Some("html") | Some("HTML") => ferogram::InputMessage::html(&new_text),
+                Some("markdown") | Some("md") | Some("Markdown") => {
+                    ferogram::InputMessage::markdown(&new_text)
+                }
+                _ => ferogram::InputMessage::text(&new_text),
+            };
+            if let Some(rm) = markup {
+                msg = msg.reply_markup(rm);
+            }
+            if no_webpage {
+                msg = msg.no_webpage(true);
+            }
+            if invert_media {
+                msg = msg.invert_media(true);
+            }
+            if let Some(ts) = schedule_date {
+                msg = msg.schedule_date(Some(ts));
+            }
+            c.edit_message(peer, message_id, msg)
                 .await
                 .map_err(py_err)?;
             Ok(())
@@ -884,14 +918,36 @@ impl Client {
 
     // media
 
-    #[pyo3(signature = (peer, path, caption = String::new()))]
+    #[pyo3(signature = (
+        peer, path,
+        caption = String::new(),
+        parse_mode = None,
+        reply_markup = None,
+        reply_to = None,
+        silent = false,
+        background = false,
+        clear_draft = false,
+        invert_media = false,
+        schedule_date = None,
+        schedule_once_online = false,
+    ))]
     fn send_photo<'py>(
         &self,
         py: Python<'py>,
         peer: String,
         path: String,
         caption: String,
+        parse_mode: Option<String>,
+        reply_markup: Option<Bound<'py, PyAny>>,
+        reply_to: Option<i32>,
+        silent: bool,
+        background: bool,
+        clear_draft: bool,
+        invert_media: bool,
+        schedule_date: Option<i32>,
+        schedule_once_online: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let data = tokio::fs::read(&path).await.map_err(py_err)?;
@@ -904,19 +960,58 @@ impl Client {
                 .upload_file(&data, &name, "image/jpeg")
                 .await
                 .map_err(py_err)?;
-            let msg = c
-                .send_file(
-                    peer,
-                    uploaded.as_photo_media(),
-                    &ferogram::InputMessage::text(caption),
-                )
+            let mut msg = match parse_mode.as_deref() {
+                Some("html") | Some("HTML") => ferogram::InputMessage::html(&caption),
+                Some("markdown") | Some("md") | Some("Markdown") => {
+                    ferogram::InputMessage::markdown(&caption)
+                }
+                _ => ferogram::InputMessage::text(&caption),
+            };
+            if let Some(rm) = markup {
+                msg = msg.reply_markup(rm);
+            }
+            if let Some(id) = reply_to {
+                msg = msg.reply_to(Some(id));
+            }
+            if silent {
+                msg = msg.silent(true);
+            }
+            if background {
+                msg = msg.background(true);
+            }
+            if clear_draft {
+                msg = msg.clear_draft(true);
+            }
+            if invert_media {
+                msg = msg.invert_media(true);
+            }
+            if schedule_once_online {
+                msg = msg.schedule_once_online();
+            } else if let Some(ts) = schedule_date {
+                msg = msg.schedule_date(Some(ts));
+            }
+            let m = c
+                .send_file(peer, uploaded.as_photo_media(), &msg)
                 .await
                 .map_err(py_err)?;
-            Ok(from_incoming(msg, Some(c)))
+            Ok(from_incoming(m, Some(c)))
         })
     }
 
-    #[pyo3(signature = (peer, path, caption = String::new(), mime_type = None))]
+    #[pyo3(signature = (
+        peer, path,
+        caption = String::new(),
+        mime_type = None,
+        parse_mode = None,
+        reply_markup = None,
+        reply_to = None,
+        silent = false,
+        background = false,
+        clear_draft = false,
+        invert_media = false,
+        schedule_date = None,
+        schedule_once_online = false,
+    ))]
     fn send_document<'py>(
         &self,
         py: Python<'py>,
@@ -924,7 +1019,17 @@ impl Client {
         path: String,
         caption: String,
         mime_type: Option<String>,
+        parse_mode: Option<String>,
+        reply_markup: Option<Bound<'py, PyAny>>,
+        reply_to: Option<i32>,
+        silent: bool,
+        background: bool,
+        clear_draft: bool,
+        invert_media: bool,
+        schedule_date: Option<i32>,
+        schedule_once_online: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let markup = reply_markup.as_ref().map(extract_markup).transpose()?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let data = tokio::fs::read(&path).await.map_err(py_err)?;
@@ -935,19 +1040,58 @@ impl Client {
                 .to_owned();
             let mime = mime_type.as_deref().unwrap_or("application/octet-stream");
             let uploaded = c.upload_file(&data, &name, mime).await.map_err(py_err)?;
-            let msg = c
-                .send_file(
-                    peer,
-                    uploaded.as_document_media(),
-                    &ferogram::InputMessage::text(caption),
-                )
+            let mut msg = match parse_mode.as_deref() {
+                Some("html") | Some("HTML") => ferogram::InputMessage::html(&caption),
+                Some("markdown") | Some("md") | Some("Markdown") => {
+                    ferogram::InputMessage::markdown(&caption)
+                }
+                _ => ferogram::InputMessage::text(&caption),
+            };
+            if let Some(rm) = markup {
+                msg = msg.reply_markup(rm);
+            }
+            if let Some(id) = reply_to {
+                msg = msg.reply_to(Some(id));
+            }
+            if silent {
+                msg = msg.silent(true);
+            }
+            if background {
+                msg = msg.background(true);
+            }
+            if clear_draft {
+                msg = msg.clear_draft(true);
+            }
+            if invert_media {
+                msg = msg.invert_media(true);
+            }
+            if schedule_once_online {
+                msg = msg.schedule_once_online();
+            } else if let Some(ts) = schedule_date {
+                msg = msg.schedule_date(Some(ts));
+            }
+            let m = c
+                .send_file(peer, uploaded.as_document_media(), &msg)
                 .await
                 .map_err(py_err)?;
-            Ok(from_incoming(msg, Some(c)))
+            Ok(from_incoming(m, Some(c)))
         })
     }
 
-    #[pyo3(signature = (peer, path, caption = String::new(), mime_type = None))]
+    #[pyo3(signature = (
+        peer, path,
+        caption = String::new(),
+        mime_type = None,
+        parse_mode = None,
+        reply_markup = None,
+        reply_to = None,
+        silent = false,
+        background = false,
+        clear_draft = false,
+        invert_media = false,
+        schedule_date = None,
+        schedule_once_online = false,
+    ))]
     fn send_file<'py>(
         &self,
         py: Python<'py>,
@@ -955,11 +1099,33 @@ impl Client {
         path: String,
         caption: String,
         mime_type: Option<String>,
+        parse_mode: Option<String>,
+        reply_markup: Option<Bound<'py, PyAny>>,
+        reply_to: Option<i32>,
+        silent: bool,
+        background: bool,
+        clear_draft: bool,
+        invert_media: bool,
+        schedule_date: Option<i32>,
+        schedule_once_online: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
-        self.send_document(py, peer, path, caption, mime_type)
+        self.send_document(
+            py,
+            peer,
+            path,
+            caption,
+            mime_type,
+            parse_mode,
+            reply_markup,
+            reply_to,
+            silent,
+            background,
+            clear_draft,
+            invert_media,
+            schedule_date,
+            schedule_once_online,
+        )
     }
-
-    // account helpers
 
     fn get_me<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
