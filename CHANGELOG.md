@@ -1,3 +1,29 @@
+## 0.3.0 (2026-05-16)
+
+### ferogram core upgraded to 0.5.0
+
+The Rust dependency is now ferogram 0.5.0.
+
+### send_poll: full PollBuilder kwargs exposed
+
+`send_poll` now accepts all options the Rust `PollBuilder` supports: `public_voters`,
+`shuffle_answers`, `hide_results_until_close`, `close_period`, `close_date`, and `solution`.
+Previously only `quiz`, `correct_index`, and `multiple_choice` were wired through.
+
+### edit_chat_default_banned_rights: send_reactions added
+
+The `restrictions` dict now accepts `"send_reactions"` as a key. Mirrors the new
+`send_reactions` field on `BannedRightsBuilder` added in ferogram 0.5.0.
+
+### poll_results method
+
+`poll_results(peer, msg_id)` is now the canonical way to fetch poll stats. Returns
+the votes graph as a JSON string. The old `get_poll_results(peer, msg_id, poll_hash)`
+is kept for backward compat but is deprecated; the `poll_hash` parameter is ignored
+because ferogram 0.5.0 dropped the underlying API call it relied on.
+
+---
+
 # Changelog
 
 ## 0.2.3 (2026-05-14)

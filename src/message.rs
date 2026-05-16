@@ -250,7 +250,7 @@ impl Message {
             .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("no client on message"))?;
         let peer = self.chat_id.to_string();
         future_into_py(py, async move {
-            client.mark_as_read(peer).await.map_err(py_err)?;
+            client.mark_read(peer).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -264,10 +264,7 @@ impl Message {
         let peer = self.chat_id.to_string();
         let id = self.id;
         future_into_py(py, async move {
-            let msgs = client
-                .get_messages_by_id(peer, &[id])
-                .await
-                .map_err(py_err)?;
+            let msgs = client.get_messages(peer, &[id]).await.map_err(py_err)?;
             Ok(msgs
                 .into_iter()
                 .next()
@@ -422,10 +419,7 @@ impl Message {
         };
 
         future_into_py(py, async move {
-            let msgs = client
-                .get_messages_by_id(peer, &[msg_id])
-                .await
-                .map_err(py_err)?;
+            let msgs = client.get_messages(peer, &[msg_id]).await.map_err(py_err)?;
             let msg = msgs
                 .into_iter()
                 .next()

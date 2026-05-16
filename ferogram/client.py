@@ -703,8 +703,19 @@ class Client:
         quiz: bool = False,
         correct_index: int | None = None,
         multiple_choice: bool = False,
+        public_voters: bool = False,
+        shuffle_answers: bool = False,
+        hide_results_until_close: bool = False,
+        close_period: int | None = None,
+        close_date: int | None = None,
+        solution: str | None = None,
     ) -> None:
-        await self._client.send_poll(peer, question, answers, quiz, correct_index, multiple_choice)
+        await self._client.send_poll(
+            peer, question, answers,
+            quiz, correct_index, multiple_choice,
+            public_voters, shuffle_answers, hide_results_until_close,
+            close_period, close_date, solution,
+        )
 
     async def send_vote(self, peer: str, msg_id: int, options: list[bytes]) -> None:
         """options: list of raw option bytes from the poll answer (e.g. [b'\\x00'])"""
@@ -714,9 +725,13 @@ class Client:
         """Returns list of (user_id, option_bytes)."""
         return await self._client.get_poll_votes(peer, msg_id, limit)
 
-    async def get_poll_results(self, peer: str, msg_id: int, poll_hash: int) -> None:
-        """Fetch and cache the latest poll results from Telegram."""
+    async def get_poll_results(self, peer: str, msg_id: int, poll_hash: int = 0) -> None:
+        """Deprecated. Use poll_results() instead. Kept for backward compat."""
         await self._client.get_poll_results(peer, msg_id, poll_hash)
+
+    async def poll_results(self, peer: str, msg_id: int) -> str:
+        """Fetch poll stats. Returns the votes_graph JSON string."""
+        return await self._client.get_poll_stats(peer, msg_id)
 
     async def read_reactions(self, peer: str) -> None:
         await self._client.read_reactions(peer)
@@ -874,7 +889,8 @@ class Client:
 
     async def edit_chat_default_banned_rights(self, peer: str, restrictions: dict[str, bool]) -> None:
         """restrictions keys: send_messages, send_media, send_stickers, send_gifs,
-        send_games, send_inline, embed_links, send_polls, change_info, invite_users, pin_messages.
+        send_games, send_inline, embed_links, send_polls, send_reactions, change_info,
+        invite_users, pin_messages.
         True = allowed, False = restricted."""
         await self._client.edit_chat_default_banned_rights(peer, restrictions)
 

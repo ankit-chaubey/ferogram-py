@@ -354,7 +354,9 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.unpin_message(peer, message_id).await.map_err(py_err)?;
+            c.pin_message(peer, message_id, false)
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
@@ -374,7 +376,7 @@ impl Client {
     fn mark_as_read<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.mark_as_read(peer).await.map_err(py_err)?;
+            c.mark_read(peer).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -430,7 +432,7 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let msgs = c.get_messages_by_id(peer, &ids).await.map_err(py_err)?;
+            let msgs = c.get_messages(peer, &ids).await.map_err(py_err)?;
             Ok(msgs
                 .into_iter()
                 .map(|m| from_incoming(m, Some(Arc::clone(&c))))
@@ -599,7 +601,7 @@ impl Client {
             .map_err(|_| py_err("user must be a numeric ID"))?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.kick_participant(peer, uid).await.map_err(py_err)?;
+            c.kick(peer, uid).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -615,7 +617,7 @@ impl Client {
             .map_err(|_| py_err("user must be a numeric ID"))?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.ban_participant(peer, uid).await.map_err(py_err)?;
+            c.ban(peer, uid, None).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -632,9 +634,7 @@ impl Client {
             .map_err(|_| py_err("user must be a numeric ID"))?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.ban_participant_until(peer, uid, until_date)
-                .await
-                .map_err(py_err)?;
+            c.ban(peer, uid, Some(until_date)).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -651,7 +651,7 @@ impl Client {
             .map_err(|_| py_err("user must be a numeric ID"))?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.set_admin_rights(peer, uid, |mut b| {
+            c.set_admin(peer, uid, |mut b| {
                 if rights.is_empty() {
                     b = ferogram::participants::AdminRightsBuilder::full_admin();
                 } else {
@@ -689,7 +689,7 @@ impl Client {
             .map_err(|_| py_err("user must be a numeric ID"))?;
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.demote_participant(peer, uid).await.map_err(py_err)?;
+            c.set_admin(peer, uid, |b| b).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -737,7 +737,7 @@ impl Client {
     fn archive_chat<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.archive_chat(peer).await.map_err(py_err)?;
+            c.archive(peer, true).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -745,7 +745,7 @@ impl Client {
     fn unarchive_chat<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.unarchive_chat(peer).await.map_err(py_err)?;
+            c.archive(peer, false).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -753,7 +753,7 @@ impl Client {
     fn pin_dialog<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.pin_dialog(peer).await.map_err(py_err)?;
+            c.pin_dialog(peer, true).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -761,7 +761,7 @@ impl Client {
     fn unpin_dialog<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.unpin_dialog(peer).await.map_err(py_err)?;
+            c.pin_dialog(peer, false).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -771,7 +771,7 @@ impl Client {
     fn block_user<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.block_user(peer).await.map_err(py_err)?;
+            c.block(peer, true).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -779,7 +779,7 @@ impl Client {
     fn unblock_user<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.unblock_user(peer).await.map_err(py_err)?;
+            c.block(peer, false).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -841,7 +841,13 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.set_profile(first_name, last_name, about)
+            c.set_profile("me")
+                .name(
+                    first_name.as_deref().unwrap_or(""),
+                    last_name.as_deref().unwrap_or(""),
+                )
+                .bio(about.as_deref().unwrap_or(""))
+                .send()
                 .await
                 .map_err(py_err)?;
             Ok(())
@@ -855,7 +861,11 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.set_username(username).await.map_err(py_err)?;
+            c.set_profile("me")
+                .username(username)
+                .send()
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
@@ -864,9 +874,9 @@ impl Client {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             if offline {
-                c.set_offline().await.map_err(py_err)?;
+                c.set_presence(false).await.map_err(py_err)?;
             } else {
-                c.set_online().await.map_err(py_err)?;
+                c.set_presence(true).await.map_err(py_err)?;
             }
             Ok(())
         })
@@ -1068,10 +1078,7 @@ impl Client {
 
     fn delete_channel<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
-        future_into_py(
-            py,
-            async move { c.delete_channel(peer).await.map_err(py_err) },
-        )
+        future_into_py(py, async move { c.delete_chat(peer).await.map_err(py_err) })
     }
 
     fn delete_chat<'py>(&self, py: Python<'py>, chat_id: i64) -> PyResult<Bound<'py, PyAny>> {
@@ -1090,7 +1097,11 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.edit_chat_title(peer, title).await.map_err(py_err)?;
+            c.set_profile(peer)
+                .title(title)
+                .send()
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
@@ -1103,7 +1114,11 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.edit_chat_about(peer, about).await.map_err(py_err)?;
+            c.set_profile(peer)
+                .about(about)
+                .send()
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
@@ -1467,7 +1482,7 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let stats = c.get_poll_stats(peer, msg_id).await.map_err(py_err)?;
+            let stats = c.poll_results(peer, msg_id).await.map_err(py_err)?;
             let json = match stats.votes_graph {
                 tl::enums::StatsGraph::StatsGraph(g) => {
                     let tl::enums::DataJson::DataJson(dj) = g.json;
@@ -1562,6 +1577,7 @@ impl Client {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             c.set_bot_info(
+                None::<String>,
                 name.as_deref(),
                 about.as_deref(),
                 description.as_deref(),
@@ -1576,7 +1592,10 @@ impl Client {
     fn get_bot_info<'py>(&self, py: Python<'py>, lang_code: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let info = c.get_bot_info(&lang_code).await.map_err(py_err)?;
+            let info = c
+                .get_bot_info(None::<String>, &lang_code)
+                .await
+                .map_err(py_err)?;
             Ok(BotInfo {
                 name: info.name,
                 about: info.about,
@@ -1738,7 +1757,7 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.accept_invite_link(&link).await.map_err(py_err)?;
+            c.join_link(&link).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -1943,7 +1962,11 @@ impl Client {
                 .upload_file(&data, &name, "image/jpeg")
                 .await
                 .map_err(py_err)?;
-            c.set_profile_photo(uploaded).await.map_err(py_err)?;
+            c.set_profile("me")
+                .photo(uploaded)
+                .send()
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
@@ -2223,7 +2246,7 @@ impl Client {
             if unread {
                 c.mark_dialog_unread(peer).await.map_err(py_err)?;
             } else {
-                c.mark_dialog_read(peer).await.map_err(py_err)?;
+                c.mark_read(peer).await.map_err(py_err)?;
             }
             Ok(())
         })
@@ -2234,11 +2257,13 @@ impl Client {
         py: Python<'py>,
         peer: String,
         msg_id: i32,
-        poll_hash: i64,
+        _poll_hash: i64,
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.get_poll_results(peer, msg_id, poll_hash)
+            // In v0.5.0, get_poll_results was removed. Use get_poll_votes to
+            // fetch votes instead. The poll_hash parameter is no longer used.
+            c.get_poll_votes(peer, msg_id, None, 100, None)
                 .await
                 .map_err(py_err)?;
             Ok(())
@@ -2373,9 +2398,7 @@ impl Client {
                 tl::enums::InputStickerSet::ShortName(tl::types::InputStickerSetShortName {
                     short_name,
                 });
-            c.install_sticker_set(ss_input, false)
-                .await
-                .map_err(py_err)?;
+            c.toggle_stickers(ss_input, true).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -2391,7 +2414,7 @@ impl Client {
                 tl::enums::InputStickerSet::ShortName(tl::types::InputStickerSetShortName {
                     short_name,
                 });
-            c.uninstall_sticker_set(ss_input).await.map_err(py_err)?;
+            c.toggle_stickers(ss_input, false).await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -2427,7 +2450,9 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.set_emoji_status(document_id, until)
+            c.set_profile("me")
+                .emoji_status(document_id, until)
+                .send()
                 .await
                 .map_err(py_err)?;
             Ok(())
@@ -2572,14 +2597,19 @@ impl Client {
                     video_emoji_markup: None,
                 },
             );
-            c.edit_chat_photo(peer, photo).await.map_err(py_err)?;
+            c.set_profile(peer)
+                .chat_photo(photo)
+                .send()
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
 
     // default banned rights: pass a dict of restriction keys -> bool
     // keys: send_messages, send_media, send_stickers, send_gifs, send_games,
-    //       send_inline, embed_links, send_polls, change_info, invite_users, pin_messages
+    //       send_inline, embed_links, send_polls, send_reactions, change_info,
+    //       invite_users, pin_messages
     fn edit_chat_default_banned_rights<'py>(
         &self,
         py: Python<'py>,
@@ -2600,6 +2630,7 @@ impl Client {
                         "send_inline" => b.send_inline(!v),
                         "embed_links" => b.embed_links(!v),
                         "send_polls" => b.send_polls(!v),
+                        "send_reactions" => b.send_reactions(!v),
                         "change_info" => b.change_info(!v),
                         "invite_users" => b.invite_users(!v),
                         "pin_messages" => b.pin_messages(!v),
@@ -2624,10 +2655,7 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let msgs = c
-                .get_messages_by_id(peer, &[msg_id])
-                .await
-                .map_err(py_err)?;
+            let msgs = c.get_messages(peer, &[msg_id]).await.map_err(py_err)?;
             let parent = msgs.into_iter().next();
             // now fetch its reply_to
             if let Some(m) = parent {
@@ -2663,7 +2691,7 @@ impl Client {
             let unread_count = disc.unread_count;
             let max_id = disc.max_id;
             let read_inbox_max_id = disc.read_inbox_max_id;
-            let fetched = c.get_messages_by_id(peer, &msg_ids).await.map_err(py_err)?;
+            let fetched = c.get_messages(peer, &msg_ids).await.map_err(py_err)?;
             let msgs = fetched
                 .into_iter()
                 .map(|m| from_incoming(m, Some(Arc::clone(&c))))
@@ -2915,7 +2943,7 @@ impl Client {
     fn resolve_peer<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let p = c.resolve_peer(&peer).await.map_err(py_err)?;
+            let p = c.resolve(peer).await.map_err(py_err)?;
             let id = match p {
                 tl::enums::Peer::User(u) => u.user_id,
                 tl::enums::Peer::Chat(ch) => ch.chat_id,
@@ -3009,10 +3037,7 @@ impl Client {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let username = username.trim_start_matches('@').to_owned();
-            let p = c
-                .resolve_peer(&format!("@{username}"))
-                .await
-                .map_err(py_err)?;
+            let p = c.resolve(format!("@{username}")).await.map_err(py_err)?;
             let id = match p {
                 tl::enums::Peer::User(u) => u.user_id,
                 tl::enums::Peer::Chat(ch) => ch.chat_id,
@@ -3100,10 +3125,7 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let msgs = c
-                .get_messages_by_id(peer, &[msg_id])
-                .await
-                .map_err(py_err)?;
+            let msgs = c.get_messages(peer, &[msg_id]).await.map_err(py_err)?;
             let msg = msgs
                 .into_iter()
                 .next()
@@ -3474,8 +3496,13 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let raw = c.get_broadcast_stats(peer).await.map_err(py_err)?;
-            let tl::enums::stats::BroadcastStats::BroadcastStats(s) = raw;
+            let raw = c.stats(peer).await.map_err(py_err)?;
+            let s = match raw {
+                ferogram::ChannelStats::Broadcast(
+                    tl::enums::stats::BroadcastStats::BroadcastStats(s),
+                ) => s,
+                _ => return Err(py_err("expected broadcast stats")),
+            };
             let tl::enums::StatsDateRangeDays::StatsDateRangeDays(period) = s.period;
             let tl::enums::StatsAbsValueAndPrev::StatsAbsValueAndPrev(followers) = s.followers;
             let tl::enums::StatsAbsValueAndPrev::StatsAbsValueAndPrev(vpp) = s.views_per_post;
@@ -3503,8 +3530,13 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let raw = c.get_megagroup_stats(peer).await.map_err(py_err)?;
-            let tl::enums::stats::MegagroupStats::MegagroupStats(s) = raw;
+            let raw = c.stats(peer).await.map_err(py_err)?;
+            let s = match raw {
+                ferogram::ChannelStats::Megagroup(
+                    tl::enums::stats::MegagroupStats::MegagroupStats(s),
+                ) => s,
+                _ => return Err(py_err("expected megagroup stats")),
+            };
             let tl::enums::StatsDateRangeDays::StatsDateRangeDays(period) = s.period;
             let tl::enums::StatsAbsValueAndPrev::StatsAbsValueAndPrev(members) = s.members;
             let tl::enums::StatsAbsValueAndPrev::StatsAbsValueAndPrev(messages) = s.messages;
@@ -3536,7 +3568,13 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.set_profile(first_name, last_name, about)
+            c.set_profile("me")
+                .name(
+                    first_name.as_deref().unwrap_or(""),
+                    last_name.as_deref().unwrap_or(""),
+                )
+                .bio(about.as_deref().unwrap_or(""))
+                .send()
                 .await
                 .map_err(py_err)?;
             Ok(())
@@ -3547,7 +3585,11 @@ impl Client {
     fn set_username<'py>(&self, py: Python<'py>, username: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.set_username(username).await.map_err(py_err)?;
+            c.set_profile("me")
+                .username(username)
+                .send()
+                .await
+                .map_err(py_err)?;
             Ok(())
         })
     }
@@ -3555,20 +3597,26 @@ impl Client {
     /// set_online - appear online. Replaces update_status(offline=False).
     fn set_online<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
-        future_into_py(py, async move { c.set_online().await.map_err(py_err) })
+        future_into_py(
+            py,
+            async move { c.set_presence(true).await.map_err(py_err) },
+        )
     }
 
     /// set_offline - appear offline. Replaces update_status(offline=True).
     fn set_offline<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
-        future_into_py(py, async move { c.set_offline().await.map_err(py_err) })
+        future_into_py(
+            py,
+            async move { c.set_presence(false).await.map_err(py_err) },
+        )
     }
 
     /// mark_dialog_read - clears unread flag for a dialog.
     fn mark_dialog_read<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.mark_dialog_read(peer).await.map_err(py_err)?;
+            c.mark_read(peer).await.map_err(py_err)?;
             Ok(())
         })
     }
