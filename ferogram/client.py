@@ -1022,6 +1022,10 @@ class Client:
         await self._client.save_session()
 
 
+    async def resolve(self, peer: Any) -> dict:
+        """Resolve any peer (username, phone, t.me link, or 'me') to an InputPeer dict."""
+        return await self._raw.resolve(str(peer))
+
     async def _resolve_peer(self, peer: Any) -> dict:
         """Resolve any peer representation to a TL InputPeer dict."""
         return await _resolve_peer_fn(self, peer)

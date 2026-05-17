@@ -3106,6 +3106,42 @@ impl Client {
 
     // resolve helpers
 
+    fn resolve<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
+        let c = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            let peer = c.resolve(peer).await.map_err(py_err)?;
+            let input = c.resolve_to_input_peer(&peer).await.map_err(py_err)?;
+            Python::with_gil(|py| match input {
+                tl::enums::InputPeer::User(u) => {
+                    let d = pyo3::types::PyDict::new(py);
+                    d.set_item("_", "inputPeerUser")?;
+                    d.set_item("user_id", u.user_id)?;
+                    d.set_item("access_hash", u.access_hash)?;
+                    Ok(d.unbind())
+                }
+                tl::enums::InputPeer::Channel(ch) => {
+                    let d = pyo3::types::PyDict::new(py);
+                    d.set_item("_", "inputPeerChannel")?;
+                    d.set_item("channel_id", ch.channel_id)?;
+                    d.set_item("access_hash", ch.access_hash)?;
+                    Ok(d.unbind())
+                }
+                tl::enums::InputPeer::Chat(ch) => {
+                    let d = pyo3::types::PyDict::new(py);
+                    d.set_item("_", "inputPeerChat")?;
+                    d.set_item("chat_id", ch.chat_id)?;
+                    Ok(d.unbind())
+                }
+                tl::enums::InputPeer::PeerSelf => {
+                    let d = pyo3::types::PyDict::new(py);
+                    d.set_item("_", "inputPeerSelf")?;
+                    Ok(d.unbind())
+                }
+                _ => Err(pyo3::exceptions::PyValueError::new_err("Peer not found")),
+            })
+        })
+    }
+
     fn resolve_peer<'py>(&self, py: Python<'py>, peer: String) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {

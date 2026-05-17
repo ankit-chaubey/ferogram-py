@@ -191,7 +191,7 @@ async def resolve_peer(client: Any, peer: Any) -> dict:
     if isinstance(peer, str) and peer.lower() in ("me", "self"):
         return {"_": "inputPeerSelf"}
     if isinstance(peer, str):
-        return {"_": "inputPeerUsername", "username": peer.lstrip("@")}
+        return await client.resolve(peer)
     if isinstance(peer, int):
         return await _resolve_int_peer(client, peer)
     raise ValueError(

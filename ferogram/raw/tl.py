@@ -38,10 +38,10 @@ def _pack_bytes(b: bytes) -> bytes:
 def _resolve(v: Any) -> Any:
     """
     Accept typed TL object, raw dict, list of either, or primitive.
-    Powers styles 1–3:
-      dict style:     {"_": "inputPeerChannel", ...}  → passthrough
-      typed style:  InputPeerChannel(...)            → .to_dict()
-      callable style: await client(req)               → same objects, __call__ handles it
+    Powers styles 1-3:
+      dict style:     {"_": "inputPeerChannel", ...}  -> passthrough
+      typed style:  InputPeerChannel(...)            -> .to_dict()
+      callable style: await client(req)               -> same objects, __call__ handles it
     """
     if v is None:
         return None
@@ -50,6 +50,12 @@ def _resolve(v: Any) -> Any:
     if isinstance(v, list):
         return [_resolve(i) for i in v]
     return v
+
+
+def _parse_flags2_ftype(ftype: str) -> tuple[int, str]:
+    """Parse "flags2.N?inner" -> (bit, inner_type)."""
+    sep = ftype.index("?")
+    return int(ftype[7:sep]), ftype[sep + 1:]
 
 
 def serialize(obj: Any, schema: dict) -> bytes:
@@ -77,6 +83,8 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
         raise KeyError(f"unknown TL constructor: {name!r}")
     cid, fields = schema[name]
     out = _pack_uint32(cid)
+
+    # Compute flags (flags.X fields have fbit != None).
     flag_fields = [(fn, ft, fb) for fn, ft, fb in fields if fb is not None]
     flags = 0
     for fname, ftype, fbit in flag_fields:
@@ -84,7 +92,35 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
             flags |= (1 << fbit)
     if flag_fields:
         out += _pack_uint32(flags)
+
+    # Compute flags2 (fields whose ftype starts with "flags2.").
+    flags2_fields = [
+        (fn, ft) for fn, ft, _ in fields
+        if isinstance(ft, str) and ft.startswith("flags2.")
+    ]
+    flags2 = 0
+    for fname, ftype in flags2_fields:
+        bit, _ = _parse_flags2_ftype(ftype)
+        if obj.get(fname) is not None:
+            flags2 |= (1 << bit)
+
+    flags2_written = False
+
     for fname, ftype, fbit in fields:
+        # flags2.X?inner field: write the flags2 word on first encounter, then
+        # write the inner value only when the corresponding bit is set.
+        if isinstance(ftype, str) and ftype.startswith("flags2."):
+            if not flags2_written:
+                out += _pack_uint32(flags2)
+                flags2_written = True
+            bit, inner = _parse_flags2_ftype(ftype)
+            if not (flags2 & (1 << bit)):
+                continue
+            val = obj.get(fname)
+            if val is not None:
+                out += _serialize_field(val, inner, schema)
+            continue
+
         if fbit is not None:
             if obj.get(fname) is None:
                 continue
@@ -92,6 +128,7 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
         if val is None:
             continue
         out += _serialize_field(val, ftype, schema)
+
     return out
 
 
@@ -169,11 +206,36 @@ def _read_value(data: bytes, pos: int, schema: dict) -> tuple[Any, int]:
     name, fields = schema[cid]
     obj: dict[str, Any] = {"_": name}
 
+    # Read flags word if any field is gated on flags.X.
     flags = 0
     if any(fb is not None for _, _, fb in fields):
         flags, pos = _read_uint32(data, pos)
 
+    # flags2 is a second flags word that appears inline in the field sequence,
+    # just before the first flags2.X?... field. The generated schema omits the
+    # flags2:# marker (FIELD_RE doesn't match "#") and encodes the conditionality
+    # as ftype="flags2.N?inner" with fbit=None. We read the flags2 word lazily
+    # on the first flags2.X field encountered, which matches the wire position.
+    flags2 = 0
+    flags2_read = False
+
     for fname, ftype, fbit in fields:
+        # flags2.X?inner conditional field.
+        if isinstance(ftype, str) and ftype.startswith("flags2."):
+            if not flags2_read:
+                flags2, pos = _read_uint32(data, pos)
+                flags2_read = True
+            bit, inner = _parse_flags2_ftype(ftype)
+            if not (flags2 & (1 << bit)):
+                continue
+            if inner in ("true", "True"):
+                obj[fname] = True
+            else:
+                val, pos = _read_typed(data, pos, inner, schema)
+                obj[fname] = val
+            continue
+
+        # Normal flags.X conditional or unconditional field.
         if fbit is not None and not (flags & (1 << fbit)):
             continue
         if ftype in ("true", "True"):
@@ -189,7 +251,12 @@ def _read_typed(data: bytes, pos: int, ftype: str, schema: dict) -> tuple[Any, i
     if ftype == "int":    return _read_int32(data, pos)
     if ftype == "long":   return _read_int64(data, pos)
     if ftype == "double": return _read_double(data, pos)
-    if ftype in ("string",): b, pos = _read_bytes(data, pos); return b.decode(), pos
+    if ftype in ("string",):
+        b, pos = _read_bytes(data, pos)
+        try:
+            return b.decode(), pos
+        except UnicodeDecodeError:
+            return b, pos
     if ftype == "bytes":  return _read_bytes(data, pos)
     if ftype == "Bool":
         cid, pos = _read_uint32(data, pos)
