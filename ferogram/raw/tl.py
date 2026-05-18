@@ -62,7 +62,9 @@ def serialize(obj: Any, schema: dict) -> bytes:
     if isinstance(obj, bool):
         return _pack_bool(obj)
     if isinstance(obj, int):
-        return _pack_int32(obj)
+        if -(2**31) <= obj < 2**31:
+            return _pack_int32(obj)
+        return _pack_int64(obj)
     if isinstance(obj, float):
         return _pack_double(obj)
     if isinstance(obj, str):

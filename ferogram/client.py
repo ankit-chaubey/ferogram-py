@@ -15,9 +15,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import inspect
 import logging
 import os
+import random
 from typing import Any, Callable
 
 from ._ferogram import Client as _RustClient, PasswordToken, User, Dialog, ChatMember, UserFull
@@ -861,6 +863,72 @@ class Client:
     async def upload_media(self, peer: str, path: str) -> int | None:
         """Upload a file to Telegram servers. Returns document ID for reuse, or None."""
         return await self._client.upload_media(peer, path)
+
+    async def upload_file(self, path: str) -> dict:
+        """Upload a file and return a raw InputFile (or InputFileBig) TL dict.
+
+        Use this when you need to pass a file into a raw TL constructor such as
+        InputMediaUploadedPhoto or InputMediaUploadedDocument.
+
+        Example::
+
+            from ferogram import raw
+
+            f = await app.upload_file("photo.jpg")
+            await app.raw.messages.SendMedia(
+                peer="username",
+                media=raw.types.InputMediaUploadedPhoto(file=f),
+                message="",
+            )
+        """
+        PART_SIZE   = 512 * 1024          # 512 KB per part (Telegram's recommended size)
+        BIG_THRESHOLD = 10 * 1024 * 1024  # files >= 10 MB use SaveBigFilePart
+
+        file_id   = random.randint(-(2**63), 2**63 - 1)
+        file_name = os.path.basename(path)
+        file_size = os.path.getsize(path)
+        is_big    = file_size >= BIG_THRESHOLD
+
+        parts  = (file_size + PART_SIZE - 1) // PART_SIZE
+        md5    = hashlib.md5()
+
+        from .raw.generated.functions.upload import SaveFilePart, SaveBigFilePart
+
+        with open(path, "rb") as fh:
+            for part_idx in range(parts):
+                chunk = fh.read(PART_SIZE)
+                if not is_big:
+                    md5.update(chunk)
+                    fn = SaveFilePart(
+                        file_id=file_id,
+                        file_part=part_idx,
+                        bytes=chunk,
+                    )
+                else:
+                    fn = SaveBigFilePart(
+                        file_id=file_id,
+                        file_part=part_idx,
+                        file_total_parts=parts,
+                        bytes=chunk,
+                    )
+                ok = await self.invoke(fn)
+                if not ok:
+                    raise RuntimeError(f"upload_file: part {part_idx} rejected by server")
+
+        if is_big:
+            return {
+                "_": "inputFileBig",
+                "id": file_id,
+                "parts": parts,
+                "name": file_name,
+            }
+        return {
+            "_": "inputFile",
+            "id": file_id,
+            "parts": parts,
+            "name": file_name,
+            "md5_checksum": md5.hexdigest(),
+        }
 
     async def download_media(self, peer: str, msg_id: int, path: str) -> str:
         """Download media from a message to disk. Returns the final path."""

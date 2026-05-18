@@ -45,7 +45,7 @@ def _auto_default(ftype: str) -> Any:
     return _MISSING  # TL object - user must provide
 
 
-_PEER_FIELDS = {"peer", "channel", "participant", "user_id", "from_id", "send_as"}
+_PEER_FTYPES = {"InputPeer", "InputUser", "InputChannel"}
 
 
 def _tl_name(namespace: str, class_name: str) -> str:
@@ -122,10 +122,15 @@ class MethodCaller:
         for fname, ftype, flag_bit in schema_fields:
             if fname not in kwargs:
                 continue
-            if (fname in _PEER_FIELDS
+            if (ftype in _PEER_FTYPES
                     and not isinstance(kwargs[fname], dict)
                     and not hasattr(kwargs[fname], "to_dict")):
                 kwargs[fname] = await self._client._resolve_peer(kwargs[fname])
+
+        # Generate random_id BEFORE auto-defaults so _auto_default("long")==0
+        # doesn't clobber it, causing Telegram to reject with RANDOM_ID_EMPTY.
+        if "random_id" in {f[0] for f in schema_fields} and "random_id" not in kwargs:
+            kwargs["random_id"] = random.randint(-(2**63), 2**63 - 1)
 
         for fname, ftype, flag_bit in schema_fields:
             if flag_bit is not None:
@@ -135,9 +140,6 @@ class MethodCaller:
             default = _auto_default(ftype)
             if default is not _MISSING:
                 kwargs[fname] = default
-
-        if "random_id" in {f[0] for f in schema_fields} and "random_id" not in kwargs:
-            kwargs["random_id"] = random.randint(-(2**63), 2**63 - 1)
 
         try:
             fn = cls(**kwargs)
