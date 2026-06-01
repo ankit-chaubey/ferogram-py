@@ -60,6 +60,8 @@ pub struct Message {
     pub reply_count: Option<i32>,
     pub(crate) client: Option<Arc<ferogram::Client>>,
     pub(crate) _inner_markup: Option<ferogram::tl::enums::ReplyMarkup>,
+    /// Eagerly resolved channel kind (populated at construction when available).
+    pub(crate) channel_kind_cached: Option<ferogram::types::ChannelKind>,
 }
 
 // Internal helper: build an InputMessage from text + optional parse_mode
@@ -275,33 +277,27 @@ impl Message {
     /// Return the channel kind: "megagroup", "broadcast", "gigagroup", or None.
     fn channel_kind<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let client = self.client.clone();
-        // We need a stored IncomingMessage handle to call the async method.
-        // Since we don't keep it, derive from chat_id sign: negative = group/channel.
-        // Approximate synchronous version: return None for non-channels.
-        // Full async version needs the inner message: expose via client peer cache.
         let chat_id = self.chat_id;
         future_into_py(py, async move {
             let client = match client {
                 Some(c) => c,
                 None => return Ok(None::<String>),
             };
-            // chat_id < 0 for groups/channels; strip the -100 prefix for channel id
             if chat_id >= 0 {
                 return Ok(None);
             }
-            let raw_id = if chat_id < -1_000_000_000_000 {
+            let channel_id = if chat_id < -1_000_000_000_000 {
                 ((-chat_id) - 1_000_000_000_000) as i64
             } else {
                 (-chat_id) as i64
             };
-            let kind = client.peer_cache.read().await.channel_kind_of(raw_id);
-            let s = match kind {
-                Some(ferogram::types::ChannelKind::Megagroup) => Some("megagroup".to_string()),
-                Some(ferogram::types::ChannelKind::Broadcast) => Some("broadcast".to_string()),
-                Some(ferogram::types::ChannelKind::Gigagroup) => Some("gigagroup".to_string()),
-                None => None,
+            let s = match client.channel_kind_of(channel_id).await {
+                Some(ferogram::types::ChannelKind::Megagroup) => "megagroup",
+                Some(ferogram::types::ChannelKind::Gigagroup) => "gigagroup",
+                Some(ferogram::types::ChannelKind::Broadcast) => "broadcast",
+                None => return Ok(None),
             };
-            Ok(s)
+            Ok(Some(s.to_string()))
         })
     }
 
@@ -316,14 +312,13 @@ impl Message {
             if chat_id >= 0 {
                 return Ok(false);
             }
-            let raw_id = if chat_id < -1_000_000_000_000 {
+            let channel_id = if chat_id < -1_000_000_000_000 {
                 ((-chat_id) - 1_000_000_000_000) as i64
             } else {
                 (-chat_id) as i64
             };
-            let kind = client.peer_cache.read().await.channel_kind_of(raw_id);
             Ok(matches!(
-                kind,
+                client.channel_kind_of(channel_id).await,
                 Some(ferogram::types::ChannelKind::Megagroup)
             ))
         })
@@ -340,14 +335,13 @@ impl Message {
             if chat_id >= 0 {
                 return Ok(false);
             }
-            let raw_id = if chat_id < -1_000_000_000_000 {
+            let channel_id = if chat_id < -1_000_000_000_000 {
                 ((-chat_id) - 1_000_000_000_000) as i64
             } else {
                 (-chat_id) as i64
             };
-            let kind = client.peer_cache.read().await.channel_kind_of(raw_id);
             Ok(matches!(
-                kind,
+                client.channel_kind_of(channel_id).await,
                 Some(ferogram::types::ChannelKind::Broadcast)
             ))
         })
@@ -539,5 +533,6 @@ pub fn from_incoming(
         reply_count: m.reply_count(),
         client,
         _inner_markup: m.reply_markup().cloned(),
+        channel_kind_cached: None,
     }
 }
