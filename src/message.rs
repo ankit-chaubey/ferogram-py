@@ -60,8 +60,6 @@ pub struct Message {
     pub reply_count: Option<i32>,
     pub(crate) client: Option<Arc<ferogram::Client>>,
     pub(crate) _inner_markup: Option<ferogram::tl::enums::ReplyMarkup>,
-    /// Eagerly resolved channel kind (populated at construction when available).
-    pub(crate) channel_kind_cached: Option<ferogram::types::ChannelKind>,
 }
 
 // Internal helper: build an InputMessage from text + optional parse_mode
@@ -533,6 +531,5 @@ pub fn from_incoming(
         reply_count: m.reply_count(),
         client,
         _inner_markup: m.reply_markup().cloned(),
-        channel_kind_cached: None,
     }
 }

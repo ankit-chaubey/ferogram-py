@@ -1039,7 +1039,7 @@ impl Client {
                 .and_then(|n| n.to_str())
                 .unwrap_or("file")
                 .to_owned();
-            let mime = mime_type.as_deref().unwrap_or("application/octet-stream");
+            let _mime = mime_type.as_deref().unwrap_or("application/octet-stream");
             let uploaded = c
                 .upload(std::io::Cursor::new(data), &name)
                 .await
@@ -3292,7 +3292,7 @@ impl Client {
                 .and_then(|n| n.to_str())
                 .unwrap_or("file")
                 .to_owned();
-            let mime = if name.ends_with(".jpg") || name.ends_with(".jpeg") {
+            let _mime = if name.ends_with(".jpg") || name.ends_with(".jpeg") {
                 "image/jpeg"
             } else if name.ends_with(".png") {
                 "image/png"
@@ -3359,7 +3359,7 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         // Capture the Python callable as a PyObject so it can cross the await boundary.
-        let cb: Option<pyo3::PyObject> = on_progress.map(|f| f.into());
+        let _cb: Option<pyo3::PyObject> = on_progress.map(|f| f.into());
         future_into_py(py, async move {
             let msgs = c.get_messages(peer, &[msg_id]).await.map_err(py_err)?;
             let msg = msgs
@@ -3385,7 +3385,7 @@ impl Client {
         on_progress: Option<Bound<'py, pyo3::types::PyAny>>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
-        let cb: Option<pyo3::PyObject> = on_progress.map(|f| f.into());
+        let _cb: Option<pyo3::PyObject> = on_progress.map(|f| f.into());
         future_into_py(py, async move {
             let data = tokio::fs::read(&path).await.map_err(py_err)?;
             let name = std::path::Path::new(&path)
