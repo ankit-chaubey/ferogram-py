@@ -1,0 +1,146 @@
+name: Compile Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit hash, branch, tag, or PR (e.g. abc1234 / main / refs/pull/12/head)"
+        required: false
+        default: "main"
+      target:
+        description: "Target platform to check"
+        required: true
+        default: linux-x86_64
+        type: choice
+        options:
+          - linux-x86_64
+          - linux-aarch64
+          - android-aarch64
+          - all
+
+jobs:
+
+  linux-x86_64:
+    if: inputs.target == 'linux-x86_64' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: compile-check-x86_64
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build (fast flags)
+        env:
+          RUSTFLAGS: "-C codegen-units=256 -C debuginfo=0"
+        run: maturin build --out dist
+
+      - name: Install wheel
+        run: pip install dist/*.whl --force-reinstall
+
+      - name: Smoke test
+        run: |
+          python3 -c "
+          from ferogram import (
+              Client, StopPropagation, ContinuePropagation, filters,
+              User, Dialog, ChatMember, Message,
+              InlineButton, InlineKeyboard,
+          )
+          print('imports ok')
+          "
+
+  linux-aarch64:
+    if: inputs.target == 'linux-aarch64' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: compile-check-aarch64
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build (fast flags)
+        env:
+          RUSTFLAGS: "-C codegen-units=256 -C debuginfo=0 -D__ARM_ARCH=8 -march=armv8-a"
+        run: maturin build --target aarch64-unknown-linux-gnu --out dist
+
+  android-aarch64:
+    if: inputs.target == 'android-aarch64' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Setup Android NDK r26d
+        uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r26d
+          link-to-sdk: true
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: compile-check-android-aarch64
+
+      - name: Add Rust Android target
+        run: rustup target add aarch64-linux-android
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Fetch Termux libpython3.13
+        run: |
+          PKGS_URL="https://packages.termux.dev/apt/termux-main/dists/stable/main/binary-aarch64/Packages"
+          DEB_PATH=$(curl -sL "$PKGS_URL" | \
+            awk '/^Package: python$/{f=1} f && /^Filename:/{print $2; f=0}' | head -1)
+          mkdir -p /tmp/termux-py && cd /tmp/termux-py
+          curl -sL "https://packages.termux.dev/apt/termux-main/${DEB_PATH}" -o python.deb
+          ar x python.deb
+          tar xf data.tar.* --wildcards "*/libpython3.13*" 2>/dev/null || true
+          LIB_DIR=/tmp/termux-py/data/data/com.termux/files/usr/lib
+          if [ ! -f "$LIB_DIR/libpython3.13.so" ]; then
+            ln -sf "$(basename $(ls $LIB_DIR/libpython3.13.so* | head -1))" \
+                   "$LIB_DIR/libpython3.13.so"
+          fi
+          echo "TERMUX_LIBDIR=$LIB_DIR" >> $GITHUB_ENV
+
+      - name: Build Android wheel (fast flags)
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+          ANDROID_API_LEVEL: "24"
+          PYO3_CROSS_PYTHON_VERSION: "3.13"
+          RUSTFLAGS: "-C codegen-units=256 -C debuginfo=0 -L native=${{ env.TERMUX_LIBDIR }}"
+        run: |
+          NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+          export CC_aarch64_linux_android=$NDK_BIN/aarch64-linux-android24-clang
+          export CXX_aarch64_linux_android=$NDK_BIN/aarch64-linux-android24-clang++
+          export AR_aarch64_linux_android=$NDK_BIN/llvm-ar
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_BIN/aarch64-linux-android24-clang
+          maturin build \
+            --release \
+            --target aarch64-linux-android \
+            --compatibility off \
+            --out dist

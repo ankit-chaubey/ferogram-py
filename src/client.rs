@@ -100,6 +100,7 @@ impl Client {
             low_memory_mode: false,
             allow_missing_channel_hash: false,
             auto_resolve_peers: false,
+            flood_sleep_threshold: 60,
         }
     }
 
@@ -957,7 +958,7 @@ impl Client {
                 .unwrap_or("photo.jpg")
                 .to_owned();
             let uploaded = c
-                .upload_file(&data, &name, "image/jpeg")
+                .upload_bytes(&data, &name, "image/jpeg", None)
                 .await
                 .map_err(py_err)?;
             let mut msg = match parse_mode.as_deref() {
@@ -1039,7 +1040,10 @@ impl Client {
                 .unwrap_or("file")
                 .to_owned();
             let mime = mime_type.as_deref().unwrap_or("application/octet-stream");
-            let uploaded = c.upload_file(&data, &name, mime).await.map_err(py_err)?;
+            let uploaded = c
+                .upload_bytes(&data, &name, mime, None)
+                .await
+                .map_err(py_err)?;
             let mut msg = match parse_mode.as_deref() {
                 Some("html") | Some("HTML") => ferogram::InputMessage::html(&caption),
                 Some("markdown") | Some("md") | Some("Markdown") => {
@@ -2125,7 +2129,7 @@ impl Client {
                 .unwrap_or("avatar.jpg")
                 .to_owned();
             let uploaded = c
-                .upload_file(&data, &name, "image/jpeg")
+                .upload_bytes(&data, &name, "image/jpeg", None)
                 .await
                 .map_err(py_err)?;
             c.set_profile("me")
@@ -2748,7 +2752,7 @@ impl Client {
                 .unwrap_or("photo.jpg")
                 .to_owned();
             let uploaded = c
-                .upload_file(&data, &name, "image/jpeg")
+                .upload_bytes(&data, &name, "image/jpeg", None)
                 .await
                 .map_err(py_err)?;
             let input_file = match uploaded.as_photo_media() {
@@ -3299,7 +3303,10 @@ impl Client {
             } else {
                 "application/octet-stream"
             };
-            let uploaded = c.upload_file(&data, &name, mime).await.map_err(py_err)?;
+            let uploaded = c
+                .upload_bytes(&data, &name, mime, None)
+                .await
+                .map_err(py_err)?;
             let media_input = uploaded.as_document_media();
             let result = c
                 .upload_media(peer.clone(), media_input)
@@ -3336,6 +3343,78 @@ impl Client {
             if !found {
                 return Err(py_err("no downloadable media in message"));
             }
+            Ok(path)
+        })
+    }
+
+    // download_with_progress: returns final path, calls on_progress(done, total) per chunk
+    #[pyo3(signature = (peer, msg_id, path, on_progress = None))]
+    fn download_with_progress<'py>(
+        &self,
+        py: Python<'py>,
+        peer: String,
+        msg_id: i32,
+        path: String,
+        on_progress: Option<Bound<'py, pyo3::types::PyAny>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let c = Arc::clone(&self.inner);
+        // Capture the Python callable as a PyObject so it can cross the await boundary.
+        let cb: Option<pyo3::PyObject> = on_progress.map(|f| f.into());
+        future_into_py(py, async move {
+            let msgs = c.get_messages(peer, &[msg_id]).await.map_err(py_err)?;
+            let msg = msgs
+                .into_iter()
+                .next()
+                .ok_or_else(|| py_err("message not found"))?;
+            let handle = ferogram::TransferHandle::new();
+            let cb_clone = cb.clone();
+            let found = msg
+                .download_media_with_handle(&path, &handle, move |p| {
+                    if let Some(ref f) = cb_clone {
+                        let _ = Python::with_gil(|py| -> PyResult<()> {
+                            f.call1(py, (p.done, p.total))?;
+                            Ok(())
+                        });
+                    }
+                })
+                .await
+                .map_err(py_err)?;
+            if !found {
+                return Err(py_err("no downloadable media in message"));
+            }
+            Ok(path)
+        })
+    }
+
+    // upload_with_progress: calls on_progress(done, total) per chunk, returns path back
+    #[pyo3(signature = (path, on_progress = None))]
+    fn upload_with_progress<'py>(
+        &self,
+        py: Python<'py>,
+        path: String,
+        on_progress: Option<Bound<'py, pyo3::types::PyAny>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let c = Arc::clone(&self.inner);
+        let cb: Option<pyo3::PyObject> = on_progress.map(|f| f.into());
+        future_into_py(py, async move {
+            let data = tokio::fs::read(&path).await.map_err(py_err)?;
+            let name = std::path::Path::new(&path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("file")
+                .to_owned();
+            let handle = ferogram::TransferHandle::new();
+            let cb_clone = cb.clone();
+            c.upload_with_progress(std::io::Cursor::new(data), &name, &handle, move |p| {
+                if let Some(ref f) = cb_clone {
+                    let _ = Python::with_gil(|py| -> PyResult<()> {
+                        f.call1(py, (p.done, p.total))?;
+                        Ok(())
+                    });
+                }
+            })
+            .await
+            .map_err(py_err)?;
             Ok(path)
         })
     }

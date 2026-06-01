@@ -274,9 +274,9 @@ dependencies = [
 
 [[package]]
 name = "ferogram"
-version = "0.4.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b72cbc599397f85947c77d7807db9b40baa047598ef17fb7b3425adf980ce48"
+checksum = "0000000000000000000000000000000000000000000000000000000000000000"
 dependencies = [
  "async-trait",
  "base64",
@@ -407,7 +407,7 @@ dependencies = [
 
 [[package]]
 name = "ferogram-py"
-version = "0.2.3"
+version = "0.4.0"
 dependencies = [
  "ferogram",
  "hex",

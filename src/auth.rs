@@ -90,6 +90,8 @@ pub struct ClientBuilder {
     pub allow_missing_channel_hash: bool,
     #[pyo3(get, set)]
     pub auto_resolve_peers: bool,
+    #[pyo3(get, set)]
+    pub flood_sleep_threshold: u64,
 }
 
 #[pymethods]
@@ -124,6 +126,7 @@ impl ClientBuilder {
         let low_memory_mode = self.low_memory_mode;
         let allow_missing_channel_hash = self.allow_missing_channel_hash;
         let auto_resolve_peers = self.auto_resolve_peers;
+        let flood_sleep_threshold = self.flood_sleep_threshold;
 
         future_into_py(py, async move {
             let mut builder = ferogram::Client::builder()
@@ -214,6 +217,11 @@ impl ClientBuilder {
                 allow_missing_channel_hash,
                 auto_resolve_peers,
             });
+
+            builder = builder.retry_policy(std::sync::Arc::new(ferogram::AutoSleep {
+                threshold: std::time::Duration::from_secs(flood_sleep_threshold),
+                io_errors_as_flood_of: Some(std::time::Duration::from_secs(1)),
+            }));
 
             let (client, shutdown) = builder.connect().await.map_err(py_err)?;
             Ok(crate::client::make_client(client, shutdown))

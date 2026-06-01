@@ -25,7 +25,7 @@ if _main_file:
             "Rename your file to something like 'bot.py', 'main.py', or 'app.py'."
         )
 
-from .client import Client
+from .client import Client, StopPropagation, ContinuePropagation
 from . import filters
 from ._ferogram import User, Dialog, ChatMember, UserFull, Message
 from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
@@ -46,6 +46,7 @@ from .types import (
 __all__ = [
     # Core
     "Client", "filters",
+    "StopPropagation", "ContinuePropagation",
     # Rust types
     "User", "Dialog", "ChatMember", "UserFull", "Message",
     "Chat", "Authorization", "ForumTopic", "BotInfo",

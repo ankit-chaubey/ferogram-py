@@ -271,6 +271,87 @@ impl Message {
                 .map(|m| from_incoming(m, Some(client))))
         })
     }
+
+    /// Return the channel kind: "megagroup", "broadcast", "gigagroup", or None.
+    fn channel_kind<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let client = self.client.clone();
+        // We need a stored IncomingMessage handle to call the async method.
+        // Since we don't keep it, derive from chat_id sign: negative = group/channel.
+        // Approximate synchronous version: return None for non-channels.
+        // Full async version needs the inner message: expose via client peer cache.
+        let chat_id = self.chat_id;
+        future_into_py(py, async move {
+            let client = match client {
+                Some(c) => c,
+                None => return Ok(None::<String>),
+            };
+            // chat_id < 0 for groups/channels; strip the -100 prefix for channel id
+            if chat_id >= 0 {
+                return Ok(None);
+            }
+            let raw_id = if chat_id < -1_000_000_000_000 {
+                ((-chat_id) - 1_000_000_000_000) as i64
+            } else {
+                (-chat_id) as i64
+            };
+            let kind = client.peer_cache().await.channel_kind_of(raw_id);
+            let s = match kind {
+                Some(ferogram::types::ChannelKind::Megagroup) => Some("megagroup".to_string()),
+                Some(ferogram::types::ChannelKind::Broadcast) => Some("broadcast".to_string()),
+                Some(ferogram::types::ChannelKind::Gigagroup) => Some("gigagroup".to_string()),
+                None => None,
+            };
+            Ok(s)
+        })
+    }
+
+    fn is_megagroup<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let client = self.client.clone();
+        let chat_id = self.chat_id;
+        future_into_py(py, async move {
+            let client = match client {
+                Some(c) => c,
+                None => return Ok(false),
+            };
+            if chat_id >= 0 {
+                return Ok(false);
+            }
+            let raw_id = if chat_id < -1_000_000_000_000 {
+                ((-chat_id) - 1_000_000_000_000) as i64
+            } else {
+                (-chat_id) as i64
+            };
+            let kind = client.peer_cache().await.channel_kind_of(raw_id);
+            Ok(matches!(
+                kind,
+                Some(ferogram::types::ChannelKind::Megagroup)
+            ))
+        })
+    }
+
+    fn is_broadcast<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let client = self.client.clone();
+        let chat_id = self.chat_id;
+        future_into_py(py, async move {
+            let client = match client {
+                Some(c) => c,
+                None => return Ok(false),
+            };
+            if chat_id >= 0 {
+                return Ok(false);
+            }
+            let raw_id = if chat_id < -1_000_000_000_000 {
+                ((-chat_id) - 1_000_000_000_000) as i64
+            } else {
+                (-chat_id) as i64
+            };
+            let kind = client.peer_cache().await.channel_kind_of(raw_id);
+            Ok(matches!(
+                kind,
+                Some(ferogram::types::ChannelKind::Broadcast)
+            ))
+        })
+    }
 }
 
 #[allow(dead_code)]

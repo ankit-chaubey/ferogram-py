@@ -42,11 +42,19 @@ from .types import (
     _inline_result_to_tuple,
 )
 
-__all__ = ["Client"]
+__all__ = ["Client", "StopPropagation", "ContinuePropagation"]
 
 _log = logging.getLogger("ferogram")
 
 _Handler = tuple[Callable, list[Callable]]
+
+
+class StopPropagation(Exception):
+    """Raise inside a handler to stop processing all further handlers for this update."""
+
+
+class ContinuePropagation(Exception):
+    """Raise inside a handler to skip to the next matching handler in the same group."""
 
 _ALL_EVENTS = (
     "message",
@@ -104,6 +112,9 @@ class Client:
         low_memory_mode: bool = False,
         allow_missing_channel_hash: bool = False,
         auto_resolve_peers: bool = False,
+        parse_mode: str | None = None,
+        workers: int = 4,
+        flood_sleep_threshold: int = 60,
     ) -> None:
         self.session                  = session
         self.api_id                   = api_id or int(os.environ.get("API_ID", 0)) or None
@@ -131,10 +142,21 @@ class Client:
         self.low_memory_mode          = low_memory_mode
         self.allow_missing_channel_hash = allow_missing_channel_hash
         self.auto_resolve_peers       = auto_resolve_peers
+        self.parse_mode               = parse_mode
+        self._workers                 = workers
+        self._flood_sleep_threshold   = flood_sleep_threshold
         self._raw: _RustClient | None = None
-        self._handlers: dict[str, list[_Handler]] = {e: [] for e in _ALL_EVENTS}
+        # group -> list of (func, filters); sorted by group key at dispatch time
+        self._handlers: dict[str, dict[int, list[_Handler]]] = {
+            e: {} for e in _ALL_EVENTS
+        }
+        self._update_queue: asyncio.Queue | None = None
         self._peer_cache = PeerCache()
         self.raw         = RawProxy(self)
+
+    def _resolve_pm(self, local: str | None) -> str | None:
+        """Return the effective parse_mode: per-call value wins over global default."""
+        return local if local is not None else self.parse_mode
 
     def _require_creds(self) -> tuple[int, str]:
         if not self.api_id or not self.api_hash:
@@ -148,129 +170,180 @@ class Client:
         return self._raw
 
 
-    def on_message(self, *filters: Callable) -> Callable:
+    def _add_handler(self, event_type: str, func: Callable, filters: list, group: int) -> None:
+        if group not in self._handlers[event_type]:
+            self._handlers[event_type][group] = []
+        self._handlers[event_type][group].append((func, filters))
+
+    def on_message(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["message"].append((func, list(filters)))
+            self._add_handler("message", func, list(filters), group)
             return func
         return decorator
 
-    def on_edited_message(self, *filters: Callable) -> Callable:
+    def on_edited_message(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["edited_message"].append((func, list(filters)))
+            self._add_handler("edited_message", func, list(filters), group)
             return func
         return decorator
 
-    def on_message_deleted(self, *filters: Callable) -> Callable:
+    def on_message_deleted(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["message_deleted"].append((func, list(filters)))
+            self._add_handler("message_deleted", func, list(filters), group)
             return func
         return decorator
 
-    def on_callback_query(self, *filters: Callable) -> Callable:
+    def on_callback_query(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["callback_query"].append((func, list(filters)))
+            self._add_handler("callback_query", func, list(filters), group)
             return func
         return decorator
 
-    def on_inline_query(self, *filters: Callable) -> Callable:
+    def on_inline_query(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["inline_query"].append((func, list(filters)))
+            self._add_handler("inline_query", func, list(filters), group)
             return func
         return decorator
 
-    def on_inline_send(self, *filters: Callable) -> Callable:
+    def on_inline_send(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["inline_send"].append((func, list(filters)))
+            self._add_handler("inline_send", func, list(filters), group)
             return func
         return decorator
 
-    def on_user_status(self, *filters: Callable) -> Callable:
+    def on_user_status(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["user_status"].append((func, list(filters)))
+            self._add_handler("user_status", func, list(filters), group)
             return func
         return decorator
 
-    def on_chat_action(self, *filters: Callable) -> Callable:
+    def on_chat_action(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["chat_action"].append((func, list(filters)))
+            self._add_handler("chat_action", func, list(filters), group)
             return func
         return decorator
 
-    def on_participant_update(self, *filters: Callable) -> Callable:
+    def on_participant_update(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["participant_update"].append((func, list(filters)))
+            self._add_handler("participant_update", func, list(filters), group)
             return func
         return decorator
 
-    def on_join_request(self, *filters: Callable) -> Callable:
+    def on_join_request(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["join_request"].append((func, list(filters)))
+            self._add_handler("join_request", func, list(filters), group)
             return func
         return decorator
 
-    def on_message_reaction(self, *filters: Callable) -> Callable:
+    def on_message_reaction(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["message_reaction"].append((func, list(filters)))
+            self._add_handler("message_reaction", func, list(filters), group)
             return func
         return decorator
 
-    def on_poll_vote(self, *filters: Callable) -> Callable:
+    def on_poll_vote(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["poll_vote"].append((func, list(filters)))
+            self._add_handler("poll_vote", func, list(filters), group)
             return func
         return decorator
 
-    def on_bot_stopped(self, *filters: Callable) -> Callable:
+    def on_bot_stopped(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["bot_stopped"].append((func, list(filters)))
+            self._add_handler("bot_stopped", func, list(filters), group)
             return func
         return decorator
 
-    def on_shipping_query(self, *filters: Callable) -> Callable:
+    def on_shipping_query(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(fn: Callable) -> Callable:
-            self._handlers["shipping_query"].append((fn, list(filters)))
+            self._add_handler("shipping_query", fn, list(filters), group)
             return fn
         return decorator
 
-    def on_pre_checkout_query(self, *filters: Callable) -> Callable:
+    def on_pre_checkout_query(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(fn: Callable) -> Callable:
-            self._handlers["pre_checkout_query"].append((fn, list(filters)))
+            self._add_handler("pre_checkout_query", fn, list(filters), group)
             return fn
         return decorator
 
-    def on_chat_boost(self, *filters: Callable) -> Callable:
+    def on_chat_boost(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(fn: Callable) -> Callable:
-            self._handlers["chat_boost"].append((fn, list(filters)))
+            self._add_handler("chat_boost", fn, list(filters), group)
             return fn
         return decorator
 
-    def on_raw_update(self, *filters: Callable) -> Callable:
+    def on_raw_update(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
-            self._handlers["raw_update"].append((func, list(filters)))
+            self._add_handler("raw_update", func, list(filters), group)
             return func
         return decorator
+
+    def add_handler(self, event_type: str, func: Callable, *filters: Callable, group: int = 0) -> None:
+        """Register a handler programmatically at runtime."""
+        if event_type not in self._handlers:
+            raise ValueError(f"Unknown event type: {event_type!r}")
+        self._add_handler(event_type, func, list(filters), group)
+
+    def remove_handler(self, event_type: str, func: Callable, group: int = 0) -> bool:
+        """Remove a previously registered handler. Returns True if found and removed."""
+        bucket = self._handlers.get(event_type, {}).get(group, [])
+        for i, (f, _) in enumerate(bucket):
+            if f is func:
+                bucket.pop(i)
+                return True
+        return False
 
 
     async def _dispatch(self, event_type: str, update: Any) -> None:
-        for func, fltrs in self._handlers.get(event_type, []):
-            if all(f(update) for f in fltrs):
+        groups = sorted(self._handlers.get(event_type, {}).keys())
+        for g in groups:
+            for func, fltrs in self._handlers[event_type][g]:
+                if not all(f(update) for f in fltrs):
+                    continue
                 try:
                     result = func(self, update)
                     if inspect.isawaitable(result):
                         await result
+                except StopPropagation:
+                    return
+                except ContinuePropagation:
+                    continue
                 except Exception as exc:
                     _log.error("handler error in %s: %s", event_type, exc, exc_info=True)
+                break  # first match per group wins; move to next group
+
+    async def _worker(self) -> None:
+        while True:
+            item = await self._update_queue.get()
+            try:
+                if item is None:
+                    return
+                event_type, update = item
+                await self._dispatch(event_type, update)
+            except Exception as exc:
+                _log.error("worker error: %s", exc, exc_info=True)
+            finally:
+                self._update_queue.task_done()
 
     async def _run_updates(self) -> None:
         _log.debug("update loop started")
-        while True:
-            result = await self._client.next_update()
-            if result is None:
-                _log.debug("update stream closed")
-                break
-            event_type, update = result
-            _log.debug("dispatching %s", event_type)
-            asyncio.create_task(self._dispatch(event_type, update))
+        self._update_queue = asyncio.Queue(maxsize=self._workers * 4)
+        worker_tasks = [
+            asyncio.create_task(self._worker())
+            for _ in range(self._workers)
+        ]
+        try:
+            while True:
+                result = await self._client.next_update()
+                if result is None:
+                    _log.debug("update stream closed")
+                    break
+                event_type, update = result
+                _log.debug("dispatching %s", event_type)
+                await self._update_queue.put((event_type, update))
+        finally:
+            for _ in worker_tasks:
+                await self._update_queue.put(None)
+            await asyncio.gather(*worker_tasks)
 
 
     async def start(self) -> "Client":
@@ -300,6 +373,7 @@ class Client:
         builder.low_memory_mode            = self.low_memory_mode
         builder.allow_missing_channel_hash = self.allow_missing_channel_hash
         builder.auto_resolve_peers         = self.auto_resolve_peers
+        builder.flood_sleep_threshold      = self._flood_sleep_threshold
         self._raw = await builder.connect()
         if not await self._raw.is_authorized():
             if self.bot_token:
@@ -358,12 +432,13 @@ class Client:
     ) -> Message:
         """Send a text message.
 
-        parse_mode: None (plain), 'html', or 'markdown'/'md'.
+        parse_mode: None (uses global default), 'html', or 'markdown'/'md'.
         reply_markup: InlineKeyboard, ReplyKeyboard, RemoveKeyboard, or ForceReply.
         """
-        if parse_mode == "html":
+        pm = self._resolve_pm(parse_mode)
+        if pm == "html":
             return await self._client.send_html(peer, text, reply_markup)
-        if parse_mode in ("markdown", "md"):
+        if pm in ("markdown", "md"):
             return await self._client.send_markdown(peer, text, reply_markup)
         return await self._client.send_message(peer, text, reply_markup)
 
@@ -933,6 +1008,32 @@ class Client:
     async def download_media(self, peer: str, msg_id: int, path: str) -> str:
         """Download media from a message to disk. Returns the final path."""
         return await self._client.download_media(peer, msg_id, path)
+
+    async def download_with_progress(
+        self,
+        peer: str,
+        msg_id: int,
+        path: str,
+        on_progress: "Callable[[int, int], None] | None" = None,
+    ) -> str:
+        """Download media with a progress callback.
+
+        on_progress(done, total) is called after each chunk. total may be 0 if
+        the server did not report a file size. Returns the final path.
+        """
+        return await self._client.download_with_progress(peer, msg_id, path, on_progress)
+
+    async def upload_with_progress(
+        self,
+        path: str,
+        on_progress: "Callable[[int, int], None] | None" = None,
+    ) -> str:
+        """Upload a file with a progress callback.
+
+        on_progress(done, total) is called after each chunk. Returns a handle
+        string that can be passed as the ``media`` argument to ``send_file``.
+        """
+        return await self._client.upload_with_progress(path, on_progress)
 
     async def edit_chat_photo(self, peer: str, path: str) -> None:
         await self._client.edit_chat_photo(peer, path)

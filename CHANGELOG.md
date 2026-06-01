@@ -1,3 +1,78 @@
+## 0.4.0 (2026-06-01)
+
+### ferogram core upgraded to 0.6.0
+
+The Rust dependency is now ferogram 0.6.0.
+
+### Global parse_mode on Client
+
+`Client(..., parse_mode="html")` sets a default parse mode applied to every
+`send_message` call that does not pass its own `parse_mode`. Per-call values
+always win over the global default. Accepted values: `"html"`, `"markdown"` /
+`"md"`, or `None` (plain text).
+
+### Worker pool with bounded queue (backpressure)
+
+The update loop no longer spawns an unbounded number of `asyncio.create_task`
+calls. Instead it maintains a fixed pool of `workers` coroutines (default 4)
+reading from a bounded `asyncio.Queue`. When the queue is full the network
+reader naturally waits, providing backpressure under load.
+
+`Client(..., workers=4)` controls the pool size.
+
+### Handler groups and dispatch order
+
+Every `on_*` decorator now accepts a `group: int = 0` keyword argument.
+Handlers are dispatched in ascending group order. Within a group, the first
+matching handler runs and the rest of that group are skipped; then dispatch
+continues to the next group.
+
+```python
+@app.on_message(filters.all, group=-1)  # auth check, always first
+@app.on_message(filters.command("start"), group=0)
+@app.on_message(filters.all, group=1)   # fallback logger, always last
+```
+
+### StopPropagation and ContinuePropagation
+
+Two new exceptions control dispatch flow from inside a handler:
+
+- `raise StopPropagation` stops all further group processing for this update.
+- `raise ContinuePropagation` skips the current handler and tries the next
+  matching handler in the same group instead of stopping at the first match.
+
+Both are exported from `ferogram` directly.
+
+### add_handler / remove_handler
+
+`app.add_handler(event_type, func, *filters, group=0)` and
+`app.remove_handler(event_type, func, group=0)` register and deregister
+handlers at runtime without decorators.
+
+### flood_sleep_threshold passed to Rust AutoSleep
+
+`Client(..., flood_sleep_threshold=60)` maps directly to the `AutoSleep`
+retry policy threshold in the Rust core. Flood waits under this value are
+slept through automatically with jitter; waits above it are raised as
+exceptions. The Rust core already handled this; this just makes the threshold
+configurable from Python.
+
+### Transfer progress callbacks
+
+`download_with_progress(peer, msg_id, path, on_progress)` and
+`upload_with_progress(path, on_progress)` accept an optional callable
+`on_progress(done: int, total: int)` that is invoked after each chunk.
+
+### channel_kind / is_megagroup / is_broadcast on Message
+
+Three new async methods on `Message` powered by the ferogram 0.6.0 peer cache:
+
+- `await msg.channel_kind()` returns `"megagroup"`, `"broadcast"`,
+  `"gigagroup"`, or `None` for private chats and groups.
+- `await msg.is_megagroup()` is `True` for supergroups.
+- `await msg.is_broadcast()` is `True` for broadcast channels.
+
+---
 ## 0.3.0 (2026-05-16)
 
 ### ferogram core upgraded to 0.5.0
