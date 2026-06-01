@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 hex                 = "0.4"
-ferogram = { git = "https://github.com/ankit-chaubey/ferogram", rev = "cc3c2c62baf266b715572d196768c13399a3d755", features = ["sqlite-session", "libsql-session"] }
+ferogram = { git = "https://github.com/ankit-chaubey/ferogram", rev = "9a363e2a3cd8daa27c4838162be84bda81654b4b", features = ["sqlite-session", "libsql-session"] }
 pyo3                = { version = "0.24", features = ["extension-module", "abi3-py313"] }
 pyo3-async-runtimes = { version = "0.24", features = ["tokio-runtime"] }
 tokio               = { version = "1", features = ["full"] }
