@@ -1,78 +1,43 @@
 ## 0.4.0 (2026-06-01)
 
-### ferogram core upgraded to 0.6.0
+### Added
 
-The Rust dependency is now ferogram 0.6.0.
+- **Session backends** - `FileSession`, `MemorySession`, `StringSession`, `SqliteSession`, `LibSqlSession`, and `CustomSession` are now first-class types importable from `ferogram`. Pass any of them as the `session` argument to `Client`. Plain string names still work as before.
+  - `SqliteSession("name")` stores the session in a SQLite database.
+  - `MemorySession()` keeps the session in memory only; nothing is written to disk.
+  - `StringSession("AQA...")` resumes from a base64 string, useful for serverless or env-var based deployments.
+  - `LibSqlSession.local/remote/replica/memory(...)` targets a local file, remote Turso database, embedded replica, or in-memory libSQL database.
+  - `CustomSession(obj)` wraps any Python object implementing `save(bytes)`, `load() -> bytes | None`, and `delete()`.
+- **`channel_kind()` on Message** - `await msg.channel_kind()` returns `"megagroup"`, `"broadcast"`, `"gigagroup"`, or `None`. Uses the peer cache; no RPC.
+- **`is_megagroup()` on Message** - `await msg.is_megagroup()` returns `True` for supergroups.
+- **`is_broadcast()` on Message** - `await msg.is_broadcast()` returns `True` for broadcast channels.
+- **`StopPropagation` and `ContinuePropagation`** - two exceptions exported from `ferogram` to control handler dispatch. `StopPropagation` stops all further group processing. `ContinuePropagation` skips the current handler and continues to the next match in the same group.
+- **Handler groups** - all `on_*` decorators now accept `group: int = 0`. Handlers run in ascending group order; lower group numbers run first.
+- **`add_handler` / `remove_handler`** - register and deregister handlers at runtime without decorators.
+- **Worker pool** - a fixed pool of `workers` coroutines (default 4) now dispatches updates from a bounded `asyncio.Queue`. Replaces the old unbounded `asyncio.create_task` approach. Provides natural backpressure under load.
+- **`workers` kwarg on `Client`** - controls pool size.
+- **`parse_mode` kwarg on `Client`** - sets a global default parse mode applied to every `send_message` call that does not pass its own `parse_mode`.
+- **`flood_sleep_threshold` kwarg on `Client`** - maps to the `AutoSleep` retry policy in the Rust core. Flood waits under this value are slept through automatically; waits above it are raised as exceptions.
+- **`download_with_progress(peer, msg_id, path, on_progress)`** - download media with a progress callback `on_progress(done, total)`.
+- **`upload_with_progress(path, on_progress)`** - upload a file with a progress callback. Returns a handle string accepted by `send_file`.
+- **`ferogram` 0.6.0 as core dependency** - includes `Client.channel_kind_of(channel_id)` which backs the new `Message` methods above.
 
-### Global parse_mode on Client
+### Changed
 
-`Client(..., parse_mode="html")` sets a default parse mode applied to every
-`send_message` call that does not pass its own `parse_mode`. Per-call values
-always win over the global default. Accepted values: `"html"`, `"markdown"` /
-`"md"`, or `None` (plain text).
+- `no_webpage` now defaults to `True` in `send_message` and `edit_message`.
+- `upload_file(data, name, mime)` replaced by `upload(Cursor(data), name)` internally; no change to the Python API.
+- Session resolution order is now `session_string > session object`. `in_memory=True` is deprecated in favor of `MemorySession()`.
+- Handler storage changed from `list` to `dict[group, list]`; dispatch now iterates groups in sorted order.
+- `_resolve_pm` is now used internally to merge per-call and global `parse_mode`.
 
-### Worker pool with bounded queue (backpressure)
+### Fixed
 
-The update loop no longer spawns an unbounded number of `asyncio.create_task`
-calls. Instead it maintains a fixed pool of `workers` coroutines (default 4)
-reading from a bounded `asyncio.Queue`. When the queue is full the network
-reader naturally waits, providing backpressure under load.
+- `channel_kind`, `is_megagroup`, `is_broadcast` on `Message` no longer call `get_chat_full` (an RPC) on every invocation. They read from the peer cache via `Client.channel_kind_of`.
+- Unnecessary `as i64` casts removed from `message.rs`.
+- Nested `if let` blocks collapsed to `if let ... && ...`.
+- `match ... { Some(m) => m, None => return None }` replaced with `as_ref()?`.
 
-`Client(..., workers=4)` controls the pool size.
 
-### Handler groups and dispatch order
-
-Every `on_*` decorator now accepts a `group: int = 0` keyword argument.
-Handlers are dispatched in ascending group order. Within a group, the first
-matching handler runs and the rest of that group are skipped; then dispatch
-continues to the next group.
-
-```python
-@app.on_message(filters.all, group=-1)  # auth check, always first
-@app.on_message(filters.command("start"), group=0)
-@app.on_message(filters.all, group=1)   # fallback logger, always last
-```
-
-### StopPropagation and ContinuePropagation
-
-Two new exceptions control dispatch flow from inside a handler:
-
-- `raise StopPropagation` stops all further group processing for this update.
-- `raise ContinuePropagation` skips the current handler and tries the next
-  matching handler in the same group instead of stopping at the first match.
-
-Both are exported from `ferogram` directly.
-
-### add_handler / remove_handler
-
-`app.add_handler(event_type, func, *filters, group=0)` and
-`app.remove_handler(event_type, func, group=0)` register and deregister
-handlers at runtime without decorators.
-
-### flood_sleep_threshold passed to Rust AutoSleep
-
-`Client(..., flood_sleep_threshold=60)` maps directly to the `AutoSleep`
-retry policy threshold in the Rust core. Flood waits under this value are
-slept through automatically with jitter; waits above it are raised as
-exceptions. The Rust core already handled this; this just makes the threshold
-configurable from Python.
-
-### Transfer progress callbacks
-
-`download_with_progress(peer, msg_id, path, on_progress)` and
-`upload_with_progress(path, on_progress)` accept an optional callable
-`on_progress(done: int, total: int)` that is invoked after each chunk.
-
-### channel_kind / is_megagroup / is_broadcast on Message
-
-Three new async methods on `Message` powered by the ferogram 0.6.0 peer cache:
-
-- `await msg.channel_kind()` returns `"megagroup"`, `"broadcast"`,
-  `"gigagroup"`, or `None` for private chats and groups.
-- `await msg.is_megagroup()` is `True` for supergroups.
-- `await msg.is_broadcast()` is `True` for broadcast channels.
-
----
 ## 0.3.0 (2026-05-16)
 
 ### ferogram core upgraded to 0.5.0

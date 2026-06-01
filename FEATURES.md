@@ -45,7 +45,7 @@ from ferogram.raw.generated.types.messages import Messages
 from ferogram import Client
 
 app = Client(
-    session="mybot",       # session file name (no extension)
+    session="mybot",       # session file name, or a session object (see Session Backends)
     api_id=123456,
     api_hash="abc...",
     bot_token="123:TOKEN", # omit for userbot
@@ -68,12 +68,17 @@ These are all the kwargs you can pass to `Client(...)`. Most of them you will ne
 
 ```python
 app = Client(
-    session="mybot",                     # session file name (no .session extension)
+    session="mybot",                     # str, or a session object (see Session Backends)
     api_id=123456,
     api_hash="abc...",
     bot_token="123:TOKEN",               # omit for userbot
     phone="+1234567890",                 # for userbot interactive login
     password="2fa_password",             # 2FA password if set
+
+    # Update dispatch
+    workers=4,                           # number of concurrent update worker coroutines
+    parse_mode=None,                     # global default: None | "html" | "markdown"
+    flood_sleep_threshold=60,            # auto-sleep flood waits under this many seconds
 
     # Network
     proxy=None,                          # "socks5://host:port" or an MTProxy t.me link
@@ -82,9 +87,8 @@ app = Client(
     probe_transport=False,               # try multiple transports on first connect
     resilient_connect=False,             # keep retrying on initial connect failure
 
-    # Session backend (priority: in_memory > session_string > session file)
+    # Session backend (session_string takes priority over the session object)
     session_string=None,                 # base64 session string instead of file
-    in_memory=False,                     # ephemeral session, nothing written to disk
 
     # Sync and updates
     catch_up=False,                      # fetch missed updates on reconnect
@@ -112,32 +116,118 @@ app = Client(
 - MTProxy: `"https://t.me/proxy?server=...&port=...&secret=..."`
 
 
-## Event Handlers
+## Session Backends
 
-Decorators to register handlers. Each accepts zero or more filters.
+Import from `ferogram`:
 
 ```python
-@app.on_message(*filters)
-@app.on_edited_message(*filters)
-@app.on_message_deleted(*filters)
-@app.on_callback_query(*filters)
-@app.on_inline_query(*filters)
-@app.on_inline_send(*filters)
-@app.on_user_status(*filters)
-@app.on_chat_action(*filters)
-@app.on_participant_update(*filters)
-@app.on_join_request(*filters)
-@app.on_message_reaction(*filters)
-@app.on_poll_vote(*filters)
-@app.on_bot_stopped(*filters)
-@app.on_shipping_query(*filters)
-@app.on_pre_checkout_query(*filters)
-@app.on_chat_boost(*filters)
-@app.on_guest_chat_query(*filters)
-@app.on_raw_update(*filters)
+from ferogram import (
+    FileSession,
+    MemorySession,
+    StringSession,
+    SqliteSession,
+    LibSqlSession,
+    CustomSession,
+)
+```
+
+Pass any of them as the `session` argument to `Client`. A plain string is still accepted and behaves like `FileSession`.
+
+```python
+# Binary file (default)
+Client(session=FileSession("mybot"), ...)         # -> mybot.session
+
+# SQLite database
+Client(session=SqliteSession("mybot"), ...)       # -> mybot.db
+
+# In-memory (nothing survives restart)
+Client(session=MemorySession(), ...)
+
+# Base64 string (env vars, database columns, serverless)
+Client(session=StringSession(os.environ["SESSION"]), ...)
+
+# libSQL - local file
+Client(session=LibSqlSession.local("mybot"), ...)
+
+# libSQL - remote Turso
+Client(session=LibSqlSession.remote("libsql://db.turso.io", "token"), ...)
+
+# libSQL - embedded replica (local cache + remote sync)
+Client(session=LibSqlSession.replica("local.db", "libsql://db.turso.io", "token"), ...)
+
+# libSQL - in-memory
+Client(session=LibSqlSession.memory(), ...)
+
+# Custom - any Python object with save/load/delete
+class RedisSession:
+    def __init__(self, key):
+        self.key = key
+    def save(self, data: bytes) -> None:
+        redis.set(self.key, data)
+    def load(self) -> bytes | None:
+        return redis.get(self.key)
+    def delete(self) -> None:
+        redis.delete(self.key)
+
+Client(session=CustomSession(RedisSession("mybot")), ...)
+```
+
+`CustomSession` passes the raw binary blob to your object. Serialize it however you like.
+
+
+## Event Handlers
+
+Decorators to register handlers. Each accepts zero or more filters and an optional `group` integer.
+
+```python
+@app.on_message(*filters, group=0)
+@app.on_edited_message(*filters, group=0)
+@app.on_message_deleted(*filters, group=0)
+@app.on_callback_query(*filters, group=0)
+@app.on_inline_query(*filters, group=0)
+@app.on_inline_send(*filters, group=0)
+@app.on_user_status(*filters, group=0)
+@app.on_chat_action(*filters, group=0)
+@app.on_participant_update(*filters, group=0)
+@app.on_join_request(*filters, group=0)
+@app.on_message_reaction(*filters, group=0)
+@app.on_poll_vote(*filters, group=0)
+@app.on_bot_stopped(*filters, group=0)
+@app.on_shipping_query(*filters, group=0)
+@app.on_pre_checkout_query(*filters, group=0)
+@app.on_chat_boost(*filters, group=0)
+@app.on_guest_chat_query(*filters, group=0)
+@app.on_raw_update(*filters, group=0)
 ```
 
 Handler signature: `async def handler(client, update):`
+
+### Handler groups
+
+Handlers run in ascending group order. Within a group, the first matching handler runs and the rest of that group are skipped; then dispatch continues to the next group.
+
+```python
+@app.on_message(filters.all, group=-1)  # runs first
+@app.on_message(filters.command("start"), group=0)
+@app.on_message(filters.all, group=1)   # runs last
+```
+
+### Dispatch control
+
+```python
+from ferogram import StopPropagation, ContinuePropagation
+
+# inside a handler:
+raise StopPropagation      # stop all further group processing for this update
+raise ContinuePropagation  # skip this handler, try next match in the same group
+```
+
+### Runtime registration
+
+```python
+app.add_handler("message", func, *filters, group=0)
+app.remove_handler("message", func, group=0)
+```
 
 
 ## Filters
@@ -300,6 +390,16 @@ await message.react(emoji)
 `reply_to_message_id`, `via_bot_id`, `grouped_id`, `has_media`, `has_photo`, `has_document`,
 `is_forwarded`, `post_author`, `view_count`, `reply_count`
 
+### Message async methods
+
+```python
+await msg.channel_kind()   # -> "megagroup" | "broadcast" | "gigagroup" | None
+await msg.is_megagroup()   # -> bool
+await msg.is_broadcast()   # -> bool
+```
+
+These read from the peer cache; no RPC call is made. Returns `None` / `False` for private chats and regular groups.
+
 
 ## Keyboards
 
@@ -364,6 +464,15 @@ await client.upload_media(peer, path)                   # -> document_id | None
 await client.download_media(peer, msg_id, path)         # -> final path
 await client.edit_chat_photo(peer, path)
 await client.delete_profile_photos()
+
+# Progress callbacks
+await client.download_with_progress(peer, msg_id, path, on_progress=None)
+# on_progress(done: int, total: int) called after each chunk. total may be 0.
+# Returns the final path.
+
+await client.upload_with_progress(path, on_progress=None)
+# on_progress(done: int, total: int) called after each chunk.
+# Returns a handle string accepted by send_file as the media argument.
 ```
 
 
