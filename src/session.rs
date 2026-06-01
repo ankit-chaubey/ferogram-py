@@ -283,7 +283,13 @@ impl CustomSession {
     }
 
     fn __repr__(&self, py: Python<'_>) -> String {
-        let name = self.obj.bind(py).get_type().name().unwrap_or("?".into());
+        let name = self
+            .obj
+            .bind(py)
+            .get_type()
+            .name()
+            .map(|n| n.to_string())
+            .unwrap_or_else(|_| "?".to_string());
         format!("CustomSession({name})")
     }
 }
@@ -361,7 +367,6 @@ pub fn resolve_session(py: Python<'_>, obj: &PyObject) -> PyResult<Arc<dyn Sessi
     }
 
     // SqliteSession
-    #[cfg(feature = "sqlite-session")]
     if let Ok(s) = obj.downcast_bound::<SqliteSession>(py) {
         let backend =
             ferogram::session_backend::SqliteBackend::open(&s.get().path).map_err(py_err)?;
@@ -369,7 +374,6 @@ pub fn resolve_session(py: Python<'_>, obj: &PyObject) -> PyResult<Arc<dyn Sessi
     }
 
     // LibSqlSession
-    #[cfg(feature = "libsql-session")]
     if let Ok(s) = obj.downcast_bound::<LibSqlSession>(py) {
         use ferogram::session_backend::LibSqlBackend;
         let backend = match &s.get().kind {

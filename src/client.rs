@@ -223,6 +223,7 @@ impl Client {
         schedule_date = None,
         schedule_once_online = false,
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn send_message<'py>(
         &self,
         py: Python<'py>,
@@ -288,6 +289,7 @@ impl Client {
         invert_media = false,
         schedule_date = None,
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn edit_message<'py>(
         &self,
         py: Python<'py>,
@@ -931,6 +933,7 @@ impl Client {
         schedule_date = None,
         schedule_once_online = false,
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn send_photo<'py>(
         &self,
         py: Python<'py>,
@@ -1012,6 +1015,7 @@ impl Client {
         schedule_date = None,
         schedule_once_online = false,
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn send_document<'py>(
         &self,
         py: Python<'py>,
@@ -1095,6 +1099,7 @@ impl Client {
         schedule_date = None,
         schedule_once_online = false,
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn send_file<'py>(
         &self,
         py: Python<'py>,
@@ -3432,6 +3437,7 @@ impl Client {
         })
     }
 
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
     fn answer_inline_query<'py>(
         &self,
         py: Python<'py>,

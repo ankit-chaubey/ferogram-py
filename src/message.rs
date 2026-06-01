@@ -285,9 +285,9 @@ impl Message {
                 return Ok(None);
             }
             let channel_id = if chat_id < -1_000_000_000_000 {
-                ((-chat_id) - 1_000_000_000_000) as i64
+                (-chat_id) - 1_000_000_000_000
             } else {
-                (-chat_id) as i64
+                -chat_id
             };
             let s = match client.channel_kind_of(channel_id).await {
                 Some(ferogram::types::ChannelKind::Megagroup) => "megagroup",
@@ -311,9 +311,9 @@ impl Message {
                 return Ok(false);
             }
             let channel_id = if chat_id < -1_000_000_000_000 {
-                ((-chat_id) - 1_000_000_000_000) as i64
+                (-chat_id) - 1_000_000_000_000
             } else {
-                (-chat_id) as i64
+                -chat_id
             };
             Ok(matches!(
                 client.channel_kind_of(channel_id).await,
@@ -334,9 +334,9 @@ impl Message {
                 return Ok(false);
             }
             let channel_id = if chat_id < -1_000_000_000_000 {
-                ((-chat_id) - 1_000_000_000_000) as i64
+                (-chat_id) - 1_000_000_000_000
             } else {
-                (-chat_id) as i64
+                -chat_id
             };
             Ok(matches!(
                 client.channel_kind_of(channel_id).await,
@@ -366,10 +366,10 @@ impl Message {
                 ferogram::tl::enums::KeyboardButtonRow::KeyboardButtonRow(r) => &r.buttons,
             };
             for btn in buttons {
-                if let ferogram::tl::enums::KeyboardButton::Callback(b) = btn {
-                    if b.text == text {
-                        return Some(b.data.clone());
-                    }
+                if let ferogram::tl::enums::KeyboardButton::Callback(b) = btn
+                    && b.text == text
+                {
+                    return Some(b.data.clone());
                 }
             }
         }
@@ -388,10 +388,7 @@ impl Message {
     /// For "text": filter_value is the button label
     /// For "data": filter_value is the callback data as a hex string
     fn find_button(&self, filter_type: &str, filter_value: &str) -> Option<(usize, usize)> {
-        let markup = match &self._inner_markup {
-            Some(m) => m,
-            None => return None,
-        };
+        let markup = self._inner_markup.as_ref()?;
         let rows = match markup {
             ferogram::tl::enums::ReplyMarkup::ReplyInlineMarkup(k) => &k.rows,
             _ => return None,
@@ -433,10 +430,10 @@ impl Message {
                         ferogram::tl::enums::KeyboardButtonRow::KeyboardButtonRow(r) => &r.buttons,
                     };
                     for (ci, btn) in buttons.iter().enumerate() {
-                        if let ferogram::tl::enums::KeyboardButton::Callback(b) = btn {
-                            if b.data == want {
-                                return Some((ri, ci));
-                            }
+                        if let ferogram::tl::enums::KeyboardButton::Callback(b) = btn
+                            && b.data == want
+                        {
+                            return Some((ri, ci));
                         }
                     }
                 }
