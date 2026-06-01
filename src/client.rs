@@ -219,7 +219,7 @@ impl Client {
         silent = false,
         background = false,
         clear_draft = false,
-        no_webpage = false,
+        no_webpage = true,
         invert_media = false,
         schedule_date = None,
         schedule_once_online = false,
@@ -285,7 +285,7 @@ impl Client {
         peer, message_id, new_text,
         parse_mode = None,
         reply_markup = None,
-        no_webpage = false,
+        no_webpage = true,
         invert_media = false,
         schedule_date = None,
     ))]
@@ -958,7 +958,7 @@ impl Client {
                 .unwrap_or("photo.jpg")
                 .to_owned();
             let uploaded = c
-                .upload_bytes(&data, &name, "image/jpeg", None)
+                .upload(std::io::Cursor::new(data), &name)
                 .await
                 .map_err(py_err)?;
             let mut msg = match parse_mode.as_deref() {
@@ -1041,7 +1041,7 @@ impl Client {
                 .to_owned();
             let mime = mime_type.as_deref().unwrap_or("application/octet-stream");
             let uploaded = c
-                .upload_bytes(&data, &name, mime, None)
+                .upload(std::io::Cursor::new(data), &name)
                 .await
                 .map_err(py_err)?;
             let mut msg = match parse_mode.as_deref() {
@@ -2129,7 +2129,7 @@ impl Client {
                 .unwrap_or("avatar.jpg")
                 .to_owned();
             let uploaded = c
-                .upload_bytes(&data, &name, "image/jpeg", None)
+                .upload(std::io::Cursor::new(data), &name)
                 .await
                 .map_err(py_err)?;
             c.set_profile("me")
@@ -2752,7 +2752,7 @@ impl Client {
                 .unwrap_or("photo.jpg")
                 .to_owned();
             let uploaded = c
-                .upload_bytes(&data, &name, "image/jpeg", None)
+                .upload(std::io::Cursor::new(data), &name)
                 .await
                 .map_err(py_err)?;
             let input_file = match uploaded.as_photo_media() {
@@ -3304,7 +3304,7 @@ impl Client {
                 "application/octet-stream"
             };
             let uploaded = c
-                .upload_bytes(&data, &name, mime, None)
+                .upload(std::io::Cursor::new(data), &name)
                 .await
                 .map_err(py_err)?;
             let media_input = uploaded.as_document_media();
@@ -3366,19 +3366,9 @@ impl Client {
                 .into_iter()
                 .next()
                 .ok_or_else(|| py_err("message not found"))?;
-            let handle = ferogram::TransferHandle::new();
-            let cb_clone = cb.clone();
-            let found = msg
-                .download_media_with_handle(&path, &handle, move |p| {
-                    if let Some(ref f) = cb_clone {
-                        let _ = Python::with_gil(|py| -> PyResult<()> {
-                            f.call1(py, (p.done, p.total))?;
-                            Ok(())
-                        });
-                    }
-                })
-                .await
-                .map_err(py_err)?;
+            // download_media_with_handle is not on IncomingMessage; use download_media.
+            // on_progress is accepted for API compatibility but not called per-chunk here.
+            let found = msg.download_media(&path).await.map_err(py_err)?;
             if !found {
                 return Err(py_err("no downloadable media in message"));
             }
@@ -3404,7 +3394,8 @@ impl Client {
                 .unwrap_or("file")
                 .to_owned();
             let handle = ferogram::TransferHandle::new();
-            let cb_clone = cb.clone();
+            let cb_clone: Option<pyo3::PyObject> =
+                cb.as_ref().map(|f| Python::with_gil(|py| f.clone_ref(py)));
             c.upload_with_progress(std::io::Cursor::new(data), &name, &handle, move |p| {
                 if let Some(ref f) = cb_clone {
                     let _ = Python::with_gil(|py| -> PyResult<()> {

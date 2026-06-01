@@ -134,7 +134,9 @@ impl ClientBuilder {
                 .api_hash(api_hash);
 
             if in_memory {
-                builder = builder.in_memory();
+                builder = builder.session_backend(std::sync::Arc::new(
+                    ferogram::session_backend::InMemoryBackend::new(),
+                ));
             } else if let Some(s) = session_string {
                 builder = builder.session_string(s);
             } else {
@@ -216,6 +218,8 @@ impl ClientBuilder {
                 allow_zero_hash,
                 allow_missing_channel_hash,
                 auto_resolve_peers,
+                resumable_transfers: false,
+                checkpoint_dir: None,
             });
 
             builder = builder.retry_policy(std::sync::Arc::new(ferogram::AutoSleep {

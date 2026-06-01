@@ -294,7 +294,7 @@ impl Message {
             } else {
                 (-chat_id) as i64
             };
-            let kind = client.peer_cache().await.channel_kind_of(raw_id);
+            let kind = client.peer_cache.read().await.channel_kind_of(raw_id);
             let s = match kind {
                 Some(ferogram::types::ChannelKind::Megagroup) => Some("megagroup".to_string()),
                 Some(ferogram::types::ChannelKind::Broadcast) => Some("broadcast".to_string()),
@@ -321,7 +321,7 @@ impl Message {
             } else {
                 (-chat_id) as i64
             };
-            let kind = client.peer_cache().await.channel_kind_of(raw_id);
+            let kind = client.peer_cache.read().await.channel_kind_of(raw_id);
             Ok(matches!(
                 kind,
                 Some(ferogram::types::ChannelKind::Megagroup)
@@ -345,7 +345,7 @@ impl Message {
             } else {
                 (-chat_id) as i64
             };
-            let kind = client.peer_cache().await.channel_kind_of(raw_id);
+            let kind = client.peer_cache.read().await.channel_kind_of(raw_id);
             Ok(matches!(
                 kind,
                 Some(ferogram::types::ChannelKind::Broadcast)
