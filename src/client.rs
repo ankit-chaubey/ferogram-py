@@ -74,7 +74,7 @@ fn participant_status(p: &ferogram::participants::Participant) -> (&'static str,
 #[pymethods]
 impl Client {
     #[staticmethod]
-    fn builder(api_id: i32, api_hash: String, session: String) -> ClientBuilder {
+    fn builder(api_id: i32, api_hash: String, session: PyObject) -> ClientBuilder {
         ClientBuilder {
             api_id,
             api_hash,
@@ -94,7 +94,6 @@ impl Client {
             system_lang_code: None,
             lang_pack: None,
             session_string: None,
-            in_memory: false,
             update_queue_capacity: None,
             update_overflow: None,
             low_memory_mode: false,

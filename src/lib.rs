@@ -19,6 +19,7 @@ pub mod client;
 pub mod keyboards;
 pub mod message;
 pub mod raw;
+pub mod session;
 pub mod types;
 pub mod updates;
 
@@ -32,6 +33,12 @@ fn _ferogram(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<auth::ClientBuilder>()?;
     m.add_class::<auth::LoginToken>()?;
     m.add_class::<auth::PasswordToken>()?;
+    m.add_class::<session::FileSession>()?;
+    m.add_class::<session::MemorySession>()?;
+    m.add_class::<session::StringSession>()?;
+    m.add_class::<session::SqliteSession>()?;
+    m.add_class::<session::LibSqlSession>()?;
+    m.add_class::<session::CustomSession>()?;
     m.add_class::<message::Message>()?;
     m.add_class::<types::User>()?;
     m.add_class::<types::Dialog>()?;

@@ -16,6 +16,7 @@ use pyo3_async_runtimes::tokio::future_into_py;
 use std::sync::{Arc, Mutex};
 
 use crate::py_err;
+use crate::session::resolve_session;
 
 #[pyclass(frozen)]
 pub struct LoginToken(pub Arc<Mutex<Option<ferogram::LoginToken>>>);
@@ -46,9 +47,7 @@ pub struct ClientBuilder {
     pub api_id: i32,
     #[pyo3(get, set)]
     pub api_hash: String,
-    #[pyo3(get, set)]
-    pub session: String,
-    #[pyo3(get, set)]
+    pub session: PyObject,
     pub allow_zero_hash: bool,
     #[pyo3(get, set)]
     pub proxy: Option<String>,
@@ -79,8 +78,6 @@ pub struct ClientBuilder {
     #[pyo3(get, set)]
     pub session_string: Option<String>,
     #[pyo3(get, set)]
-    pub in_memory: bool,
-    #[pyo3(get, set)]
     pub update_queue_capacity: Option<usize>,
     #[pyo3(get, set)]
     pub update_overflow: Option<String>,
@@ -104,7 +101,7 @@ impl ClientBuilder {
     fn connect<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let api_id = self.api_id;
         let api_hash = self.api_hash.clone();
-        let session_path = self.session.clone();
+        let session_backend = resolve_session(py, &self.session)?;
         let allow_zero_hash = self.allow_zero_hash;
         let proxy = self.proxy.clone();
         let allow_ipv6 = self.allow_ipv6;
@@ -120,7 +117,6 @@ impl ClientBuilder {
         let system_lang_code = self.system_lang_code.clone();
         let lang_pack = self.lang_pack.clone();
         let session_string = self.session_string.clone();
-        let in_memory = self.in_memory;
         let update_queue_capacity = self.update_queue_capacity;
         let update_overflow = self.update_overflow.clone();
         let low_memory_mode = self.low_memory_mode;
@@ -133,14 +129,11 @@ impl ClientBuilder {
                 .api_id(api_id)
                 .api_hash(api_hash);
 
-            if in_memory {
-                builder = builder.session_backend(std::sync::Arc::new(
-                    ferogram::session_backend::InMemoryBackend::new(),
-                ));
-            } else if let Some(s) = session_string {
+            if let Some(s) = session_string {
+                // session_string takes priority when explicitly set
                 builder = builder.session_string(s);
             } else {
-                builder = builder.session(session_path);
+                builder = builder.session_backend(session_backend);
             }
 
             if let Some(p) = &proxy {

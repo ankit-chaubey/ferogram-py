@@ -27,6 +27,7 @@ if _main_file:
 
 from .client import Client, StopPropagation, ContinuePropagation
 from . import filters
+from ._ferogram import FileSession, MemorySession, StringSession, SqliteSession, LibSqlSession, CustomSession
 from ._ferogram import User, Dialog, ChatMember, UserFull, Message
 from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
 from ._ferogram import InviteLinkMember, ReadParticipant, AdminLogEvent, StickerSetInfo

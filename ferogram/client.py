@@ -85,7 +85,7 @@ _STICKER_MIME = "image/webp"
 class Client:
     def __init__(
         self,
-        session: str = "ferogram",
+        session: "str | FileSession | MemorySession | StringSession | SqliteSession | LibSqlSession | CustomSession" = "ferogram",
         *,
         api_id: int | None = None,
         api_hash: str | None = None,
@@ -350,9 +350,14 @@ class Client:
         if self._raw is not None:
             return self
         api_id, api_hash = self._require_creds()
-        session_path = self.session if self.session.endswith(".session") else self.session + ".session"
-        _log.info("connecting (session=%r)", session_path)
-        builder = _RustClient.builder(api_id, api_hash, session_path)
+        # Resolve a plain str to FileSession (with .session suffix) for backward compat.
+        from ._ferogram import FileSession, MemorySession, StringSession, SqliteSession, LibSqlSession, CustomSession
+        session = self.session
+        if isinstance(session, str):
+            path = session if session.endswith(".session") else session + ".session"
+            session = FileSession(path)
+        _log.info("connecting (session=%r)", repr(session))
+        builder = _RustClient.builder(api_id, api_hash, session)
         builder.proxy                      = self.proxy
         builder.allow_ipv6                 = self.allow_ipv6
         builder.dc_addr                    = self.dc_addr
@@ -367,7 +372,6 @@ class Client:
         builder.system_lang_code           = self.system_lang_code
         builder.lang_pack                  = self.lang_pack
         builder.session_string             = self.session_string
-        builder.in_memory                  = self.in_memory
         builder.update_queue_capacity      = self.update_queue_capacity
         builder.update_overflow            = self.update_overflow
         builder.low_memory_mode            = self.low_memory_mode
