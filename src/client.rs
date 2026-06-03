@@ -375,7 +375,7 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.pin_message(peer, message_id, false)
+            c.pin_message(peer, message_id, true)
                 .await
                 .map_err(py_err)?;
             Ok(())
@@ -2435,12 +2435,22 @@ impl Client {
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            // In v0.5.0, get_poll_results was removed. Use get_poll_votes to
-            // fetch votes instead. The poll_hash parameter is no longer used.
-            c.get_poll_votes(peer, msg_id, None, 100, None)
+            let result = c
+                .get_poll_votes(peer, msg_id, None, 100, None)
                 .await
                 .map_err(py_err)?;
-            Ok(())
+            let pairs: Vec<(i64, Vec<u8>)> = result
+                .votes
+                .into_iter()
+                .map(|v| match v {
+                    tl::enums::MessagePeerVote::MessagePeerVote(x) => (x.peer.bare_id(), x.option),
+                    tl::enums::MessagePeerVote::InputOption(x) => (x.peer.bare_id(), vec![]),
+                    tl::enums::MessagePeerVote::Multiple(x) => {
+                        (x.peer.bare_id(), x.options.into_iter().flatten().collect())
+                    }
+                })
+                .collect();
+            Ok(pairs)
         })
     }
 
@@ -2918,7 +2928,7 @@ impl Client {
     fn get_all_drafts<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            c.clear_all_drafts().await.map_err(py_err)?;
+            c.sync_drafts().await.map_err(py_err)?;
             Ok(())
         })
     }
@@ -3174,11 +3184,6 @@ impl Client {
     fn get_input_peer<'py>(&self, py: Python<'py>, peer_id: i64) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            Python::with_gil(|py| {
-                let cache = pyo3::PyErr::take(py); // just to get py handle
-                drop(cache);
-                Ok::<_, pyo3::PyErr>(())
-            })?;
             // Build a Peer enum from the raw id using the same sign convention
             // as Telegram: positive = user, -100xxxx = channel, small neg = chat
             let peer = if peer_id > 0 {
@@ -3362,19 +3367,26 @@ impl Client {
         on_progress: Option<Bound<'py, pyo3::types::PyAny>>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let c = Arc::clone(&self.inner);
-        // Capture the Python callable as a PyObject so it can cross the await boundary.
-        let _cb: Option<pyo3::PyObject> = on_progress.map(|f| f.into());
+        let cb: Option<pyo3::PyObject> = on_progress.map(|f| f.into());
         future_into_py(py, async move {
             let msgs = c.get_messages(peer, &[msg_id]).await.map_err(py_err)?;
             let msg = msgs
                 .into_iter()
                 .next()
                 .ok_or_else(|| py_err("message not found"))?;
-            // download_media_with_handle is not on IncomingMessage; use download_media.
-            // on_progress is accepted for API compatibility but not called per-chunk here.
             let found = msg.download_media(&path).await.map_err(py_err)?;
             if !found {
                 return Err(py_err("no downloadable media in message"));
+            }
+            if let Some(ref f) = cb {
+                let size = tokio::fs::metadata(&path)
+                    .await
+                    .map(|m| m.len())
+                    .unwrap_or(0);
+                let _ = Python::with_gil(|py| -> PyResult<()> {
+                    f.call1(py, (size, size))?;
+                    Ok(())
+                });
             }
             Ok(path)
         })

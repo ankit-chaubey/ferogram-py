@@ -458,7 +458,7 @@ checksum = "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a"
 [[package]]
 name = "ferogram"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -493,7 +493,7 @@ dependencies = [
 [[package]]
 name = "ferogram-connect"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "ferogram-crypto",
  "ferogram-mtproto",
@@ -512,7 +512,7 @@ dependencies = [
 [[package]]
 name = "ferogram-crypto"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "aes",
  "ctr",
@@ -526,7 +526,7 @@ dependencies = [
 [[package]]
 name = "ferogram-fsm"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "async-trait",
  "dashmap",
@@ -538,7 +538,7 @@ dependencies = [
 [[package]]
 name = "ferogram-mtproto"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "ferogram-crypto",
  "ferogram-tl-types",
@@ -552,7 +552,7 @@ dependencies = [
 [[package]]
 name = "ferogram-mtsender"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "ferogram-connect",
  "ferogram-crypto",
@@ -571,7 +571,7 @@ dependencies = [
 [[package]]
 name = "ferogram-parsers"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "ferogram-tl-types",
  "pulldown-cmark",
@@ -591,7 +591,7 @@ dependencies = [
 [[package]]
 name = "ferogram-session"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "base64 0.22.1",
  "libsql",
@@ -604,7 +604,7 @@ dependencies = [
 [[package]]
 name = "ferogram-tl-gen"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "ferogram-tl-parser",
 ]
@@ -612,12 +612,12 @@ dependencies = [
 [[package]]
 name = "ferogram-tl-parser"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 
 [[package]]
 name = "ferogram-tl-types"
 version = "0.6.0"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=56209e3109e698ba89d6da2fd555cc0e6843777f#56209e3109e698ba89d6da2fd555cc0e6843777f"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=8fcff584faf88e76fc501b057ca92c793f42883d#8fcff584faf88e76fc501b057ca92c793f42883d"
 dependencies = [
  "ferogram-tl-gen",
  "ferogram-tl-parser",
@@ -1492,6 +1492,7 @@ version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c10584274047cb335c23d3e61bcef8e323adae7c5c8c760540f73610177fc3f"
 dependencies = [
+ "cc",
  "pkg-config",
  "vcpkg",
 ]
