@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class ExportedChatlistInvite:
+    _CID = 0x10e6e3a6
+
     def __init__(
         self,
         filter: Any,
@@ -35,12 +38,24 @@ class ExportedChatlistInvite:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa6\xe3\xe6\x10'
+        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.invite), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.exportedChatlistInvite"}
+        obj["filter"], pos = _tl._read_typed(data, pos, "DialogFilter", _SCHEMA_BY_CID)
+        obj["invite"], pos = _tl._read_typed(data, pos, "ExportedChatlistInvite", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportedChatlistInvite(filter={self.filter!r}, invite={self.invite!r})"
 
 class ExportedInvites:
+    _CID = 0x10ab6dc7
+
     def __init__(
         self,
         invites: list[Any],
@@ -59,12 +74,26 @@ class ExportedInvites:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xc7m\xab\x10'
+        out += _tl.serialize(_tl._resolve(self.invites), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.exportedInvites"}
+        obj["invites"], pos = _tl._read_typed(data, pos, "Vector<ExportedChatlistInvite>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportedInvites(invites={self.invites!r}, chats={self.chats!r}, users={self.users!r})"
 
 class ChatlistInviteAlready:
+    _CID = 0xfa87f659
+
     def __init__(
         self,
         filter_id: int,
@@ -89,12 +118,31 @@ class ChatlistInviteAlready:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'Y\xf6\x87\xfa'
+        out += _struct.pack('<i', self.filter_id)
+        out += _tl.serialize(_tl._resolve(self.missing_peers), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.already_peers), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.chatlistInviteAlready"}
+        obj["filter_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["missing_peers"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
+        obj["already_peers"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChatlistInviteAlready(filter_id={self.filter_id!r}, missing_peers={self.missing_peers!r}, already_peers={self.already_peers!r}, chats={self.chats!r})"
 
 class ChatlistInvite:
+    _CID = 0xf10ece2f
+
     def __init__(
         self,
         title: Any,
@@ -122,12 +170,38 @@ class ChatlistInvite:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'/\xce\x0e\xf1'
+        _flags_word = (0 if self.title_noanimate is None else (1 << 1)) | (0 if self.emoticon is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.title), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.emoticon)
+        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.chatlistInvite"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 1):
+            obj["title_noanimate"] = True
+        obj["title"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["emoticon"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChatlistInvite(title_noanimate={self.title_noanimate!r}, title={self.title!r}, emoticon={self.emoticon!r}, peers={self.peers!r})"
 
 class ChatlistUpdates:
+    _CID = 0x93bd878d
+
     def __init__(
         self,
         missing_peers: list[Any],
@@ -146,7 +220,19 @@ class ChatlistUpdates:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x8d\x87\xbd\x93'
+        out += _tl.serialize(_tl._resolve(self.missing_peers), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.chatlistUpdates"}
+        obj["missing_peers"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChatlistUpdates(missing_peers={self.missing_peers!r}, chats={self.chats!r}, users={self.users!r})"

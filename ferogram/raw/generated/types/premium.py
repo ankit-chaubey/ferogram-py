@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class BoostsList:
+    _CID = 0x86f8613c
+
     def __init__(
         self,
         count: int,
@@ -41,12 +44,35 @@ class BoostsList:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'<a\xf8\x86'
+        _flags_word = (0 if self.next_offset is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.boosts), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.next_offset)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "premium.boostsList"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["boosts"], pos = _tl._read_typed(data, pos, "Vector<Boost>", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"BoostsList(count={self.count!r}, boosts={self.boosts!r}, next_offset={self.next_offset!r}, users={self.users!r})"
 
 class MyBoosts:
+    _CID = 0x9ae228e2
+
     def __init__(
         self,
         my_boosts: list[Any],
@@ -65,12 +91,26 @@ class MyBoosts:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe2(\xe2\x9a'
+        out += _tl.serialize(_tl._resolve(self.my_boosts), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "premium.myBoosts"}
+        obj["my_boosts"], pos = _tl._read_typed(data, pos, "Vector<MyBoost>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"MyBoosts(my_boosts={self.my_boosts!r}, chats={self.chats!r}, users={self.users!r})"
 
 class BoostsStatus:
+    _CID = 0x4959427a
+
     def __init__(
         self,
         level: int,
@@ -110,7 +150,46 @@ class BoostsStatus:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'zBYI'
+        _flags_word = (0 if self.my_boost is None else (1 << 2)) | (0 if self.gift_boosts is None else (1 << 4)) | (0 if self.next_level_boosts is None else (1 << 0)) | (0 if self.premium_audience is None else (1 << 1)) | (0 if self.prepaid_giveaways is None else (1 << 3)) | (0 if self.my_boost_slots is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<iii', self.level, self.current_level_boosts, self.boosts)
+        if _flags_word & (1 << 4):
+            out += _struct.pack('<i', self.gift_boosts)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.next_level_boosts)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.premium_audience), _SCHEMA)
+        out += _tl._pack_string(self.boost_url)
+        if _flags_word & (1 << 3):
+            out += _tl.serialize(_tl._resolve(self.prepaid_giveaways), _SCHEMA)
+        if _flags_word & (1 << 2):
+            out += _tl.serialize(_tl._resolve(self.my_boost_slots), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "premium.boostsStatus"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 2):
+            obj["my_boost"] = True
+        obj["level"], obj["current_level_boosts"], obj["boosts"], = _struct.unpack_from('<iii', data, pos)
+        pos += 12
+        if _flags_word & (1 << 4):
+            obj["gift_boosts"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["next_level_boosts"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["premium_audience"], pos = _tl._read_typed(data, pos, "StatsPercentValue", _SCHEMA_BY_CID)
+        obj["boost_url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["prepaid_giveaways"], pos = _tl._read_typed(data, pos, "Vector<PrepaidGiveaway>", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["my_boost_slots"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"BoostsStatus(my_boost={self.my_boost!r}, level={self.level!r}, current_level_boosts={self.current_level_boosts!r}, boosts={self.boosts!r})"

@@ -3,6 +3,7 @@ name        = "ferogram-py"
 version     = "0.5.0"
 edition     = "2024"
 description = "Python bindings for ferogram (Rust MTProto)"
+build       = "build.rs"
 license     = "MIT OR Apache-2.0"
 
 [lib]
@@ -25,3 +26,6 @@ tokio               = { version = "1", features = ["full"] }
 strip     = true
 opt-level = 3
 lto       = true
+
+[build-dependencies]
+pyo3-build-config = "0.24"

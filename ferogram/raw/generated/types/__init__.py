@@ -15,8 +15,8 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 # Flat imports so both styles work:
-#   raw.functions.messages.GetHistory(...)   ← namespace style
-#   raw.functions.GetHistory(...)            ← flat style (convenience)
+#   raw.functions.messages.GetHistory(...)   <- namespace style
+#   raw.functions.GetHistory(...)            <- flat style (convenience)
 
 from ._base import *  # noqa: F401,F403
 from .account import *  # noqa: F401,F403

@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class GetUsers:
+    _CID = 0x0d91a548
+
     def __init__(
         self,
         id: list[Any],
@@ -32,12 +35,22 @@ class GetUsers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'H\xa5\x91\r'
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.getUsers"}
+        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetUsers(id={self.id!r})"
 
 class GetFullUser:
+    _CID = 0xb60f5918
+
     def __init__(
         self,
         id: Any,
@@ -50,12 +63,22 @@ class GetFullUser:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x18Y\x0f\xb6'
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.getFullUser"}
+        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetFullUser(id={self.id!r})"
 
 class SetSecureValueErrors:
+    _CID = 0x90c894b5
+
     def __init__(
         self,
         id: Any,
@@ -71,12 +94,24 @@ class SetSecureValueErrors:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb5\x94\xc8\x90'
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.errors), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.setSecureValueErrors"}
+        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["errors"], pos = _tl._read_typed(data, pos, "Vector<SecureValueError>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SetSecureValueErrors(id={self.id!r}, errors={self.errors!r})"
 
 class GetRequirementsToContact:
+    _CID = 0xd89a83a3
+
     def __init__(
         self,
         id: list[Any],
@@ -89,12 +124,22 @@ class GetRequirementsToContact:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa3\x83\x9a\xd8'
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.getRequirementsToContact"}
+        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetRequirementsToContact(id={self.id!r})"
 
 class GetSavedMusic:
+    _CID = 0x788d7fe3
+
     def __init__(
         self,
         id: Any,
@@ -116,12 +161,25 @@ class GetSavedMusic:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe3\x7f\x8dx'
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _struct.pack('<iiq', self.offset, self.limit, self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.getSavedMusic"}
+        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["offset"], obj["limit"], obj["hash"], = _struct.unpack_from('<iiq', data, pos)
+        pos += 16
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetSavedMusic(id={self.id!r}, offset={self.offset!r}, limit={self.limit!r}, hash={self.hash!r})"
 
 class GetSavedMusicByID:
+    _CID = 0x7573a4e9
+
     def __init__(
         self,
         id: Any,
@@ -137,12 +195,24 @@ class GetSavedMusicByID:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe9\xa4su'
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.documents), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.getSavedMusicByID"}
+        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["documents"], pos = _tl._read_typed(data, pos, "Vector<InputDocument>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetSavedMusicByID(id={self.id!r}, documents={self.documents!r})"
 
 class SuggestBirthday:
+    _CID = 0xfc533372
+
     def __init__(
         self,
         id: Any,
@@ -158,7 +228,17 @@ class SuggestBirthday:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'r3S\xfc'
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.birthday), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.suggestBirthday"}
+        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["birthday"], pos = _tl._read_typed(data, pos, "Birthday", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SuggestBirthday(id={self.id!r}, birthday={self.birthday!r})"

@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class EligibleToJoin:
+    _CID = 0xdc8b44cf
+
     def __init__(
         self,
         terms_url: str,
@@ -35,12 +38,25 @@ class EligibleToJoin:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xcfD\x8b\xdc'
+        out += _tl._pack_string(self.terms_url)
+        out += _struct.pack('<i', self.monthly_sent_sms)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "smsjobs.eligibleToJoin"}
+        obj["terms_url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["monthly_sent_sms"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EligibleToJoin(terms_url={self.terms_url!r}, monthly_sent_sms={self.monthly_sent_sms!r})"
 
 class Status:
+    _CID = 0x2aee9191
+
     def __init__(
         self,
         recent_sent: int,
@@ -74,7 +90,28 @@ class Status:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x91\x91\xee*'
+        _flags_word = (0 if self.allow_international is None else (1 << 0)) | (0 if self.last_gift_slug is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<iiiii', self.recent_sent, self.recent_since, self.recent_remains, self.total_sent, self.total_since)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.last_gift_slug)
+        out += _tl._pack_string(self.terms_url)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "smsjobs.status"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["allow_international"] = True
+        obj["recent_sent"], obj["recent_since"], obj["recent_remains"], obj["total_sent"], obj["total_since"], = _struct.unpack_from('<iiiii', data, pos)
+        pos += 20
+        if _flags_word & (1 << 1):
+            obj["last_gift_slug"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["terms_url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Status(allow_international={self.allow_international!r}, recent_sent={self.recent_sent!r}, recent_since={self.recent_since!r}, recent_remains={self.recent_remains!r})"

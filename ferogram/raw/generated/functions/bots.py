@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class SendCustomRequest:
+    _CID = 0xaa2769ed
+
     def __init__(
         self,
         custom_method: str,
@@ -35,12 +38,24 @@ class SendCustomRequest:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b"\xedi'\xaa"
+        out += _tl._pack_string(self.custom_method)
+        out += _tl.serialize(_tl._resolve(self.params), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.sendCustomRequest"}
+        obj["custom_method"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SendCustomRequest(custom_method={self.custom_method!r}, params={self.params!r})"
 
 class AnswerWebhookJSONQuery:
+    _CID = 0xe6213f4d
+
     def __init__(
         self,
         query_id: int,
@@ -56,12 +71,25 @@ class AnswerWebhookJSONQuery:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'M?!\xe6'
+        out += _struct.pack('<q', self.query_id)
+        out += _tl.serialize(_tl._resolve(self.data), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.answerWebhookJSONQuery"}
+        obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["data"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AnswerWebhookJSONQuery(query_id={self.query_id!r}, data={self.data!r})"
 
 class SetBotCommands:
+    _CID = 0x0517165a
+
     def __init__(
         self,
         scope: Any,
@@ -80,12 +108,26 @@ class SetBotCommands:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'Z\x16\x17\x05'
+        out += _tl.serialize(_tl._resolve(self.scope), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        out += _tl.serialize(_tl._resolve(self.commands), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.setBotCommands"}
+        obj["scope"], pos = _tl._read_typed(data, pos, "BotCommandScope", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["commands"], pos = _tl._read_typed(data, pos, "Vector<BotCommand>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SetBotCommands(scope={self.scope!r}, lang_code={self.lang_code!r}, commands={self.commands!r})"
 
 class ResetBotCommands:
+    _CID = 0x3d8de0f9
+
     def __init__(
         self,
         scope: Any,
@@ -101,12 +143,24 @@ class ResetBotCommands:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf9\xe0\x8d='
+        out += _tl.serialize(_tl._resolve(self.scope), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.resetBotCommands"}
+        obj["scope"], pos = _tl._read_typed(data, pos, "BotCommandScope", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ResetBotCommands(scope={self.scope!r}, lang_code={self.lang_code!r})"
 
 class GetBotCommands:
+    _CID = 0xe34c0dd6
+
     def __init__(
         self,
         scope: Any,
@@ -122,12 +176,24 @@ class GetBotCommands:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd6\rL\xe3'
+        out += _tl.serialize(_tl._resolve(self.scope), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getBotCommands"}
+        obj["scope"], pos = _tl._read_typed(data, pos, "BotCommandScope", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetBotCommands(scope={self.scope!r}, lang_code={self.lang_code!r})"
 
 class SetBotMenuButton:
+    _CID = 0x4504d54f
+
     def __init__(
         self,
         user_id: Any,
@@ -143,12 +209,24 @@ class SetBotMenuButton:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'O\xd5\x04E'
+        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.button), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.setBotMenuButton"}
+        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["button"], pos = _tl._read_typed(data, pos, "BotMenuButton", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SetBotMenuButton(user_id={self.user_id!r}, button={self.button!r})"
 
 class GetBotMenuButton:
+    _CID = 0x9c60eb28
+
     def __init__(
         self,
         user_id: Any,
@@ -161,12 +239,22 @@ class GetBotMenuButton:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'(\xeb`\x9c'
+        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getBotMenuButton"}
+        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetBotMenuButton(user_id={self.user_id!r})"
 
 class SetBotBroadcastDefaultAdminRights:
+    _CID = 0x788464e1
+
     def __init__(
         self,
         admin_rights: Any,
@@ -179,12 +267,22 @@ class SetBotBroadcastDefaultAdminRights:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe1d\x84x'
+        out += _tl.serialize(_tl._resolve(self.admin_rights), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.setBotBroadcastDefaultAdminRights"}
+        obj["admin_rights"], pos = _tl._read_typed(data, pos, "ChatAdminRights", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SetBotBroadcastDefaultAdminRights(admin_rights={self.admin_rights!r})"
 
 class SetBotGroupDefaultAdminRights:
+    _CID = 0x925ec9ea
+
     def __init__(
         self,
         admin_rights: Any,
@@ -197,12 +295,22 @@ class SetBotGroupDefaultAdminRights:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xea\xc9^\x92'
+        out += _tl.serialize(_tl._resolve(self.admin_rights), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.setBotGroupDefaultAdminRights"}
+        obj["admin_rights"], pos = _tl._read_typed(data, pos, "ChatAdminRights", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SetBotGroupDefaultAdminRights(admin_rights={self.admin_rights!r})"
 
 class SetBotInfo:
+    _CID = 0x10cf3123
+
     def __init__(
         self,
         lang_code: str,
@@ -227,12 +335,42 @@ class SetBotInfo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'#1\xcf\x10'
+        _flags_word = (0 if self.bot is None else (1 << 2)) | (0 if self.name is None else (1 << 3)) | (0 if self.about is None else (1 << 0)) | (0 if self.description is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 2):
+            out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        if _flags_word & (1 << 3):
+            out += _tl._pack_string(self.name)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.about)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.description)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.setBotInfo"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 2):
+            obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["about"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["description"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SetBotInfo(bot={self.bot!r}, lang_code={self.lang_code!r}, name={self.name!r}, about={self.about!r})"
 
 class GetBotInfo:
+    _CID = 0xdcd914fd
+
     def __init__(
         self,
         lang_code: str,
@@ -248,12 +386,30 @@ class GetBotInfo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xfd\x14\xd9\xdc'
+        _flags_word = (0 if self.bot is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getBotInfo"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetBotInfo(bot={self.bot!r}, lang_code={self.lang_code!r})"
 
 class ReorderUsernames:
+    _CID = 0x9709b1c2
+
     def __init__(
         self,
         bot: Any,
@@ -269,12 +425,24 @@ class ReorderUsernames:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xc2\xb1\t\x97'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.reorderUsernames"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ReorderUsernames(bot={self.bot!r}, order={self.order!r})"
 
 class ToggleUsername:
+    _CID = 0x053ca973
+
     def __init__(
         self,
         bot: Any,
@@ -293,12 +461,26 @@ class ToggleUsername:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b's\xa9<\x05'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.username)
+        out += _tl._pack_bool(self.active)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.toggleUsername"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["username"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["active"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ToggleUsername(bot={self.bot!r}, username={self.username!r}, active={self.active!r})"
 
 class CanSendMessage:
+    _CID = 0x1359f4e6
+
     def __init__(
         self,
         bot: Any,
@@ -311,12 +493,22 @@ class CanSendMessage:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe6\xf4Y\x13'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.canSendMessage"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CanSendMessage(bot={self.bot!r})"
 
 class AllowSendMessage:
+    _CID = 0xf132e3ef
+
     def __init__(
         self,
         bot: Any,
@@ -329,12 +521,22 @@ class AllowSendMessage:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xef\xe32\xf1'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.allowSendMessage"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AllowSendMessage(bot={self.bot!r})"
 
 class InvokeWebViewCustomMethod:
+    _CID = 0x087fc5e7
+
     def __init__(
         self,
         bot: Any,
@@ -353,12 +555,26 @@ class InvokeWebViewCustomMethod:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe7\xc5\x7f\x08'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.custom_method)
+        out += _tl.serialize(_tl._resolve(self.params), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.invokeWebViewCustomMethod"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["custom_method"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"InvokeWebViewCustomMethod(bot={self.bot!r}, custom_method={self.custom_method!r}, params={self.params!r})"
 
 class GetPopularAppBots:
+    _CID = 0xc2510192
+
     def __init__(
         self,
         offset: str,
@@ -374,12 +590,25 @@ class GetPopularAppBots:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x92\x01Q\xc2'
+        out += _tl._pack_string(self.offset)
+        out += _struct.pack('<i', self.limit)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getPopularAppBots"}
+        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetPopularAppBots(offset={self.offset!r}, limit={self.limit!r})"
 
 class AddPreviewMedia:
+    _CID = 0x17aeb75a
+
     def __init__(
         self,
         bot: Any,
@@ -398,12 +627,26 @@ class AddPreviewMedia:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'Z\xb7\xae\x17'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.addPreviewMedia"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AddPreviewMedia(bot={self.bot!r}, lang_code={self.lang_code!r}, media={self.media!r})"
 
 class EditPreviewMedia:
+    _CID = 0x8525606f
+
     def __init__(
         self,
         bot: Any,
@@ -425,12 +668,28 @@ class EditPreviewMedia:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'o`%\x85'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.new_media), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.editPreviewMedia"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+        obj["new_media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EditPreviewMedia(bot={self.bot!r}, lang_code={self.lang_code!r}, media={self.media!r}, new_media={self.new_media!r})"
 
 class DeletePreviewMedia:
+    _CID = 0x2d0135b3
+
     def __init__(
         self,
         bot: Any,
@@ -449,12 +708,26 @@ class DeletePreviewMedia:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb35\x01-'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.deletePreviewMedia"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["media"], pos = _tl._read_typed(data, pos, "Vector<InputMedia>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DeletePreviewMedia(bot={self.bot!r}, lang_code={self.lang_code!r}, media={self.media!r})"
 
 class ReorderPreviewMedias:
+    _CID = 0xb627f3aa
+
     def __init__(
         self,
         bot: Any,
@@ -473,12 +746,26 @@ class ReorderPreviewMedias:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b"\xaa\xf3'\xb6"
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.reorderPreviewMedias"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_typed(data, pos, "Vector<InputMedia>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ReorderPreviewMedias(bot={self.bot!r}, lang_code={self.lang_code!r}, order={self.order!r})"
 
 class GetPreviewInfo:
+    _CID = 0x423ab3ad
+
     def __init__(
         self,
         bot: Any,
@@ -494,12 +781,24 @@ class GetPreviewInfo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xad\xb3:B'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.lang_code)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getPreviewInfo"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetPreviewInfo(bot={self.bot!r}, lang_code={self.lang_code!r})"
 
 class GetPreviewMedias:
+    _CID = 0xa2a5594d
+
     def __init__(
         self,
         bot: Any,
@@ -512,12 +811,22 @@ class GetPreviewMedias:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'MY\xa5\xa2'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getPreviewMedias"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetPreviewMedias(bot={self.bot!r})"
 
 class UpdateUserEmojiStatus:
+    _CID = 0xed9f30c5
+
     def __init__(
         self,
         user_id: Any,
@@ -533,12 +842,24 @@ class UpdateUserEmojiStatus:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xc50\x9f\xed'
+        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.emoji_status), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.updateUserEmojiStatus"}
+        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["emoji_status"], pos = _tl._read_typed(data, pos, "EmojiStatus", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"UpdateUserEmojiStatus(user_id={self.user_id!r}, emoji_status={self.emoji_status!r})"
 
 class ToggleUserEmojiStatusPermission:
+    _CID = 0x06de6392
+
     def __init__(
         self,
         bot: Any,
@@ -554,12 +875,24 @@ class ToggleUserEmojiStatusPermission:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x92c\xde\x06'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_bool(self.enabled)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.toggleUserEmojiStatusPermission"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ToggleUserEmojiStatusPermission(bot={self.bot!r}, enabled={self.enabled!r})"
 
 class CheckDownloadFileParams:
+    _CID = 0x50077589
+
     def __init__(
         self,
         bot: Any,
@@ -578,12 +911,26 @@ class CheckDownloadFileParams:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x89u\x07P'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.file_name)
+        out += _tl._pack_string(self.url)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.checkDownloadFileParams"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["file_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CheckDownloadFileParams(bot={self.bot!r}, file_name={self.file_name!r}, url={self.url!r})"
 
 class GetAdminedBots:
+    _CID = 0xb0711d83
+
     def __init__(self) -> None:
         pass
 
@@ -592,12 +939,20 @@ class GetAdminedBots:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x83\x1dq\xb0'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getAdminedBots"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetAdminedBots()"
 
 class UpdateStarRefProgram:
+    _CID = 0x778b5ab3
+
     def __init__(
         self,
         bot: Any,
@@ -616,12 +971,34 @@ class UpdateStarRefProgram:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb3Z\x8bw'
+        _flags_word = (0 if self.duration_months is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _struct.pack('<i', self.commission_permille)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.duration_months)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.updateStarRefProgram"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["commission_permille"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["duration_months"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"UpdateStarRefProgram(bot={self.bot!r}, commission_permille={self.commission_permille!r}, duration_months={self.duration_months!r})"
 
 class SetCustomVerification:
+    _CID = 0x8b89dfbd
+
     def __init__(
         self,
         peer: Any,
@@ -643,12 +1020,36 @@ class SetCustomVerification:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xbd\xdf\x89\x8b'
+        _flags_word = (0 if self.enabled is None else (1 << 1)) | (0 if self.bot is None else (1 << 0)) | (0 if self.custom_description is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_string(self.custom_description)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.setCustomVerification"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 1):
+            obj["enabled"] = True
+        if _flags_word & (1 << 0):
+            obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["custom_description"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SetCustomVerification(enabled={self.enabled!r}, bot={self.bot!r}, peer={self.peer!r}, custom_description={self.custom_description!r})"
 
 class GetBotRecommendations:
+    _CID = 0xa1b70815
+
     def __init__(
         self,
         bot: Any,
@@ -661,12 +1062,22 @@ class GetBotRecommendations:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x15\x08\xb7\xa1'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getBotRecommendations"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetBotRecommendations(bot={self.bot!r})"
 
 class CheckUsername:
+    _CID = 0x87f2219b
+
     def __init__(
         self,
         username: str,
@@ -679,12 +1090,22 @@ class CheckUsername:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x9b!\xf2\x87'
+        out += _tl._pack_string(self.username)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.checkUsername"}
+        obj["username"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CheckUsername(username={self.username!r})"
 
 class CreateBot:
+    _CID = 0xe5b17f2b
+
     def __init__(
         self,
         name: str,
@@ -706,12 +1127,32 @@ class CreateBot:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'+\x7f\xb1\xe5'
+        _flags_word = (0 if self.via_deeplink is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.name)
+        out += _tl._pack_string(self.username)
+        out += _tl.serialize(_tl._resolve(self.manager_id), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.createBot"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["via_deeplink"] = True
+        obj["name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["username"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["manager_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CreateBot(via_deeplink={self.via_deeplink!r}, name={self.name!r}, username={self.username!r}, manager_id={self.manager_id!r})"
 
 class ExportBotToken:
+    _CID = 0xbd0d99eb
+
     def __init__(
         self,
         bot: Any,
@@ -727,12 +1168,24 @@ class ExportBotToken:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xeb\x99\r\xbd'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_bool(self.revoke)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.exportBotToken"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["revoke"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportBotToken(bot={self.bot!r}, revoke={self.revoke!r})"
 
 class RequestWebViewButton:
+    _CID = 0x31a2a35e
+
     def __init__(
         self,
         user_id: Any,
@@ -748,12 +1201,24 @@ class RequestWebViewButton:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'^\xa3\xa21'
+        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.button), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.requestWebViewButton"}
+        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["button"], pos = _tl._read_typed(data, pos, "KeyboardButton", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"RequestWebViewButton(user_id={self.user_id!r}, button={self.button!r})"
 
 class GetRequestedWebViewButton:
+    _CID = 0xbf25b7f3
+
     def __init__(
         self,
         bot: Any,
@@ -769,12 +1234,24 @@ class GetRequestedWebViewButton:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf3\xb7%\xbf'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._pack_string(self.webapp_req_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getRequestedWebViewButton"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["webapp_req_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetRequestedWebViewButton(bot={self.bot!r}, webapp_req_id={self.webapp_req_id!r})"
 
 class GetAccessSettings:
+    _CID = 0x213853a3
+
     def __init__(
         self,
         bot: Any,
@@ -787,12 +1264,22 @@ class GetAccessSettings:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa3S8!'
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.getAccessSettings"}
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetAccessSettings(bot={self.bot!r})"
 
 class EditAccessSettings:
+    _CID = 0x31813cd8
+
     def __init__(
         self,
         bot: Any,
@@ -811,12 +1298,32 @@ class EditAccessSettings:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd8<\x811'
+        _flags_word = (0 if self.restricted is None else (1 << 0)) | (0 if self.add_users is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.add_users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.editAccessSettings"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["restricted"] = True
+        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["add_users"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EditAccessSettings(restricted={self.restricted!r}, bot={self.bot!r}, add_users={self.add_users!r})"
 
 class SetJoinChatResults:
+    _CID = 0xe71a4810
+
     def __init__(
         self,
         query_id: int,
@@ -832,7 +1339,18 @@ class SetJoinChatResults:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x10H\x1a\xe7'
+        out += _struct.pack('<q', self.query_id)
+        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "bots.setJoinChatResults"}
+        obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["result"], pos = _tl._read_typed(data, pos, "JoinChatBotResult", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SetJoinChatResults(query_id={self.query_id!r}, result={self.result!r})"

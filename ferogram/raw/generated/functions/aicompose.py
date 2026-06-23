@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class CreateTone:
+    _CID = 0x4aa83913
+
     def __init__(
         self,
         emoji_id: int,
@@ -41,12 +44,33 @@ class CreateTone:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x139\xa8J'
+        _flags_word = (0 if self.display_author is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.emoji_id)
+        out += _tl._pack_string(self.title)
+        out += _tl._pack_string(self.prompt)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.createTone"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["display_author"] = True
+        obj["emoji_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["prompt"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CreateTone(display_author={self.display_author!r}, emoji_id={self.emoji_id!r}, title={self.title!r}, prompt={self.prompt!r})"
 
 class UpdateTone:
+    _CID = 0x903bcf59
+
     def __init__(
         self,
         tone: Any,
@@ -71,12 +95,43 @@ class UpdateTone:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'Y\xcf;\x90'
+        _flags_word = (0 if self.display_author is None else (1 << 0)) | (0 if self.emoji_id is None else (1 << 1)) | (0 if self.title is None else (1 << 2)) | (0 if self.prompt is None else (1 << 3))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.tone), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_bool(self.display_author)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<q', self.emoji_id)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_string(self.title)
+        if _flags_word & (1 << 3):
+            out += _tl._pack_string(self.prompt)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.updateTone"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["tone"], pos = _tl._read_typed(data, pos, "InputAiComposeTone", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["display_author"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["emoji_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 2):
+            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["prompt"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"UpdateTone(tone={self.tone!r}, display_author={self.display_author!r}, emoji_id={self.emoji_id!r}, title={self.title!r})"
 
 class SaveTone:
+    _CID = 0x1782cbb1
+
     def __init__(
         self,
         tone: Any,
@@ -92,12 +147,24 @@ class SaveTone:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb1\xcb\x82\x17'
+        out += _tl.serialize(_tl._resolve(self.tone), _SCHEMA)
+        out += _tl._pack_bool(self.unsave)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.saveTone"}
+        obj["tone"], pos = _tl._read_typed(data, pos, "InputAiComposeTone", _SCHEMA_BY_CID)
+        obj["unsave"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SaveTone(tone={self.tone!r}, unsave={self.unsave!r})"
 
 class DeleteTone:
+    _CID = 0xdd39316a
+
     def __init__(
         self,
         tone: Any,
@@ -110,12 +177,22 @@ class DeleteTone:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'j19\xdd'
+        out += _tl.serialize(_tl._resolve(self.tone), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.deleteTone"}
+        obj["tone"], pos = _tl._read_typed(data, pos, "InputAiComposeTone", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DeleteTone(tone={self.tone!r})"
 
 class GetTone:
+    _CID = 0xb2e8ba03
+
     def __init__(
         self,
         tone: Any,
@@ -128,12 +205,22 @@ class GetTone:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x03\xba\xe8\xb2'
+        out += _tl.serialize(_tl._resolve(self.tone), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.getTone"}
+        obj["tone"], pos = _tl._read_typed(data, pos, "InputAiComposeTone", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetTone(tone={self.tone!r})"
 
 class GetTones:
+    _CID = 0xabd59201
+
     def __init__(
         self,
         hash: int,
@@ -146,12 +233,23 @@ class GetTones:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x01\x92\xd5\xab'
+        out += _struct.pack('<q', self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.getTones"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetTones(hash={self.hash!r})"
 
 class GetToneExample:
+    _CID = 0xd1b4ab14
+
     def __init__(
         self,
         tone: Any,
@@ -167,7 +265,18 @@ class GetToneExample:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x14\xab\xb4\xd1'
+        out += _tl.serialize(_tl._resolve(self.tone), _SCHEMA)
+        out += _struct.pack('<i', self.num)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.getToneExample"}
+        obj["tone"], pos = _tl._read_typed(data, pos, "InputAiComposeTone", _SCHEMA_BY_CID)
+        obj["num"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetToneExample(tone={self.tone!r}, num={self.num!r})"

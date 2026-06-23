@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class SuggestedShortName:
+    _CID = 0x85fea03f
+
     def __init__(
         self,
         short_name: str,
@@ -32,7 +35,15 @@ class SuggestedShortName:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'?\xa0\xfe\x85'
+        out += _tl._pack_string(self.short_name)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "stickers.suggestedShortName"}
+        obj["short_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SuggestedShortName(short_name={self.short_name!r})"

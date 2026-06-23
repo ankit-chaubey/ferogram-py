@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class IsEligibleToJoin:
+    _CID = 0x0edc39d0
+
     def __init__(self) -> None:
         pass
 
@@ -28,12 +31,20 @@ class IsEligibleToJoin:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd09\xdc\x0e'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "smsjobs.isEligibleToJoin"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"IsEligibleToJoin()"
 
 class Join:
+    _CID = 0xa74ece2d
+
     def __init__(self) -> None:
         pass
 
@@ -42,12 +53,20 @@ class Join:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'-\xceN\xa7'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "smsjobs.join"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Join()"
 
 class Leave:
+    _CID = 0x9898ad73
+
     def __init__(self) -> None:
         pass
 
@@ -56,12 +75,20 @@ class Leave:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b's\xad\x98\x98'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "smsjobs.leave"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Leave()"
 
 class UpdateSettings:
+    _CID = 0x093fa0bf
+
     def __init__(
         self,
         allow_international: bool | None = None,
@@ -74,12 +101,26 @@ class UpdateSettings:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xbf\xa0?\t'
+        _flags_word = (0 if self.allow_international is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "smsjobs.updateSettings"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["allow_international"] = True
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"UpdateSettings(allow_international={self.allow_international!r})"
 
 class GetStatus:
+    _CID = 0x10a698e8
+
     def __init__(self) -> None:
         pass
 
@@ -88,12 +129,20 @@ class GetStatus:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe8\x98\xa6\x10'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "smsjobs.getStatus"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetStatus()"
 
 class GetSmsJob:
+    _CID = 0x778d902f
+
     def __init__(
         self,
         job_id: str,
@@ -106,12 +155,22 @@ class GetSmsJob:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'/\x90\x8dw'
+        out += _tl._pack_string(self.job_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "smsjobs.getSmsJob"}
+        obj["job_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetSmsJob(job_id={self.job_id!r})"
 
 class FinishJob:
+    _CID = 0x4f1ebf24
+
     def __init__(
         self,
         job_id: str,
@@ -127,7 +186,23 @@ class FinishJob:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'$\xbf\x1eO'
+        _flags_word = (0 if self.error is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.job_id)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.error)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "smsjobs.finishJob"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["job_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["error"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FinishJob(job_id={self.job_id!r}, error={self.error!r})"

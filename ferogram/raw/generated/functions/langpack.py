@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class GetLangPack:
+    _CID = 0xf2f2330a
+
     def __init__(
         self,
         lang_pack: str,
@@ -35,12 +38,24 @@ class GetLangPack:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\n3\xf2\xf2'
+        out += _tl._pack_string(self.lang_pack)
+        out += _tl._pack_string(self.lang_code)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "langpack.getLangPack"}
+        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetLangPack(lang_pack={self.lang_pack!r}, lang_code={self.lang_code!r})"
 
 class GetStrings:
+    _CID = 0xefea3803
+
     def __init__(
         self,
         lang_pack: str,
@@ -59,12 +74,26 @@ class GetStrings:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x038\xea\xef'
+        out += _tl._pack_string(self.lang_pack)
+        out += _tl._pack_string(self.lang_code)
+        out += _tl.serialize(_tl._resolve(self.keys), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "langpack.getStrings"}
+        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["keys"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetStrings(lang_pack={self.lang_pack!r}, lang_code={self.lang_code!r}, keys={self.keys!r})"
 
 class GetDifference:
+    _CID = 0xcd984aa5
+
     def __init__(
         self,
         lang_pack: str,
@@ -83,12 +112,27 @@ class GetDifference:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa5J\x98\xcd'
+        out += _tl._pack_string(self.lang_pack)
+        out += _tl._pack_string(self.lang_code)
+        out += _struct.pack('<i', self.from_version)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "langpack.getDifference"}
+        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["from_version"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetDifference(lang_pack={self.lang_pack!r}, lang_code={self.lang_code!r}, from_version={self.from_version!r})"
 
 class GetLanguages:
+    _CID = 0x42c6978f
+
     def __init__(
         self,
         lang_pack: str,
@@ -101,12 +145,22 @@ class GetLanguages:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x8f\x97\xc6B'
+        out += _tl._pack_string(self.lang_pack)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "langpack.getLanguages"}
+        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetLanguages(lang_pack={self.lang_pack!r})"
 
 class GetLanguage:
+    _CID = 0x6a596502
+
     def __init__(
         self,
         lang_pack: str,
@@ -122,7 +176,17 @@ class GetLanguage:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x02eYj'
+        out += _tl._pack_string(self.lang_pack)
+        out += _tl._pack_string(self.lang_code)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "langpack.getLanguage"}
+        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetLanguage(lang_pack={self.lang_pack!r}, lang_code={self.lang_code!r})"

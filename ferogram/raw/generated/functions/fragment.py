@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class GetCollectibleInfo:
+    _CID = 0xbe1e85ba
+
     def __init__(
         self,
         collectible: Any,
@@ -32,7 +35,15 @@ class GetCollectibleInfo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xba\x85\x1e\xbe'
+        out += _tl.serialize(_tl._resolve(self.collectible), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "fragment.getCollectibleInfo"}
+        obj["collectible"], pos = _tl._read_typed(data, pos, "InputCollectible", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetCollectibleInfo(collectible={self.collectible!r})"

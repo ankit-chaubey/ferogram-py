@@ -26,14 +26,12 @@ TL_LINE = re.compile(
     r'((?:\s+[\w.]+:[^\s=]+)*)'
     r'\s*=\s*([\w.<>]+);'
 )
-FIELD_RE  = re.compile(r'([\w.]+):([\w?.<>]+)')
-FLAG_FIELD = re.compile(r'flags\.(\d+)\?(.+)')
+FIELD_RE   = re.compile(r'([\w.]+):([\w?.<>]+)')
+FLAG_FIELD = re.compile(r'^(flags\d*)\.(\d+)\?(.+)$')
 
 PRIMITIVES = {"int", "long", "double", "string", "bytes", "Bool",
               "int128", "int256", "true", "True", "Int", "Long"}
 
-# TL field names that clash with Python keywords → rename with trailing _
-# We keep to_dict using the original TL name so serialization is unaffected
 import keyword as _kw
 _PY_KEYWORDS = set(_kw.kwlist) | {"True", "False", "None", "self"}
 
@@ -41,28 +39,34 @@ def _safe_param(name: str) -> str:
     return name + "_" if name in _PY_KEYWORDS else name
 
 
+class Flag(NamedTuple):
+    group: str
+    bit:   int
+
+
 class Field(NamedTuple):
-    name: str
+    name:  str
     ftype: str
-    flag_bit: int | None
+    flag:  Flag | None
 
 
 class Constructor(NamedTuple):
-    name: str
-    cid: int
-    fields: list[Field]
-    ret: str
+    name:        str
+    cid:         int
+    fields:      list[Field]
+    ret:         str
     is_function: bool
 
 
 def parse_fields(raw: str) -> list[Field]:
     fields = []
     for fname, ftype in FIELD_RE.findall(raw):
-        if fname == "flags" and ftype == "#":
+        if ftype == "#":
             continue
         m = FLAG_FIELD.match(ftype)
         if m:
-            fields.append(Field(fname, m.group(2), int(m.group(1))))
+            group, bit_str, inner = m.groups()
+            fields.append(Field(fname, inner, Flag(group, int(bit_str))))
         else:
             fields.append(Field(fname, ftype, None))
     return fields
@@ -103,7 +107,6 @@ import keyword as _keyword
 def py_class(tl_name: str) -> str:
     base = tl_name.split(".")[-1]
     result = base[0].upper() + base[1:]
-    # avoid Python keywords and builtins that look like TL names (True, False, None)
     if _keyword.iskeyword(result) or result in ("True", "False", "None"):
         result = "Tl" + result
     return result
@@ -126,17 +129,382 @@ def ftype_py(ftype: str) -> str:
     if ftype.startswith(("Vector<", "vector<")):
         inner = ftype[7:-1]
         return f"list[{ftype_py(inner)}]"
-    return "Any"  # TL object - accepts dict or typed instance
+    return "Any"
 
+
+
+# Deserialization codegen (Phase 4)
+
+# Fixed-width field: (struct format char, byte width)
+_FIXED_READ: dict[str, tuple[str, int]] = {
+    "int":    ("i", 4),
+    "long":   ("q", 8),
+    "double": ("d", 8),
+}
+
+
+def _collect_fixed_read_run(fields: list[Field], start: int) -> list[Field]:
+    run = []
+    for f in fields[start:]:
+        if f.flag is None and f.ftype in _FIXED_READ:
+            run.append(f)
+        else:
+            break
+    return run
+
+
+def _read_expr(ftype: str, access_data: str, access_pos: str) -> tuple[str, str] | None:
+    """
+    Return (value_expr, new_pos_expr) for reading one primitive field inline,
+    or None if the type needs the generic _tl._read_typed() fallback.
+
+    access_data / access_pos are the names of the data/pos variables in scope.
+    """
+    if ftype == "int":
+        return (
+            f"_struct.unpack_from('<i', {access_data}, {access_pos})[0]",
+            f"{access_pos} + 4",
+        )
+    if ftype == "long":
+        return (
+            f"_struct.unpack_from('<q', {access_data}, {access_pos})[0]",
+            f"{access_pos} + 8",
+        )
+    if ftype == "double":
+        return (
+            f"_struct.unpack_from('<d', {access_data}, {access_pos})[0]",
+            f"{access_pos} + 8",
+        )
+    if ftype == "bytes":
+        return None   # _pack_bytes logic is non-trivial; use generic
+    if ftype == "string":
+        return None   # same — needs decode attempt
+    if ftype == "Bool":
+        return None   # needs CID dispatch
+    return None       # TL object or Vector — generic fallback
+
+
+def _emit_read_body(c: Constructor) -> list[str]:
+    """
+    Return lines (8-space indent) of from_bytes(cls, data, pos).
+
+    Returns (dict, new_pos). The dict always has "_" set to the TL name.
+    Fields are written as obj["fname"] = value.
+
+    Batching: runs of 2+ consecutive unconditional int/long/double fields
+    are collapsed into a single struct.unpack_from call with a combined
+    format string, unpacking directly into the dict in one shot.
+    """
+    I = "        "
+
+    lines: list[str] = []
+    lines.append(f'{I}obj = {{"_": "{c.name}"}}')
+
+    # Determine flag groups present (in encounter order)
+    seen_groups: set[str] = set()
+    flag_groups: list[str] = []
+    for f in c.fields:
+        if f.flag and f.flag.group not in seen_groups:
+            seen_groups.add(f.flag.group)
+            flag_groups.append(f.flag.group)
+
+    if not flag_groups:
+        # Fast path — no flags
+        lines.extend(_emit_read_fields(c.fields, indent=I))
+        lines.append(f"{I}return obj, pos")
+        return lines
+
+    # Pre-read "flags" word if present (always first in wire order)
+    if "flags" in seen_groups:
+        lines.append(f"{I}_flags_word, = _struct.unpack_from('<I', data, pos)")
+        lines.append(f"{I}pos += 4")
+
+    emitted_reads: set[str] = {"flags"} if "flags" in seen_groups else set()
+
+    i = 0
+    fields = c.fields
+    while i < len(fields):
+        f = fields[i]
+
+        # Lazily read the flag group word on first encounter
+        if f.flag and f.flag.group not in emitted_reads:
+            grp = f.flag.group
+            lines.append(f"{I}_{grp}_word, = _struct.unpack_from('<I', data, pos)")
+            lines.append(f"{I}pos += 4")
+            emitted_reads.add(grp)
+
+        # Try batch of consecutive unconditional fixed-width fields
+        if f.flag is None and f.ftype in _FIXED_READ:
+            run = _collect_fixed_read_run(fields, i)
+            if len(run) >= 2:
+                fmt = "<" + "".join(_FIXED_READ[rf.ftype][0] for rf in run)
+                size = sum(_FIXED_READ[rf.ftype][1] for rf in run)
+                names = ", ".join(f'obj["{rf.name}"]' for rf in run)
+                lines.append(f"{I}{names}, = _struct.unpack_from('{fmt}', data, pos)")
+                lines.append(f"{I}pos += {size}")
+                i += len(run)
+                continue
+
+        lines.extend(_emit_read_single_field(f, indent=I))
+        i += 1
+
+    lines.append(f"{I}return obj, pos")
+    return lines
+
+
+def _emit_read_fields(fields: list[Field], indent: str) -> list[str]:
+    """Emit all fields with batching (no-flags fast path)."""
+    lines = []
+    i = 0
+    while i < len(fields):
+        f = fields[i]
+        if f.flag is None and f.ftype in _FIXED_READ:
+            run = _collect_fixed_read_run(fields, i)
+            if len(run) >= 2:
+                fmt = "<" + "".join(_FIXED_READ[rf.ftype][0] for rf in run)
+                size = sum(_FIXED_READ[rf.ftype][1] for rf in run)
+                names = ", ".join(f'obj["{rf.name}"]' for rf in run)
+                lines.append(f"{indent}{names}, = _struct.unpack_from('{fmt}', data, pos)")
+                lines.append(f"{indent}pos += {size}")
+                i += len(run)
+                continue
+        lines.extend(_emit_read_single_field(f, indent=indent))
+        i += 1
+    return lines
+
+
+def _emit_read_single_field(f: Field, indent: str) -> list[str]:
+    I = indent
+    fname = f.name
+
+    if f.flag is not None:
+        grp, bit = f.flag.group, f.flag.bit
+        guard = f"{I}if _{grp}_word & (1 << {bit}):"
+        II = I + "    "
+        if f.ftype in ("true", "True"):
+            return [guard, f'{II}obj["{fname}"] = True']
+        inner = _read_expr(f.ftype, "data", "pos")
+        if inner:
+            val_expr, pos_expr = inner
+            return [
+                guard,
+                f'{II}obj["{fname}"] = {val_expr}',
+                f"{II}pos = {pos_expr}",
+            ]
+        return [
+            guard,
+            f'{II}obj["{fname}"], pos = _tl._read_typed(data, pos, "{f.ftype}", _SCHEMA_BY_CID)',
+        ]
+
+    # Unconditional field
+    if f.ftype in ("true", "True"):
+        return [f'{I}obj["{fname}"] = True']
+    inner = _read_expr(f.ftype, "data", "pos")
+    if inner:
+        val_expr, pos_expr = inner
+        return [
+            f'{I}obj["{fname}"] = {val_expr}',
+            f"{I}pos = {pos_expr}",
+        ]
+    return [f'{I}obj["{fname}"], pos = _tl._read_typed(data, pos, "{f.ftype}", _SCHEMA_BY_CID)']
+
+# Serialization codegen helpers
+
+# Struct format chars for unconditional fixed-width scalars.
+# These can be batched into a single struct.pack call when contiguous.
+_FIXED_FMT: dict[str, str] = {
+    "int":    "i",
+    "long":   "q",
+    "double": "d",
+}
+
+# int128 / int256 are rare (only 2 total in the schema) and handled via
+# .to_bytes() — not worth special-casing in the batch logic.
+
+
+def _emit_serialize_body(c: Constructor) -> list[str]:
+    """
+    Return the lines (indented 8 spaces) of to_bytes(), using inlined
+    struct.pack calls instead of calling the generic serialize_object()
+    interpreter.
+
+    Strategy:
+      1. Emit CID as a fixed 4-byte little-endian uint32.
+      2. For each flag group present, compute and emit the flags word.
+         "flags" is always emitted before its fields; other groups
+         (flags2, ...) are emitted lazily on first field encounter,
+         matching TL wire order.
+      3. For each field, emit the tightest possible pack call:
+         - Runs of 2+ consecutive unconditional int/long/double fields
+           (with no conditional fields or non-scalar fields interrupting)
+           are collapsed into one struct.pack with a combined format string.
+         - Single unconditional int / long / double: one struct.pack.
+         - Unconditional string / bytes: _pack_bytes / _pack_string.
+         - Unconditional true/True: nothing (zero-wire-size).
+         - Unconditional Bool: _pack_bool.
+         - Unconditional int128 / int256: .to_bytes() call.
+         - Unconditional TL object or Vector: _tl.serialize(val, _SCHEMA).
+         - Conditional (flagged) field: guard with bit-check, then same
+           per-type dispatch.
+    """
+    I = "        "   # 8-space indent inside to_bytes
+
+    lines: list[str] = []
+
+    # CID
+    cid_bytes = c.cid.to_bytes(4, "little")
+    lines.append(f"{I}out = {cid_bytes!r}")
+
+    # Determine which flag groups are present
+    flag_groups: list[str] = []
+    seen_groups: set[str] = set()
+    for f in c.fields:
+        if f.flag and f.flag.group not in seen_groups:
+            seen_groups.add(f.flag.group)
+            flag_groups.append(f.flag.group)
+
+    if not flag_groups:
+        # Fast path: no flags at all — just emit fields sequentially.
+        lines.extend(_emit_fields_sequence(c.fields, conditional=False, indent=I))
+        lines.append(f"{I}return out")
+        return lines
+
+    # Precompute each flag group's word from field presence.
+    for grp in flag_groups:
+        grp_fields = [f for f in c.fields if f.flag and f.flag.group == grp]
+        parts = []
+        for f in grp_fields:
+            p = _safe_param(f.name)
+            parts.append(f"(0 if self.{p} is None else (1 << {f.flag.bit}))")
+        word_expr = " | ".join(parts) if parts else "0"
+        lines.append(f"{I}_{grp}_word = {word_expr}")
+
+    # Emit "flags" word first (TL convention)
+    if "flags" in seen_groups:
+        lines.append(f"{I}out += _struct.pack('<I', _flags_word)")
+
+    emitted_groups: set[str] = {"flags"} if "flags" in seen_groups else set()
+
+    # Walk fields, batching fixed-width unconditional runs
+    i = 0
+    fields = c.fields
+    while i < len(fields):
+        f = fields[i]
+
+        # Emit any not-yet-emitted flag group whose first field we're about to visit
+        if f.flag and f.flag.group not in emitted_groups:
+            grp = f.flag.group
+            lines.append(f"{I}out += _struct.pack('<I', _{grp}_word)")
+            emitted_groups.add(grp)
+
+        # Try to batch consecutive unconditional fixed-width scalars
+        if f.flag is None and f.ftype in _FIXED_FMT:
+            run = _collect_fixed_run(fields, i)
+            if len(run) >= 2:
+                fmt = "<" + "".join(_FIXED_FMT[rf.ftype] for rf in run)
+                args = ", ".join(f"self.{_safe_param(rf.name)}" for rf in run)
+                lines.append(f"{I}out += _struct.pack('{fmt}', {args})")
+                i += len(run)
+                continue
+
+        # Single field
+        lines.extend(_emit_single_field(f, indent=I))
+        i += 1
+
+    lines.append(f"{I}return out")
+    return lines
+
+
+def _collect_fixed_run(fields: list[Field], start: int) -> list[Field]:
+    """Return the longest run of unconditional fixed-width fields starting at start."""
+    run = []
+    for f in fields[start:]:
+        if f.flag is None and f.ftype in _FIXED_FMT:
+            run.append(f)
+        else:
+            break
+    return run
+
+
+def _emit_single_field(f: Field, indent: str) -> list[str]:
+    """Emit the pack statement(s) for one field (conditional or not)."""
+    I = indent
+    p = _safe_param(f.name)
+
+    if f.flag is not None:
+        grp, bit = f.flag.group, f.flag.bit
+        inner = _pack_expr(f.ftype, f"self.{p}")
+        if inner is None:
+            # true/True: zero wire size — the bit in the flags word is enough,
+            # nothing to write. Skip emitting an if block entirely.
+            return []
+        lines = [f"{I}if _{grp}_word & (1 << {bit}):"]
+        lines.append(f"{I}    out += {inner}")
+        return lines
+
+    expr = _pack_expr(f.ftype, f"self.{p}")
+    if expr is None:
+        return []   # true/True — zero wire size, unconditional
+    return [f"{I}out += {expr}"]
+
+
+def _pack_expr(ftype: str, access: str) -> str | None:
+    """
+    Return a Python expression that evaluates to bytes for one field value,
+    or None for zero-wire-size types (true/True).
+    """
+    if ftype in ("true", "True"):
+        return None
+    if ftype == "int":
+        return f"_struct.pack('<i', {access})"
+    if ftype == "long":
+        return f"_struct.pack('<q', {access})"
+    if ftype == "double":
+        return f"_struct.pack('<d', {access})"
+    if ftype == "Bool":
+        return f"_tl._pack_bool({access})"
+    if ftype == "string":
+        return f"_tl._pack_string({access})"
+    if ftype == "bytes":
+        return f"_tl._pack_bytes({access})"
+    if ftype == "int128":
+        return f"{access}.to_bytes(16, 'little', signed=False)"
+    if ftype == "int256":
+        return f"{access}.to_bytes(32, 'little', signed=False)"
+    # Vector or TL object — fall back to generic serialize
+    return f"_tl.serialize(_tl._resolve({access}), _SCHEMA)"
+
+
+def _emit_fields_sequence(fields: list[Field], conditional: bool, indent: str) -> list[str]:
+    """Emit all fields with batching (used for the no-flags fast path)."""
+    lines = []
+    i = 0
+    while i < len(fields):
+        f = fields[i]
+        if f.flag is None and f.ftype in _FIXED_FMT:
+            run = _collect_fixed_run(fields, i)
+            if len(run) >= 2:
+                fmt = "<" + "".join(_FIXED_FMT[rf.ftype] for rf in run)
+                args = ", ".join(f"self.{_safe_param(rf.name)}" for rf in run)
+                lines.append(f"{indent}out += _struct.pack('{fmt}', {args})")
+                i += len(run)
+                continue
+        lines.extend(_emit_single_field(f, indent=indent))
+        i += 1
+    return lines
+
+
+# Class renderer
 
 def render_class(c: Constructor) -> str:
     cls = py_class(c.name)
     lines = [f"class {cls}:"]
+    lines.append(f"    _CID = {c.cid:#010x}")
+    lines.append("")
 
-    # __init__: required fields first, optional (flag) fields after
-    # This is required by Python: non-default args can't follow default args
-    required = [f for f in c.fields if f.flag_bit is None]
-    optional = [f for f in c.fields if f.flag_bit is not None]
+    required = [f for f in c.fields if f.flag is None]
+    optional = [f for f in c.fields if f.flag is not None]
+
     if required or optional:
         lines.append("    def __init__(")
         lines.append("        self,")
@@ -154,7 +522,7 @@ def render_class(c: Constructor) -> str:
         lines.append("    def __init__(self) -> None:")
         lines.append("        pass")
 
-    # to_dict: _tl._resolve() lets callers pass dicts or typed objects
+    # to_dict — keep for dict-style callers and _tl._resolve compatibility
     lines.append("")
     lines.append("    def to_dict(self) -> dict:")
     lines.append(f'        return {{"_": "{c.name}", **{{')
@@ -162,12 +530,17 @@ def render_class(c: Constructor) -> str:
         lines.append(f'            "{f.name}": _tl._resolve(self.{_safe_param(f.name)}),')
     lines.append("        }}")
 
-    # to_bytes
+    # to_bytes — specialized, inlined struct.pack calls
     lines.append("")
     lines.append("    def to_bytes(self) -> bytes:")
-    lines.append("        return _tl.serialize_object(self.to_dict(), _SCHEMA)")
+    lines.extend(_emit_serialize_body(c))
 
-    # __repr__
+    # from_bytes — specialized, inlined struct.unpack calls
+    lines.append("")
+    lines.append("    @classmethod")
+    lines.append("    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:")
+    lines.extend(_emit_read_body(c))
+
     lines.append("")
     preview = ", ".join(
         f"{f.name}={{self.{_safe_param(f.name)}!r}}"
@@ -180,11 +553,13 @@ def render_class(c: Constructor) -> str:
     return "\n".join(lines)
 
 
+# Schema builders (unchanged from Phase 2)
+
 def build_schema(constructors: list[Constructor]) -> str:
     lines = ["_SCHEMA = {"]
     for c in constructors:
         fields_repr = ", ".join(
-            f'("{f.name}", "{f.ftype}", {f.flag_bit!r})'
+            f'("{f.name}", "{f.ftype}", {(f.flag.group, f.flag.bit) if f.flag else None!r})'
             for f in c.fields
         )
         lines.append(f'    "{c.name}": ({c.cid:#010x}, [{fields_repr}]),')
@@ -196,13 +571,15 @@ def build_schema_by_cid(constructors: list[Constructor]) -> str:
     lines = ["_SCHEMA_BY_CID = {"]
     for c in constructors:
         fields_repr = ", ".join(
-            f'("{f.name}", "{f.ftype}", {f.flag_bit!r})'
+            f'("{f.name}", "{f.ftype}", {(f.flag.group, f.flag.bit) if f.flag else None!r})'
             for f in c.fields
         )
         lines.append(f'    {c.cid:#010x}: ("{c.name}", [{fields_repr}]),')
     lines.append("}")
     return "\n".join(lines)
 
+
+# File writers
 
 LICENSE = """\
 # Copyright (c) Ankit Chaubey <ankitchaubey.dev@gmail.com>
@@ -224,9 +601,10 @@ NS_HEADER = """\
 
 """ + LICENSE + """
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 """
 
@@ -238,31 +616,25 @@ def write_namespace_pkg(
 ) -> None:
     out_pkg.mkdir(parents=True, exist_ok=True)
 
-    all_classes: list[str] = []
-
     for ns, constructors in sorted(grouped.items()):
         mod_file = out_pkg / f"{ns}.py"
         body = [NS_HEADER]
         for c in constructors:
             body.append(render_class(c))
-            all_classes.append(py_class(c.name))
         mod_file.write_text("\n".join(body))
 
-    # flat imports - re-exports every class from every namespace module
     init_lines = [
         "# auto-generated - do not edit\n",
         "",
         LICENSE,
         "# Flat imports so both styles work:",
-        "#   raw.functions.messages.GetHistory(...)   ← namespace style",
-        "#   raw.functions.GetHistory(...)            ← flat style (convenience)",
+        "#   raw.functions.messages.GetHistory(...)   <- namespace style",
+        "#   raw.functions.GetHistory(...)            <- flat style (convenience)",
         "",
     ]
     for ns in sorted(grouped):
         init_lines.append(f"from .{ns} import *  # noqa: F401,F403")
     init_lines.append("")
-
-    # expose namespace modules as attributes too
     init_lines.append("# namespace sub-modules")
     for ns in sorted(grouped):
         init_lines.append(f"from . import {ns}  # noqa: F401")
@@ -277,10 +649,9 @@ def generate(tl_path: Path, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     all_constructors = types + funcs
-    schema_str     = build_schema(all_constructors)
-    schema_by_cid  = build_schema_by_cid(types)
+    schema_str    = build_schema(all_constructors)
+    schema_by_cid = build_schema_by_cid(types)
 
-    # _tl_schema.py - unchanged format, used by serializer
     (out_dir / "_tl_schema.py").write_text(
         "# auto-generated schema - do not edit\n\n"
         + LICENSE + "\n"
@@ -289,7 +660,6 @@ def generate(tl_path: Path, out_dir: Path) -> None:
         + schema_by_cid + "\n"
     )
 
-    # group by namespace
     type_ns: dict[str, list[Constructor]] = defaultdict(list)
     func_ns: dict[str, list[Constructor]] = defaultdict(list)
     for c in types:
@@ -297,11 +667,9 @@ def generate(tl_path: Path, out_dir: Path) -> None:
     for c in funcs:
         func_ns[ns_of(c.name)].append(c)
 
-    # write types/ and functions/ namespace packages
     write_namespace_pkg(out_dir / "types",     type_ns, schema_str)
     write_namespace_pkg(out_dir / "functions", func_ns, schema_str)
 
-    # generated/__init__.py
     (out_dir / "__init__.py").write_text(
         "# auto-generated - do not edit\n\n"
         + LICENSE + "\n"
@@ -319,3 +687,5 @@ if __name__ == "__main__":
         print("usage: python codegen.py <api.tl> <out_dir>")
         sys.exit(1)
     generate(Path(sys.argv[1]), Path(sys.argv[2]))
+
+

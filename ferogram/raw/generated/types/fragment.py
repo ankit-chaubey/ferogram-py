@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class CollectibleInfo:
+    _CID = 0x6ebdff91
+
     def __init__(
         self,
         purchase_date: int,
@@ -47,7 +50,28 @@ class CollectibleInfo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x91\xff\xbdn'
+        out += _struct.pack('<i', self.purchase_date)
+        out += _tl._pack_string(self.currency)
+        out += _struct.pack('<q', self.amount)
+        out += _tl._pack_string(self.crypto_currency)
+        out += _struct.pack('<q', self.crypto_amount)
+        out += _tl._pack_string(self.url)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "fragment.collectibleInfo"}
+        obj["purchase_date"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["currency"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["amount"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["crypto_currency"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["crypto_amount"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CollectibleInfo(purchase_date={self.purchase_date!r}, currency={self.currency!r}, amount={self.amount!r}, crypto_currency={self.crypto_currency!r})"

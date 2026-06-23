@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class GetBroadcastStats:
+    _CID = 0xab42441a
+
     def __init__(
         self,
         channel: Any,
@@ -35,12 +38,28 @@ class GetBroadcastStats:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x1aDB\xab'
+        _flags_word = (0 if self.dark is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "stats.getBroadcastStats"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["dark"] = True
+        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetBroadcastStats(dark={self.dark!r}, channel={self.channel!r})"
 
 class LoadAsyncGraph:
+    _CID = 0x621d5fa0
+
     def __init__(
         self,
         token: str,
@@ -56,12 +75,31 @@ class LoadAsyncGraph:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa0_\x1db'
+        _flags_word = (0 if self.x is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.token)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.x)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "stats.loadAsyncGraph"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["x"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"LoadAsyncGraph(token={self.token!r}, x={self.x!r})"
 
 class GetMegagroupStats:
+    _CID = 0xdcdf8607
+
     def __init__(
         self,
         channel: Any,
@@ -77,12 +115,28 @@ class GetMegagroupStats:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x07\x86\xdf\xdc'
+        _flags_word = (0 if self.dark is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "stats.getMegagroupStats"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["dark"] = True
+        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetMegagroupStats(dark={self.dark!r}, channel={self.channel!r})"
 
 class GetMessagePublicForwards:
+    _CID = 0x5f150144
+
     def __init__(
         self,
         channel: Any,
@@ -104,12 +158,30 @@ class GetMessagePublicForwards:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'D\x01\x15_'
+        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _struct.pack('<i', self.msg_id)
+        out += _tl._pack_string(self.offset)
+        out += _struct.pack('<i', self.limit)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "stats.getMessagePublicForwards"}
+        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetMessagePublicForwards(channel={self.channel!r}, msg_id={self.msg_id!r}, offset={self.offset!r}, limit={self.limit!r})"
 
 class GetMessageStats:
+    _CID = 0xb6e0a3f5
+
     def __init__(
         self,
         channel: Any,
@@ -128,12 +200,31 @@ class GetMessageStats:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf5\xa3\xe0\xb6'
+        _flags_word = (0 if self.dark is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _struct.pack('<i', self.msg_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "stats.getMessageStats"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["dark"] = True
+        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetMessageStats(dark={self.dark!r}, channel={self.channel!r}, msg_id={self.msg_id!r})"
 
 class GetStoryStats:
+    _CID = 0x374fef40
+
     def __init__(
         self,
         peer: Any,
@@ -152,12 +243,31 @@ class GetStoryStats:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'@\xefO7'
+        _flags_word = (0 if self.dark is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<i', self.id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "stats.getStoryStats"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["dark"] = True
+        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetStoryStats(dark={self.dark!r}, peer={self.peer!r}, id={self.id!r})"
 
 class GetStoryPublicForwards:
+    _CID = 0xa6437ef6
+
     def __init__(
         self,
         peer: Any,
@@ -179,12 +289,30 @@ class GetStoryPublicForwards:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf6~C\xa6'
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<i', self.id)
+        out += _tl._pack_string(self.offset)
+        out += _struct.pack('<i', self.limit)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "stats.getStoryPublicForwards"}
+        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetStoryPublicForwards(peer={self.peer!r}, id={self.id!r}, offset={self.offset!r}, limit={self.limit!r})"
 
 class GetPollStats:
+    _CID = 0xc27dfa68
+
     def __init__(
         self,
         peer: Any,
@@ -203,7 +331,24 @@ class GetPollStats:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'h\xfa}\xc2'
+        _flags_word = (0 if self.dark is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<i', self.msg_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "stats.getPollStats"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["dark"] = True
+        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetPollStats(dark={self.dark!r}, peer={self.peer!r}, msg_id={self.msg_id!r})"

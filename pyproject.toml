@@ -31,3 +31,4 @@ Author        = "https://github.com/ankit-chaubey"
 [tool.maturin]
 module-name   = "ferogram._ferogram"
 features      = ["pyo3/extension-module"]
+include       = ["ferogram/raw/generated/**/*"]

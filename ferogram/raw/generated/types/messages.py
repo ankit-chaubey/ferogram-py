@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class Dialogs:
+    _CID = 0x15ba6c40
+
     def __init__(
         self,
         dialogs: list[Any],
@@ -41,12 +44,28 @@ class Dialogs:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'@l\xba\x15'
+        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.dialogs"}
+        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<Dialog>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Dialogs(dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r}, users={self.users!r})"
 
 class DialogsSlice:
+    _CID = 0x71e094f3
+
     def __init__(
         self,
         count: int,
@@ -71,12 +90,31 @@ class DialogsSlice:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf3\x94\xe0q'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.dialogsSlice"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<Dialog>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DialogsSlice(count={self.count!r}, dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r})"
 
 class DialogsNotModified:
+    _CID = 0xf0e3e596
+
     def __init__(
         self,
         count: int,
@@ -89,12 +127,23 @@ class DialogsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x96\xe5\xe3\xf0'
+        out += _struct.pack('<i', self.count)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.dialogsNotModified"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DialogsNotModified(count={self.count!r})"
 
 class Messages:
+    _CID = 0x1d73e7ea
+
     def __init__(
         self,
         messages: list[Any],
@@ -116,12 +165,28 @@ class Messages:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xea\xe7s\x1d'
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.topics), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.messages"}
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["topics"], pos = _tl._read_typed(data, pos, "Vector<ForumTopic>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Messages(messages={self.messages!r}, topics={self.topics!r}, chats={self.chats!r}, users={self.users!r})"
 
 class MessagesSlice:
+    _CID = 0x5f206716
+
     def __init__(
         self,
         count: int,
@@ -158,12 +223,51 @@ class MessagesSlice:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x16g _'
+        _flags_word = (0 if self.inexact is None else (1 << 1)) | (0 if self.next_rate is None else (1 << 0)) | (0 if self.offset_id_offset is None else (1 << 2)) | (0 if self.search_flood is None else (1 << 3))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<i', self.count)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.next_rate)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<i', self.offset_id_offset)
+        if _flags_word & (1 << 3):
+            out += _tl.serialize(_tl._resolve(self.search_flood), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.topics), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.messagesSlice"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 1):
+            obj["inexact"] = True
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["next_rate"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 2):
+            obj["offset_id_offset"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 3):
+            obj["search_flood"], pos = _tl._read_typed(data, pos, "SearchPostsFlood", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["topics"], pos = _tl._read_typed(data, pos, "Vector<ForumTopic>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"MessagesSlice(inexact={self.inexact!r}, count={self.count!r}, next_rate={self.next_rate!r}, offset_id_offset={self.offset_id_offset!r})"
 
 class ChannelMessages:
+    _CID = 0xc776ba4e
+
     def __init__(
         self,
         pts: int,
@@ -197,12 +301,42 @@ class ChannelMessages:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'N\xbav\xc7'
+        _flags_word = (0 if self.inexact is None else (1 << 1)) | (0 if self.offset_id_offset is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<ii', self.pts, self.count)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<i', self.offset_id_offset)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.topics), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.channelMessages"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 1):
+            obj["inexact"] = True
+        obj["pts"], obj["count"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        if _flags_word & (1 << 2):
+            obj["offset_id_offset"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["topics"], pos = _tl._read_typed(data, pos, "Vector<ForumTopic>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChannelMessages(inexact={self.inexact!r}, pts={self.pts!r}, count={self.count!r}, offset_id_offset={self.offset_id_offset!r})"
 
 class MessagesNotModified:
+    _CID = 0x74535f21
+
     def __init__(
         self,
         count: int,
@@ -215,12 +349,23 @@ class MessagesNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'!_St'
+        out += _struct.pack('<i', self.count)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.messagesNotModified"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"MessagesNotModified(count={self.count!r})"
 
 class Chats:
+    _CID = 0x64ff9fd5
+
     def __init__(
         self,
         chats: list[Any],
@@ -233,12 +378,22 @@ class Chats:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd5\x9f\xffd'
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.chats"}
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Chats(chats={self.chats!r})"
 
 class ChatsSlice:
+    _CID = 0x9cd81144
+
     def __init__(
         self,
         count: int,
@@ -254,12 +409,25 @@ class ChatsSlice:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'D\x11\xd8\x9c'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.chatsSlice"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChatsSlice(count={self.count!r}, chats={self.chats!r})"
 
 class ChatFull:
+    _CID = 0xe5d7d19c
+
     def __init__(
         self,
         full_chat: Any,
@@ -278,12 +446,26 @@ class ChatFull:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x9c\xd1\xd7\xe5'
+        out += _tl.serialize(_tl._resolve(self.full_chat), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.chatFull"}
+        obj["full_chat"], pos = _tl._read_typed(data, pos, "ChatFull", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChatFull(full_chat={self.full_chat!r}, chats={self.chats!r}, users={self.users!r})"
 
 class AffectedHistory:
+    _CID = 0xb45c69d1
+
     def __init__(
         self,
         pts: int,
@@ -302,12 +484,23 @@ class AffectedHistory:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd1i\\\xb4'
+        out += _struct.pack('<iii', self.pts, self.pts_count, self.offset)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.affectedHistory"}
+        obj["pts"], obj["pts_count"], obj["offset"], = _struct.unpack_from('<iii', data, pos)
+        pos += 12
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AffectedHistory(pts={self.pts!r}, pts_count={self.pts_count!r}, offset={self.offset!r})"
 
 class DhConfigNotModified:
+    _CID = 0xc0e24635
+
     def __init__(
         self,
         random: bytes,
@@ -320,12 +513,22 @@ class DhConfigNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'5F\xe2\xc0'
+        out += _tl._pack_bytes(self.random)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.dhConfigNotModified"}
+        obj["random"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DhConfigNotModified(random={self.random!r})"
 
 class DhConfig:
+    _CID = 0x2c221edd
+
     def __init__(
         self,
         g: int,
@@ -347,12 +550,30 @@ class DhConfig:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xdd\x1e",'
+        out += _struct.pack('<i', self.g)
+        out += _tl._pack_bytes(self.p)
+        out += _struct.pack('<i', self.version)
+        out += _tl._pack_bytes(self.random)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.dhConfig"}
+        obj["g"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["p"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["version"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["random"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DhConfig(g={self.g!r}, p={self.p!r}, version={self.version!r}, random={self.random!r})"
 
 class SentEncryptedMessage:
+    _CID = 0x560f8935
+
     def __init__(
         self,
         date: int,
@@ -365,12 +586,23 @@ class SentEncryptedMessage:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'5\x89\x0fV'
+        out += _struct.pack('<i', self.date)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.sentEncryptedMessage"}
+        obj["date"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SentEncryptedMessage(date={self.date!r})"
 
 class SentEncryptedFile:
+    _CID = 0x9493ff32
+
     def __init__(
         self,
         date: int,
@@ -386,12 +618,25 @@ class SentEncryptedFile:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'2\xff\x93\x94'
+        out += _struct.pack('<i', self.date)
+        out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.sentEncryptedFile"}
+        obj["date"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["file"], pos = _tl._read_typed(data, pos, "EncryptedFile", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SentEncryptedFile(date={self.date!r}, file={self.file!r})"
 
 class StickersNotModified:
+    _CID = 0xf1749a22
+
     def __init__(self) -> None:
         pass
 
@@ -400,12 +645,20 @@ class StickersNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'"\x9at\xf1'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.stickersNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"StickersNotModified()"
 
 class Stickers:
+    _CID = 0x30a6ec7e
+
     def __init__(
         self,
         hash: int,
@@ -421,12 +674,25 @@ class Stickers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'~\xec\xa60'
+        out += _struct.pack('<q', self.hash)
+        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.stickers"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Stickers(hash={self.hash!r}, stickers={self.stickers!r})"
 
 class AllStickersNotModified:
+    _CID = 0xe86602c3
+
     def __init__(self) -> None:
         pass
 
@@ -435,12 +701,20 @@ class AllStickersNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xc3\x02f\xe8'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.allStickersNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AllStickersNotModified()"
 
 class AllStickers:
+    _CID = 0xcdbbcebb
+
     def __init__(
         self,
         hash: int,
@@ -456,12 +730,25 @@ class AllStickers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xbb\xce\xbb\xcd'
+        out += _struct.pack('<q', self.hash)
+        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.allStickers"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSet>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AllStickers(hash={self.hash!r}, sets={self.sets!r})"
 
 class AffectedMessages:
+    _CID = 0x84d19185
+
     def __init__(
         self,
         pts: int,
@@ -477,12 +764,23 @@ class AffectedMessages:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x85\x91\xd1\x84'
+        out += _struct.pack('<ii', self.pts, self.pts_count)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.affectedMessages"}
+        obj["pts"], obj["pts_count"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AffectedMessages(pts={self.pts!r}, pts_count={self.pts_count!r})"
 
 class StickerSet:
+    _CID = 0x6e153f16
+
     def __init__(
         self,
         set: Any,
@@ -504,12 +802,28 @@ class StickerSet:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x16?\x15n'
+        out += _tl.serialize(_tl._resolve(self.set), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.packs), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.keywords), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.documents), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.stickerSet"}
+        obj["set"], pos = _tl._read_typed(data, pos, "StickerSet", _SCHEMA_BY_CID)
+        obj["packs"], pos = _tl._read_typed(data, pos, "Vector<StickerPack>", _SCHEMA_BY_CID)
+        obj["keywords"], pos = _tl._read_typed(data, pos, "Vector<StickerKeyword>", _SCHEMA_BY_CID)
+        obj["documents"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"StickerSet(set={self.set!r}, packs={self.packs!r}, keywords={self.keywords!r}, documents={self.documents!r})"
 
 class StickerSetNotModified:
+    _CID = 0xd3f924eb
+
     def __init__(self) -> None:
         pass
 
@@ -518,12 +832,20 @@ class StickerSetNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xeb$\xf9\xd3'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.stickerSetNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"StickerSetNotModified()"
 
 class SavedGifsNotModified:
+    _CID = 0xe8025ca2
+
     def __init__(self) -> None:
         pass
 
@@ -532,12 +854,20 @@ class SavedGifsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa2\\\x02\xe8'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.savedGifsNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SavedGifsNotModified()"
 
 class SavedGifs:
+    _CID = 0x84a02a0d
+
     def __init__(
         self,
         hash: int,
@@ -553,12 +883,25 @@ class SavedGifs:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\r*\xa0\x84'
+        out += _struct.pack('<q', self.hash)
+        out += _tl.serialize(_tl._resolve(self.gifs), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.savedGifs"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["gifs"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SavedGifs(hash={self.hash!r}, gifs={self.gifs!r})"
 
 class BotResults:
+    _CID = 0xe021f2f6
+
     def __init__(
         self,
         query_id: int,
@@ -592,12 +935,48 @@ class BotResults:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf6\xf2!\xe0'
+        _flags_word = (0 if self.gallery is None else (1 << 0)) | (0 if self.next_offset is None else (1 << 1)) | (0 if self.switch_pm is None else (1 << 2)) | (0 if self.switch_webview is None else (1 << 3))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.query_id)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.next_offset)
+        if _flags_word & (1 << 2):
+            out += _tl.serialize(_tl._resolve(self.switch_pm), _SCHEMA)
+        if _flags_word & (1 << 3):
+            out += _tl.serialize(_tl._resolve(self.switch_webview), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.results), _SCHEMA)
+        out += _struct.pack('<i', self.cache_time)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.botResults"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["gallery"] = True
+        obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 1):
+            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["switch_pm"], pos = _tl._read_typed(data, pos, "InlineBotSwitchPM", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["switch_webview"], pos = _tl._read_typed(data, pos, "InlineBotWebView", _SCHEMA_BY_CID)
+        obj["results"], pos = _tl._read_typed(data, pos, "Vector<BotInlineResult>", _SCHEMA_BY_CID)
+        obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"BotResults(gallery={self.gallery!r}, query_id={self.query_id!r}, next_offset={self.next_offset!r}, switch_pm={self.switch_pm!r})"
 
 class BotCallbackAnswer:
+    _CID = 0x36585ea4
+
     def __init__(
         self,
         cache_time: int,
@@ -625,12 +1004,41 @@ class BotCallbackAnswer:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa4^X6'
+        _flags_word = (0 if self.alert is None else (1 << 1)) | (0 if self.has_url is None else (1 << 3)) | (0 if self.native_ui is None else (1 << 4)) | (0 if self.message is None else (1 << 0)) | (0 if self.url is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.message)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_string(self.url)
+        out += _struct.pack('<i', self.cache_time)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.botCallbackAnswer"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 1):
+            obj["alert"] = True
+        if _flags_word & (1 << 3):
+            obj["has_url"] = True
+        if _flags_word & (1 << 4):
+            obj["native_ui"] = True
+        if _flags_word & (1 << 0):
+            obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"BotCallbackAnswer(alert={self.alert!r}, has_url={self.has_url!r}, native_ui={self.native_ui!r}, message={self.message!r})"
 
 class MessageEditData:
+    _CID = 0x26b5dde6
+
     def __init__(
         self,
         caption: bool | None = None,
@@ -643,12 +1051,26 @@ class MessageEditData:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe6\xdd\xb5&'
+        _flags_word = (0 if self.caption is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.messageEditData"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["caption"] = True
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"MessageEditData(caption={self.caption!r})"
 
 class PeerDialogs:
+    _CID = 0x3371c354
+
     def __init__(
         self,
         dialogs: list[Any],
@@ -673,12 +1095,30 @@ class PeerDialogs:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'T\xc3q3'
+        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.state), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.peerDialogs"}
+        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<Dialog>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["state"], pos = _tl._read_typed(data, pos, "updates.State", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"PeerDialogs(dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r}, users={self.users!r})"
 
 class FeaturedStickersNotModified:
+    _CID = 0xc6dc0c66
+
     def __init__(
         self,
         count: int,
@@ -691,12 +1131,23 @@ class FeaturedStickersNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'f\x0c\xdc\xc6'
+        out += _struct.pack('<i', self.count)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.featuredStickersNotModified"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FeaturedStickersNotModified(count={self.count!r})"
 
 class FeaturedStickers:
+    _CID = 0xbe382906
+
     def __init__(
         self,
         hash: int,
@@ -721,12 +1172,33 @@ class FeaturedStickers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x06)8\xbe'
+        _flags_word = (0 if self.premium is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<qi', self.hash, self.count)
+        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.unread), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.featuredStickers"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["premium"] = True
+        obj["hash"], obj["count"], = _struct.unpack_from('<qi', data, pos)
+        pos += 12
+        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
+        obj["unread"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FeaturedStickers(premium={self.premium!r}, hash={self.hash!r}, count={self.count!r}, sets={self.sets!r})"
 
 class RecentStickersNotModified:
+    _CID = 0x0b17f890
+
     def __init__(self) -> None:
         pass
 
@@ -735,12 +1207,20 @@ class RecentStickersNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x90\xf8\x17\x0b'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.recentStickersNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"RecentStickersNotModified()"
 
 class RecentStickers:
+    _CID = 0x88d37c56
+
     def __init__(
         self,
         hash: int,
@@ -762,12 +1242,29 @@ class RecentStickers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'V|\xd3\x88'
+        out += _struct.pack('<q', self.hash)
+        out += _tl.serialize(_tl._resolve(self.packs), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.dates), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.recentStickers"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["packs"], pos = _tl._read_typed(data, pos, "Vector<StickerPack>", _SCHEMA_BY_CID)
+        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        obj["dates"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"RecentStickers(hash={self.hash!r}, packs={self.packs!r}, stickers={self.stickers!r}, dates={self.dates!r})"
 
 class ArchivedStickers:
+    _CID = 0x4fcba9c8
+
     def __init__(
         self,
         count: int,
@@ -783,12 +1280,25 @@ class ArchivedStickers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xc8\xa9\xcbO'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.archivedStickers"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ArchivedStickers(count={self.count!r}, sets={self.sets!r})"
 
 class StickerSetInstallResultSuccess:
+    _CID = 0x38641628
+
     def __init__(self) -> None:
         pass
 
@@ -797,12 +1307,20 @@ class StickerSetInstallResultSuccess:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'(\x16d8'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.stickerSetInstallResultSuccess"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"StickerSetInstallResultSuccess()"
 
 class StickerSetInstallResultArchive:
+    _CID = 0x35e410a8
+
     def __init__(
         self,
         sets: list[Any],
@@ -815,12 +1333,22 @@ class StickerSetInstallResultArchive:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa8\x10\xe45'
+        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.stickerSetInstallResultArchive"}
+        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"StickerSetInstallResultArchive(sets={self.sets!r})"
 
 class HighScores:
+    _CID = 0x9a3bfd99
+
     def __init__(
         self,
         scores: list[Any],
@@ -836,12 +1364,24 @@ class HighScores:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x99\xfd;\x9a'
+        out += _tl.serialize(_tl._resolve(self.scores), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.highScores"}
+        obj["scores"], pos = _tl._read_typed(data, pos, "Vector<HighScore>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"HighScores(scores={self.scores!r}, users={self.users!r})"
 
 class FavedStickersNotModified:
+    _CID = 0x9e8fa6d3
+
     def __init__(self) -> None:
         pass
 
@@ -850,12 +1390,20 @@ class FavedStickersNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd3\xa6\x8f\x9e'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.favedStickersNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FavedStickersNotModified()"
 
 class FavedStickers:
+    _CID = 0x2cb51097
+
     def __init__(
         self,
         hash: int,
@@ -874,12 +1422,27 @@ class FavedStickers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x97\x10\xb5,'
+        out += _struct.pack('<q', self.hash)
+        out += _tl.serialize(_tl._resolve(self.packs), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.favedStickers"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["packs"], pos = _tl._read_typed(data, pos, "Vector<StickerPack>", _SCHEMA_BY_CID)
+        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FavedStickers(hash={self.hash!r}, packs={self.packs!r}, stickers={self.stickers!r})"
 
 class FoundStickerSetsNotModified:
+    _CID = 0x0d54b65d
+
     def __init__(self) -> None:
         pass
 
@@ -888,12 +1451,20 @@ class FoundStickerSetsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b']\xb6T\r'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.foundStickerSetsNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FoundStickerSetsNotModified()"
 
 class FoundStickerSets:
+    _CID = 0x8af09dd2
+
     def __init__(
         self,
         hash: int,
@@ -909,12 +1480,25 @@ class FoundStickerSets:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd2\x9d\xf0\x8a'
+        out += _struct.pack('<q', self.hash)
+        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.foundStickerSets"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FoundStickerSets(hash={self.hash!r}, sets={self.sets!r})"
 
 class SearchCounter:
+    _CID = 0xe844ebff
+
     def __init__(
         self,
         filter: Any,
@@ -933,12 +1517,31 @@ class SearchCounter:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xff\xebD\xe8'
+        _flags_word = (0 if self.inexact is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+        out += _struct.pack('<i', self.count)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.searchCounter"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 1):
+            obj["inexact"] = True
+        obj["filter"], pos = _tl._read_typed(data, pos, "MessagesFilter", _SCHEMA_BY_CID)
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SearchCounter(inexact={self.inexact!r}, filter={self.filter!r}, count={self.count!r})"
 
 class InactiveChats:
+    _CID = 0xa927fec5
+
     def __init__(
         self,
         dates: list[int],
@@ -957,12 +1560,26 @@ class InactiveChats:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b"\xc5\xfe'\xa9"
+        out += _tl.serialize(_tl._resolve(self.dates), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.inactiveChats"}
+        obj["dates"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"InactiveChats(dates={self.dates!r}, chats={self.chats!r}, users={self.users!r})"
 
 class VotesList:
+    _CID = 0x4899484e
+
     def __init__(
         self,
         count: int,
@@ -987,12 +1604,37 @@ class VotesList:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'NH\x99H'
+        _flags_word = (0 if self.next_offset is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.votes), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.next_offset)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.votesList"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["votes"], pos = _tl._read_typed(data, pos, "Vector<MessagePeerVote>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"VotesList(count={self.count!r}, votes={self.votes!r}, chats={self.chats!r}, users={self.users!r})"
 
 class MessageViews:
+    _CID = 0xb6c4f543
+
     def __init__(
         self,
         views: list[Any],
@@ -1011,12 +1653,26 @@ class MessageViews:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'C\xf5\xc4\xb6'
+        out += _tl.serialize(_tl._resolve(self.views), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.messageViews"}
+        obj["views"], pos = _tl._read_typed(data, pos, "Vector<MessageViews>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"MessageViews(views={self.views!r}, chats={self.chats!r}, users={self.users!r})"
 
 class DiscussionMessage:
+    _CID = 0xa6341782
+
     def __init__(
         self,
         messages: list[Any],
@@ -1047,12 +1703,48 @@ class DiscussionMessage:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x82\x174\xa6'
+        _flags_word = (0 if self.max_id is None else (1 << 0)) | (0 if self.read_inbox_max_id is None else (1 << 1)) | (0 if self.read_outbox_max_id is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.max_id)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.read_inbox_max_id)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<i', self.read_outbox_max_id)
+        out += _struct.pack('<i', self.unread_count)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.discussionMessage"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["max_id"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["read_inbox_max_id"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 2):
+            obj["read_outbox_max_id"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        obj["unread_count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DiscussionMessage(messages={self.messages!r}, max_id={self.max_id!r}, read_inbox_max_id={self.read_inbox_max_id!r}, read_outbox_max_id={self.read_outbox_max_id!r})"
 
 class HistoryImport:
+    _CID = 0x1662af0b
+
     def __init__(
         self,
         id: int,
@@ -1065,12 +1757,23 @@ class HistoryImport:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x0b\xafb\x16'
+        out += _struct.pack('<q', self.id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.historyImport"}
+        obj["id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"HistoryImport(id={self.id!r})"
 
 class HistoryImportParsed:
+    _CID = 0x5e0fb7b9
+
     def __init__(
         self,
         pm: bool | None = None,
@@ -1089,12 +1792,32 @@ class HistoryImportParsed:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb9\xb7\x0f^'
+        _flags_word = (0 if self.pm is None else (1 << 0)) | (0 if self.group is None else (1 << 1)) | (0 if self.title is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_string(self.title)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.historyImportParsed"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["pm"] = True
+        if _flags_word & (1 << 1):
+            obj["group"] = True
+        if _flags_word & (1 << 2):
+            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"HistoryImportParsed(pm={self.pm!r}, group={self.group!r}, title={self.title!r})"
 
 class AffectedFoundMessages:
+    _CID = 0xef8d3e6c
+
     def __init__(
         self,
         pts: int,
@@ -1116,12 +1839,25 @@ class AffectedFoundMessages:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'l>\x8d\xef'
+        out += _struct.pack('<iii', self.pts, self.pts_count, self.offset)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.affectedFoundMessages"}
+        obj["pts"], obj["pts_count"], obj["offset"], = _struct.unpack_from('<iii', data, pos)
+        pos += 12
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AffectedFoundMessages(pts={self.pts!r}, pts_count={self.pts_count!r}, offset={self.offset!r}, messages={self.messages!r})"
 
 class ExportedChatInvites:
+    _CID = 0xbdc62dcc
+
     def __init__(
         self,
         count: int,
@@ -1140,12 +1876,27 @@ class ExportedChatInvites:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xcc-\xc6\xbd'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.invites), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.exportedChatInvites"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["invites"], pos = _tl._read_typed(data, pos, "Vector<ExportedChatInvite>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportedChatInvites(count={self.count!r}, invites={self.invites!r}, users={self.users!r})"
 
 class ExportedChatInvite:
+    _CID = 0x1871be50
+
     def __init__(
         self,
         invite: Any,
@@ -1161,12 +1912,24 @@ class ExportedChatInvite:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'P\xbeq\x18'
+        out += _tl.serialize(_tl._resolve(self.invite), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.exportedChatInvite"}
+        obj["invite"], pos = _tl._read_typed(data, pos, "ExportedChatInvite", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportedChatInvite(invite={self.invite!r}, users={self.users!r})"
 
 class ExportedChatInviteReplaced:
+    _CID = 0x222600ef
+
     def __init__(
         self,
         invite: Any,
@@ -1185,12 +1948,26 @@ class ExportedChatInviteReplaced:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xef\x00&"'
+        out += _tl.serialize(_tl._resolve(self.invite), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.new_invite), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.exportedChatInviteReplaced"}
+        obj["invite"], pos = _tl._read_typed(data, pos, "ExportedChatInvite", _SCHEMA_BY_CID)
+        obj["new_invite"], pos = _tl._read_typed(data, pos, "ExportedChatInvite", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportedChatInviteReplaced(invite={self.invite!r}, new_invite={self.new_invite!r}, users={self.users!r})"
 
 class ChatInviteImporters:
+    _CID = 0x81b6b00a
+
     def __init__(
         self,
         count: int,
@@ -1209,12 +1986,27 @@ class ChatInviteImporters:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\n\xb0\xb6\x81'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.importers), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.chatInviteImporters"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["importers"], pos = _tl._read_typed(data, pos, "Vector<ChatInviteImporter>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChatInviteImporters(count={self.count!r}, importers={self.importers!r}, users={self.users!r})"
 
 class ChatAdminsWithInvites:
+    _CID = 0xb69b72d7
+
     def __init__(
         self,
         admins: list[Any],
@@ -1230,12 +2022,24 @@ class ChatAdminsWithInvites:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd7r\x9b\xb6'
+        out += _tl.serialize(_tl._resolve(self.admins), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.chatAdminsWithInvites"}
+        obj["admins"], pos = _tl._read_typed(data, pos, "Vector<ChatAdminWithInvites>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChatAdminsWithInvites(admins={self.admins!r}, users={self.users!r})"
 
 class CheckedHistoryImportPeer:
+    _CID = 0xa24de717
+
     def __init__(
         self,
         confirm_text: str,
@@ -1248,12 +2052,22 @@ class CheckedHistoryImportPeer:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x17\xe7M\xa2'
+        out += _tl._pack_string(self.confirm_text)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.checkedHistoryImportPeer"}
+        obj["confirm_text"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CheckedHistoryImportPeer(confirm_text={self.confirm_text!r})"
 
 class SponsoredMessages:
+    _CID = 0xffda656d
+
     def __init__(
         self,
         messages: list[Any],
@@ -1281,12 +2095,45 @@ class SponsoredMessages:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'me\xda\xff'
+        _flags_word = (0 if self.posts_between is None else (1 << 0)) | (0 if self.start_delay is None else (1 << 1)) | (0 if self.between_delay is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.posts_between)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.start_delay)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<i', self.between_delay)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.sponsoredMessages"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["posts_between"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["start_delay"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 2):
+            obj["between_delay"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<SponsoredMessage>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SponsoredMessages(posts_between={self.posts_between!r}, start_delay={self.start_delay!r}, between_delay={self.between_delay!r}, messages={self.messages!r})"
 
 class SponsoredMessagesEmpty:
+    _CID = 0x1839490f
+
     def __init__(self) -> None:
         pass
 
@@ -1295,12 +2142,20 @@ class SponsoredMessagesEmpty:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x0fI9\x18'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.sponsoredMessagesEmpty"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SponsoredMessagesEmpty()"
 
 class SearchResultsCalendar:
+    _CID = 0x147ee23c
+
     def __init__(
         self,
         count: int,
@@ -1337,12 +2192,42 @@ class SearchResultsCalendar:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'<\xe2~\x14'
+        _flags_word = (0 if self.inexact is None else (1 << 0)) | (0 if self.offset_id_offset is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<iii', self.count, self.min_date, self.min_msg_id)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.offset_id_offset)
+        out += _tl.serialize(_tl._resolve(self.periods), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.searchResultsCalendar"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["inexact"] = True
+        obj["count"], obj["min_date"], obj["min_msg_id"], = _struct.unpack_from('<iii', data, pos)
+        pos += 12
+        if _flags_word & (1 << 1):
+            obj["offset_id_offset"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        obj["periods"], pos = _tl._read_typed(data, pos, "Vector<SearchResultsCalendarPeriod>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SearchResultsCalendar(inexact={self.inexact!r}, count={self.count!r}, min_date={self.min_date!r}, min_msg_id={self.min_msg_id!r})"
 
 class SearchResultsPositions:
+    _CID = 0x53b22baf
+
     def __init__(
         self,
         count: int,
@@ -1358,12 +2243,25 @@ class SearchResultsPositions:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xaf+\xb2S'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.positions), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.searchResultsPositions"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["positions"], pos = _tl._read_typed(data, pos, "Vector<SearchResultsPosition>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SearchResultsPositions(count={self.count!r}, positions={self.positions!r})"
 
 class PeerSettings:
+    _CID = 0x6880b94d
+
     def __init__(
         self,
         settings: Any,
@@ -1382,12 +2280,26 @@ class PeerSettings:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'M\xb9\x80h'
+        out += _tl.serialize(_tl._resolve(self.settings), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.peerSettings"}
+        obj["settings"], pos = _tl._read_typed(data, pos, "PeerSettings", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"PeerSettings(settings={self.settings!r}, chats={self.chats!r}, users={self.users!r})"
 
 class MessageReactionsList:
+    _CID = 0x31bd492d
+
     def __init__(
         self,
         count: int,
@@ -1412,12 +2324,37 @@ class MessageReactionsList:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'-I\xbd1'
+        _flags_word = (0 if self.next_offset is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.reactions), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.next_offset)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.messageReactionsList"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["reactions"], pos = _tl._read_typed(data, pos, "Vector<MessagePeerReaction>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"MessageReactionsList(count={self.count!r}, reactions={self.reactions!r}, chats={self.chats!r}, users={self.users!r})"
 
 class AvailableReactionsNotModified:
+    _CID = 0x9f071957
+
     def __init__(self) -> None:
         pass
 
@@ -1426,12 +2363,20 @@ class AvailableReactionsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'W\x19\x07\x9f'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.availableReactionsNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AvailableReactionsNotModified()"
 
 class AvailableReactions:
+    _CID = 0x768e3aad
+
     def __init__(
         self,
         hash: int,
@@ -1447,12 +2392,25 @@ class AvailableReactions:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xad:\x8ev'
+        out += _struct.pack('<i', self.hash)
+        out += _tl.serialize(_tl._resolve(self.reactions), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.availableReactions"}
+        obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["reactions"], pos = _tl._read_typed(data, pos, "Vector<AvailableReaction>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AvailableReactions(hash={self.hash!r}, reactions={self.reactions!r})"
 
 class TranscribedAudio:
+    _CID = 0xcfb9d957
+
     def __init__(
         self,
         transcription_id: int,
@@ -1477,12 +2435,41 @@ class TranscribedAudio:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'W\xd9\xb9\xcf'
+        _flags_word = (0 if self.pending is None else (1 << 0)) | (0 if self.trial_remains_num is None else (1 << 1)) | (0 if self.trial_remains_until_date is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.transcription_id)
+        out += _tl._pack_string(self.text)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.trial_remains_num)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.trial_remains_until_date)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.transcribedAudio"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["pending"] = True
+        obj["transcription_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["text"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["trial_remains_num"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["trial_remains_until_date"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"TranscribedAudio(pending={self.pending!r}, transcription_id={self.transcription_id!r}, text={self.text!r}, trial_remains_num={self.trial_remains_num!r})"
 
 class ReactionsNotModified:
+    _CID = 0xb06fdbdf
+
     def __init__(self) -> None:
         pass
 
@@ -1491,12 +2478,20 @@ class ReactionsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xdf\xdbo\xb0'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.reactionsNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ReactionsNotModified()"
 
 class Reactions:
+    _CID = 0xeafdf716
+
     def __init__(
         self,
         hash: int,
@@ -1512,12 +2507,25 @@ class Reactions:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x16\xf7\xfd\xea'
+        out += _struct.pack('<q', self.hash)
+        out += _tl.serialize(_tl._resolve(self.reactions), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.reactions"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["reactions"], pos = _tl._read_typed(data, pos, "Vector<Reaction>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Reactions(hash={self.hash!r}, reactions={self.reactions!r})"
 
 class ForumTopics:
+    _CID = 0x367617d3
+
     def __init__(
         self,
         count: int,
@@ -1548,12 +2556,40 @@ class ForumTopics:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd3\x17v6'
+        _flags_word = (0 if self.order_by_create_date is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.topics), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _struct.pack('<i', self.pts)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.forumTopics"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["order_by_create_date"] = True
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["topics"], pos = _tl._read_typed(data, pos, "Vector<ForumTopic>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["pts"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ForumTopics(order_by_create_date={self.order_by_create_date!r}, count={self.count!r}, topics={self.topics!r}, messages={self.messages!r})"
 
 class EmojiGroupsNotModified:
+    _CID = 0x6fb4ad87
+
     def __init__(self) -> None:
         pass
 
@@ -1562,12 +2598,20 @@ class EmojiGroupsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x87\xad\xb4o'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.emojiGroupsNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EmojiGroupsNotModified()"
 
 class EmojiGroups:
+    _CID = 0x881fb94b
+
     def __init__(
         self,
         hash: int,
@@ -1583,12 +2627,25 @@ class EmojiGroups:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'K\xb9\x1f\x88'
+        out += _struct.pack('<i', self.hash)
+        out += _tl.serialize(_tl._resolve(self.groups), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.emojiGroups"}
+        obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["groups"], pos = _tl._read_typed(data, pos, "Vector<EmojiGroup>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EmojiGroups(hash={self.hash!r}, groups={self.groups!r})"
 
 class TranslateResult:
+    _CID = 0x33db32f8
+
     def __init__(
         self,
         result: list[Any],
@@ -1601,12 +2658,22 @@ class TranslateResult:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf82\xdb3'
+        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.translateResult"}
+        obj["result"], pos = _tl._read_typed(data, pos, "Vector<TextWithEntities>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"TranslateResult(result={self.result!r})"
 
 class BotApp:
+    _CID = 0xeb50adf5
+
     def __init__(
         self,
         app: Any,
@@ -1628,12 +2695,32 @@ class BotApp:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf5\xadP\xeb'
+        _flags_word = (0 if self.inactive is None else (1 << 0)) | (0 if self.request_write_access is None else (1 << 1)) | (0 if self.has_settings is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.app), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.botApp"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["inactive"] = True
+        if _flags_word & (1 << 1):
+            obj["request_write_access"] = True
+        if _flags_word & (1 << 2):
+            obj["has_settings"] = True
+        obj["app"], pos = _tl._read_typed(data, pos, "BotApp", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"BotApp(inactive={self.inactive!r}, request_write_access={self.request_write_access!r}, has_settings={self.has_settings!r}, app={self.app!r})"
 
 class WebPage:
+    _CID = 0xfd5e12bd
+
     def __init__(
         self,
         webpage: Any,
@@ -1652,12 +2739,26 @@ class WebPage:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xbd\x12^\xfd'
+        out += _tl.serialize(_tl._resolve(self.webpage), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.webPage"}
+        obj["webpage"], pos = _tl._read_typed(data, pos, "WebPage", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"WebPage(webpage={self.webpage!r}, chats={self.chats!r}, users={self.users!r})"
 
 class SavedDialogs:
+    _CID = 0xf83ae221
+
     def __init__(
         self,
         dialogs: list[Any],
@@ -1679,12 +2780,28 @@ class SavedDialogs:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'!\xe2:\xf8'
+        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.savedDialogs"}
+        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<SavedDialog>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SavedDialogs(dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r}, users={self.users!r})"
 
 class SavedDialogsSlice:
+    _CID = 0x44ba9dd9
+
     def __init__(
         self,
         count: int,
@@ -1709,12 +2826,31 @@ class SavedDialogsSlice:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd9\x9d\xbaD'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.savedDialogsSlice"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<SavedDialog>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SavedDialogsSlice(count={self.count!r}, dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r})"
 
 class SavedDialogsNotModified:
+    _CID = 0xc01f6fe8
+
     def __init__(
         self,
         count: int,
@@ -1727,12 +2863,23 @@ class SavedDialogsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe8o\x1f\xc0'
+        out += _struct.pack('<i', self.count)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.savedDialogsNotModified"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SavedDialogsNotModified(count={self.count!r})"
 
 class SavedReactionTagsNotModified:
+    _CID = 0x889b59ef
+
     def __init__(self) -> None:
         pass
 
@@ -1741,12 +2888,20 @@ class SavedReactionTagsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xefY\x9b\x88'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.savedReactionTagsNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SavedReactionTagsNotModified()"
 
 class SavedReactionTags:
+    _CID = 0x3259950a
+
     def __init__(
         self,
         tags: list[Any],
@@ -1762,12 +2917,25 @@ class SavedReactionTags:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\n\x95Y2'
+        out += _tl.serialize(_tl._resolve(self.tags), _SCHEMA)
+        out += _struct.pack('<q', self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.savedReactionTags"}
+        obj["tags"], pos = _tl._read_typed(data, pos, "Vector<SavedReactionTag>", _SCHEMA_BY_CID)
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SavedReactionTags(tags={self.tags!r}, hash={self.hash!r})"
 
 class QuickReplies:
+    _CID = 0xc68d6695
+
     def __init__(
         self,
         quick_replies: list[Any],
@@ -1789,12 +2957,28 @@ class QuickReplies:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x95f\x8d\xc6'
+        out += _tl.serialize(_tl._resolve(self.quick_replies), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.quickReplies"}
+        obj["quick_replies"], pos = _tl._read_typed(data, pos, "Vector<QuickReply>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"QuickReplies(quick_replies={self.quick_replies!r}, messages={self.messages!r}, chats={self.chats!r}, users={self.users!r})"
 
 class QuickRepliesNotModified:
+    _CID = 0x5f91eb5b
+
     def __init__(self) -> None:
         pass
 
@@ -1803,12 +2987,20 @@ class QuickRepliesNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'[\xeb\x91_'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.quickRepliesNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"QuickRepliesNotModified()"
 
 class DialogFilters:
+    _CID = 0x2ad93719
+
     def __init__(
         self,
         filters: list[Any],
@@ -1824,12 +3016,28 @@ class DialogFilters:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x197\xd9*'
+        _flags_word = (0 if self.tags_enabled is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.filters), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.dialogFilters"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["tags_enabled"] = True
+        obj["filters"], pos = _tl._read_typed(data, pos, "Vector<DialogFilter>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DialogFilters(tags_enabled={self.tags_enabled!r}, filters={self.filters!r})"
 
 class MyStickers:
+    _CID = 0xfaff629d
+
     def __init__(
         self,
         count: int,
@@ -1845,12 +3053,25 @@ class MyStickers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x9db\xff\xfa'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.myStickers"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"MyStickers(count={self.count!r}, sets={self.sets!r})"
 
 class InvitedUsers:
+    _CID = 0x7f5defa6
+
     def __init__(
         self,
         updates: Any,
@@ -1866,12 +3087,24 @@ class InvitedUsers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa6\xef]\x7f'
+        out += _tl.serialize(_tl._resolve(self.updates), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.missing_invitees), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.invitedUsers"}
+        obj["updates"], pos = _tl._read_typed(data, pos, "Updates", _SCHEMA_BY_CID)
+        obj["missing_invitees"], pos = _tl._read_typed(data, pos, "Vector<MissingInvitee>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"InvitedUsers(updates={self.updates!r}, missing_invitees={self.missing_invitees!r})"
 
 class AvailableEffectsNotModified:
+    _CID = 0xd1ed9a5b
+
     def __init__(self) -> None:
         pass
 
@@ -1880,12 +3113,20 @@ class AvailableEffectsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'[\x9a\xed\xd1'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.availableEffectsNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AvailableEffectsNotModified()"
 
 class AvailableEffects:
+    _CID = 0xbddb616e
+
     def __init__(
         self,
         hash: int,
@@ -1904,12 +3145,27 @@ class AvailableEffects:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'na\xdb\xbd'
+        out += _struct.pack('<i', self.hash)
+        out += _tl.serialize(_tl._resolve(self.effects), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.documents), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.availableEffects"}
+        obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["effects"], pos = _tl._read_typed(data, pos, "Vector<AvailableEffect>", _SCHEMA_BY_CID)
+        obj["documents"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AvailableEffects(hash={self.hash!r}, effects={self.effects!r}, documents={self.documents!r})"
 
 class BotPreparedInlineMessage:
+    _CID = 0x8ecf0511
+
     def __init__(
         self,
         id: str,
@@ -1925,12 +3181,25 @@ class BotPreparedInlineMessage:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x11\x05\xcf\x8e'
+        out += _tl._pack_string(self.id)
+        out += _struct.pack('<i', self.expire_date)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.botPreparedInlineMessage"}
+        obj["id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["expire_date"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"BotPreparedInlineMessage(id={self.id!r}, expire_date={self.expire_date!r})"
 
 class PreparedInlineMessage:
+    _CID = 0xff57708d
+
     def __init__(
         self,
         query_id: int,
@@ -1955,12 +3224,32 @@ class PreparedInlineMessage:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x8dpW\xff'
+        out += _struct.pack('<q', self.query_id)
+        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.peer_types), _SCHEMA)
+        out += _struct.pack('<i', self.cache_time)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.preparedInlineMessage"}
+        obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["result"], pos = _tl._read_typed(data, pos, "BotInlineResult", _SCHEMA_BY_CID)
+        obj["peer_types"], pos = _tl._read_typed(data, pos, "Vector<InlineQueryPeerType>", _SCHEMA_BY_CID)
+        obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"PreparedInlineMessage(query_id={self.query_id!r}, result={self.result!r}, peer_types={self.peer_types!r}, cache_time={self.cache_time!r})"
 
 class FoundStickersNotModified:
+    _CID = 0x6010c534
+
     def __init__(
         self,
         next_offset: int | None = None,
@@ -1973,12 +3262,29 @@ class FoundStickersNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'4\xc5\x10`'
+        _flags_word = (0 if self.next_offset is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.next_offset)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.foundStickersNotModified"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["next_offset"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FoundStickersNotModified(next_offset={self.next_offset!r})"
 
 class FoundStickers:
+    _CID = 0x82c9e290
+
     def __init__(
         self,
         hash: int,
@@ -1997,12 +3303,34 @@ class FoundStickers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x90\xe2\xc9\x82'
+        _flags_word = (0 if self.next_offset is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.next_offset)
+        out += _struct.pack('<q', self.hash)
+        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.foundStickers"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["next_offset"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FoundStickers(next_offset={self.next_offset!r}, hash={self.hash!r}, stickers={self.stickers!r})"
 
 class WebPagePreview:
+    _CID = 0x8c9a88ac
+
     def __init__(
         self,
         media: Any,
@@ -2021,12 +3349,26 @@ class WebPagePreview:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xac\x88\x9a\x8c'
+        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.webPagePreview"}
+        obj["media"], pos = _tl._read_typed(data, pos, "MessageMedia", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"WebPagePreview(media={self.media!r}, chats={self.chats!r}, users={self.users!r})"
 
 class EmojiGameOutcome:
+    _CID = 0xda2ad647
+
     def __init__(
         self,
         seed: bytes,
@@ -2045,12 +3387,25 @@ class EmojiGameOutcome:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'G\xd6*\xda'
+        out += _tl._pack_bytes(self.seed)
+        out += _struct.pack('<qq', self.stake_ton_amount, self.ton_amount)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.emojiGameOutcome"}
+        obj["seed"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["stake_ton_amount"], obj["ton_amount"], = _struct.unpack_from('<qq', data, pos)
+        pos += 16
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EmojiGameOutcome(seed={self.seed!r}, stake_ton_amount={self.stake_ton_amount!r}, ton_amount={self.ton_amount!r})"
 
 class EmojiGameUnavailable:
+    _CID = 0x59e65335
+
     def __init__(self) -> None:
         pass
 
@@ -2059,12 +3414,20 @@ class EmojiGameUnavailable:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'5S\xe6Y'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.emojiGameUnavailable"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EmojiGameUnavailable()"
 
 class EmojiGameDiceInfo:
+    _CID = 0x44e56023
+
     def __init__(
         self,
         game_hash: str,
@@ -2089,12 +3452,36 @@ class EmojiGameDiceInfo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'#`\xe5D'
+        _flags_word = (0 if self.plays_left is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.game_hash)
+        out += _struct.pack('<qi', self.prev_stake, self.current_streak)
+        out += _tl.serialize(_tl._resolve(self.params), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.plays_left)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.emojiGameDiceInfo"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["game_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["prev_stake"], obj["current_streak"], = _struct.unpack_from('<qi', data, pos)
+        pos += 12
+        obj["params"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["plays_left"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EmojiGameDiceInfo(game_hash={self.game_hash!r}, prev_stake={self.prev_stake!r}, current_streak={self.current_streak!r}, params={self.params!r})"
 
 class ComposedMessageWithAI:
+    _CID = 0x90d7adfa
+
     def __init__(
         self,
         result_text: Any,
@@ -2110,12 +3497,30 @@ class ComposedMessageWithAI:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xfa\xad\xd7\x90'
+        _flags_word = (0 if self.diff_text is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.result_text), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.diff_text), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.composedMessageWithAI"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["result_text"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["diff_text"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ComposedMessageWithAI(result_text={self.result_text!r}, diff_text={self.diff_text!r})"
 
 class ChatInviteJoinResultOk:
+    _CID = 0x445663a7
+
     def __init__(
         self,
         updates: Any,
@@ -2128,12 +3533,22 @@ class ChatInviteJoinResultOk:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa7cVD'
+        out += _tl.serialize(_tl._resolve(self.updates), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.chatInviteJoinResultOk"}
+        obj["updates"], pos = _tl._read_typed(data, pos, "Updates", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChatInviteJoinResultOk(updates={self.updates!r})"
 
 class ChatInviteJoinResultWebView:
+    _CID = 0x2f51c337
+
     def __init__(
         self,
         bot_id: int,
@@ -2152,7 +3567,20 @@ class ChatInviteJoinResultWebView:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'7\xc3Q/'
+        out += _struct.pack('<q', self.bot_id)
+        out += _tl.serialize(_tl._resolve(self.webview), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.chatInviteJoinResultWebView"}
+        obj["bot_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["webview"], pos = _tl._read_typed(data, pos, "WebViewResult", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChatInviteJoinResultWebView(bot_id={self.bot_id!r}, webview={self.webview!r}, users={self.users!r})"

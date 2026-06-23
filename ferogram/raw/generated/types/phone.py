@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class PhoneCall:
+    _CID = 0xec82e140
+
     def __init__(
         self,
         phone_call: Any,
@@ -35,12 +38,24 @@ class PhoneCall:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'@\xe1\x82\xec'
+        out += _tl.serialize(_tl._resolve(self.phone_call), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "phone.phoneCall"}
+        obj["phone_call"], pos = _tl._read_typed(data, pos, "PhoneCall", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"PhoneCall(phone_call={self.phone_call!r}, users={self.users!r})"
 
 class GroupCall:
+    _CID = 0x9e727aad
+
     def __init__(
         self,
         call: Any,
@@ -65,12 +80,30 @@ class GroupCall:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xadzr\x9e'
+        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.participants), _SCHEMA)
+        out += _tl._pack_string(self.participants_next_offset)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "phone.groupCall"}
+        obj["call"], pos = _tl._read_typed(data, pos, "GroupCall", _SCHEMA_BY_CID)
+        obj["participants"], pos = _tl._read_typed(data, pos, "Vector<GroupCallParticipant>", _SCHEMA_BY_CID)
+        obj["participants_next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GroupCall(call={self.call!r}, participants={self.participants!r}, participants_next_offset={self.participants_next_offset!r}, chats={self.chats!r})"
 
 class GroupParticipants:
+    _CID = 0xf47751b6
+
     def __init__(
         self,
         count: int,
@@ -98,12 +131,34 @@ class GroupParticipants:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb6Qw\xf4'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.participants), _SCHEMA)
+        out += _tl._pack_string(self.next_offset)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _struct.pack('<i', self.version)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "phone.groupParticipants"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["participants"], pos = _tl._read_typed(data, pos, "Vector<GroupCallParticipant>", _SCHEMA_BY_CID)
+        obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["version"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GroupParticipants(count={self.count!r}, participants={self.participants!r}, next_offset={self.next_offset!r}, chats={self.chats!r})"
 
 class JoinAsPeers:
+    _CID = 0xafe5623f
+
     def __init__(
         self,
         peers: list[Any],
@@ -122,12 +177,26 @@ class JoinAsPeers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'?b\xe5\xaf'
+        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "phone.joinAsPeers"}
+        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"JoinAsPeers(peers={self.peers!r}, chats={self.chats!r}, users={self.users!r})"
 
 class ExportedGroupCallInvite:
+    _CID = 0x204bd158
+
     def __init__(
         self,
         link: str,
@@ -140,12 +209,22 @@ class ExportedGroupCallInvite:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'X\xd1K '
+        out += _tl._pack_string(self.link)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "phone.exportedGroupCallInvite"}
+        obj["link"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportedGroupCallInvite(link={self.link!r})"
 
 class GroupCallStreamChannels:
+    _CID = 0xd0e482b2
+
     def __init__(
         self,
         channels: list[Any],
@@ -158,12 +237,22 @@ class GroupCallStreamChannels:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb2\x82\xe4\xd0'
+        out += _tl.serialize(_tl._resolve(self.channels), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "phone.groupCallStreamChannels"}
+        obj["channels"], pos = _tl._read_typed(data, pos, "Vector<GroupCallStreamChannel>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GroupCallStreamChannels(channels={self.channels!r})"
 
 class GroupCallStreamRtmpUrl:
+    _CID = 0x2dbf3432
+
     def __init__(
         self,
         url: str,
@@ -179,12 +268,24 @@ class GroupCallStreamRtmpUrl:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'24\xbf-'
+        out += _tl._pack_string(self.url)
+        out += _tl._pack_string(self.key)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "phone.groupCallStreamRtmpUrl"}
+        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["key"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GroupCallStreamRtmpUrl(url={self.url!r}, key={self.key!r})"
 
 class GroupCallStars:
+    _CID = 0x9d1dbd26
+
     def __init__(
         self,
         total_stars: int,
@@ -206,7 +307,22 @@ class GroupCallStars:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'&\xbd\x1d\x9d'
+        out += _struct.pack('<q', self.total_stars)
+        out += _tl.serialize(_tl._resolve(self.top_donors), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "phone.groupCallStars"}
+        obj["total_stars"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["top_donors"], pos = _tl._read_typed(data, pos, "Vector<GroupCallDonor>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GroupCallStars(total_stars={self.total_stars!r}, top_donors={self.top_donors!r}, chats={self.chats!r}, users={self.users!r})"

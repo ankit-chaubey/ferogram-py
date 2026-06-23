@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class FileUnknown:
+    _CID = 0xaa963b05
+
     def __init__(self) -> None:
         pass
 
@@ -28,12 +31,20 @@ class FileUnknown:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x05;\x96\xaa'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.fileUnknown"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FileUnknown()"
 
 class FilePartial:
+    _CID = 0x40bc6f52
+
     def __init__(self) -> None:
         pass
 
@@ -42,12 +53,20 @@ class FilePartial:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'Ro\xbc@'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.filePartial"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FilePartial()"
 
 class FileJpeg:
+    _CID = 0x007efe0e
+
     def __init__(self) -> None:
         pass
 
@@ -56,12 +75,20 @@ class FileJpeg:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x0e\xfe~\x00'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.fileJpeg"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FileJpeg()"
 
 class FileGif:
+    _CID = 0xcae1aadf
+
     def __init__(self) -> None:
         pass
 
@@ -70,12 +97,20 @@ class FileGif:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xdf\xaa\xe1\xca'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.fileGif"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FileGif()"
 
 class FilePng:
+    _CID = 0x0a4f63c0
+
     def __init__(self) -> None:
         pass
 
@@ -84,12 +119,20 @@ class FilePng:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xc0cO\n'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.filePng"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FilePng()"
 
 class FilePdf:
+    _CID = 0xae1e508d
+
     def __init__(self) -> None:
         pass
 
@@ -98,12 +141,20 @@ class FilePdf:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x8dP\x1e\xae'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.filePdf"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FilePdf()"
 
 class FileMp3:
+    _CID = 0x528a0677
+
     def __init__(self) -> None:
         pass
 
@@ -112,12 +163,20 @@ class FileMp3:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'w\x06\x8aR'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.fileMp3"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FileMp3()"
 
 class FileMov:
+    _CID = 0x4b09ebbc
+
     def __init__(self) -> None:
         pass
 
@@ -126,12 +185,20 @@ class FileMov:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xbc\xeb\tK'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.fileMov"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FileMov()"
 
 class FileMp4:
+    _CID = 0xb3cea0e4
+
     def __init__(self) -> None:
         pass
 
@@ -140,12 +207,20 @@ class FileMp4:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe4\xa0\xce\xb3'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.fileMp4"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FileMp4()"
 
 class FileWebp:
+    _CID = 0x1081464c
+
     def __init__(self) -> None:
         pass
 
@@ -154,7 +229,13 @@ class FileWebp:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'LF\x81\x10'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "storage.fileWebp"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FileWebp()"

@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class SendCode:
+    _CID = 0xa677244f
+
     def __init__(
         self,
         phone_number: str,
@@ -41,12 +44,29 @@ class SendCode:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'O$w\xa6'
+        out += _tl._pack_string(self.phone_number)
+        out += _struct.pack('<i', self.api_id)
+        out += _tl._pack_string(self.api_hash)
+        out += _tl.serialize(_tl._resolve(self.settings), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.sendCode"}
+        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["api_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["settings"], pos = _tl._read_typed(data, pos, "CodeSettings", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SendCode(phone_number={self.phone_number!r}, api_id={self.api_id!r}, api_hash={self.api_hash!r}, settings={self.settings!r})"
 
 class SignUp:
+    _CID = 0xaac7b717
+
     def __init__(
         self,
         phone_number: str,
@@ -71,12 +91,34 @@ class SignUp:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x17\xb7\xc7\xaa'
+        _flags_word = (0 if self.no_joined_notifications is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.phone_number)
+        out += _tl._pack_string(self.phone_code_hash)
+        out += _tl._pack_string(self.first_name)
+        out += _tl._pack_string(self.last_name)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.signUp"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["no_joined_notifications"] = True
+        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["first_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["last_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SignUp(no_joined_notifications={self.no_joined_notifications!r}, phone_number={self.phone_number!r}, phone_code_hash={self.phone_code_hash!r}, first_name={self.first_name!r})"
 
 class SignIn:
+    _CID = 0x8d52a951
+
     def __init__(
         self,
         phone_number: str,
@@ -98,12 +140,36 @@ class SignIn:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'Q\xa9R\x8d'
+        _flags_word = (0 if self.phone_code is None else (1 << 0)) | (0 if self.email_verification is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.phone_number)
+        out += _tl._pack_string(self.phone_code_hash)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.phone_code)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.email_verification), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.signIn"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["phone_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["email_verification"], pos = _tl._read_typed(data, pos, "EmailVerification", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SignIn(phone_number={self.phone_number!r}, phone_code_hash={self.phone_code_hash!r}, phone_code={self.phone_code!r}, email_verification={self.email_verification!r})"
 
 class LogOut:
+    _CID = 0x3e72ba19
+
     def __init__(self) -> None:
         pass
 
@@ -112,12 +178,20 @@ class LogOut:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x19\xbar>'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.logOut"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"LogOut()"
 
 class ResetAuthorizations:
+    _CID = 0x9fab0d1a
+
     def __init__(self) -> None:
         pass
 
@@ -126,12 +200,20 @@ class ResetAuthorizations:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x1a\r\xab\x9f'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.resetAuthorizations"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ResetAuthorizations()"
 
 class ExportAuthorization:
+    _CID = 0xe5bfffcd
+
     def __init__(
         self,
         dc_id: int,
@@ -144,12 +226,23 @@ class ExportAuthorization:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xcd\xff\xbf\xe5'
+        out += _struct.pack('<i', self.dc_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.exportAuthorization"}
+        obj["dc_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportAuthorization(dc_id={self.dc_id!r})"
 
 class ImportAuthorization:
+    _CID = 0xa57a7dad
+
     def __init__(
         self,
         id: int,
@@ -165,12 +258,25 @@ class ImportAuthorization:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xad}z\xa5'
+        out += _struct.pack('<q', self.id)
+        out += _tl._pack_bytes(self.bytes)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.importAuthorization"}
+        obj["id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ImportAuthorization(id={self.id!r}, bytes={self.bytes!r})"
 
 class BindTempAuthKey:
+    _CID = 0xcdd42a05
+
     def __init__(
         self,
         perm_auth_key_id: int,
@@ -192,12 +298,25 @@ class BindTempAuthKey:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x05*\xd4\xcd'
+        out += _struct.pack('<qqi', self.perm_auth_key_id, self.nonce, self.expires_at)
+        out += _tl._pack_bytes(self.encrypted_message)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.bindTempAuthKey"}
+        obj["perm_auth_key_id"], obj["nonce"], obj["expires_at"], = _struct.unpack_from('<qqi', data, pos)
+        pos += 20
+        obj["encrypted_message"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"BindTempAuthKey(perm_auth_key_id={self.perm_auth_key_id!r}, nonce={self.nonce!r}, expires_at={self.expires_at!r}, encrypted_message={self.encrypted_message!r})"
 
 class ImportBotAuthorization:
+    _CID = 0x67a3ff2c
+
     def __init__(
         self,
         flags: int,
@@ -219,12 +338,27 @@ class ImportBotAuthorization:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b',\xff\xa3g'
+        out += _struct.pack('<ii', self.flags, self.api_id)
+        out += _tl._pack_string(self.api_hash)
+        out += _tl._pack_string(self.bot_auth_token)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.importBotAuthorization"}
+        obj["flags"], obj["api_id"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["bot_auth_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ImportBotAuthorization(flags={self.flags!r}, api_id={self.api_id!r}, api_hash={self.api_hash!r}, bot_auth_token={self.bot_auth_token!r})"
 
 class CheckPassword:
+    _CID = 0xd18b4d16
+
     def __init__(
         self,
         password: Any,
@@ -237,12 +371,22 @@ class CheckPassword:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x16M\x8b\xd1'
+        out += _tl.serialize(_tl._resolve(self.password), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.checkPassword"}
+        obj["password"], pos = _tl._read_typed(data, pos, "InputCheckPasswordSRP", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CheckPassword(password={self.password!r})"
 
 class RequestPasswordRecovery:
+    _CID = 0xd897bc66
+
     def __init__(self) -> None:
         pass
 
@@ -251,12 +395,20 @@ class RequestPasswordRecovery:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'f\xbc\x97\xd8'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.requestPasswordRecovery"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"RequestPasswordRecovery()"
 
 class RecoverPassword:
+    _CID = 0x37096c70
+
     def __init__(
         self,
         code: str,
@@ -272,12 +424,30 @@ class RecoverPassword:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'pl\t7'
+        _flags_word = (0 if self.new_settings is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.code)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.new_settings), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.recoverPassword"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["new_settings"], pos = _tl._read_typed(data, pos, "account.PasswordInputSettings", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"RecoverPassword(code={self.code!r}, new_settings={self.new_settings!r})"
 
 class ResendCode:
+    _CID = 0xcae47523
+
     def __init__(
         self,
         phone_number: str,
@@ -296,12 +466,32 @@ class ResendCode:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'#u\xe4\xca'
+        _flags_word = (0 if self.reason is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.phone_number)
+        out += _tl._pack_string(self.phone_code_hash)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.reason)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.resendCode"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["reason"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ResendCode(phone_number={self.phone_number!r}, phone_code_hash={self.phone_code_hash!r}, reason={self.reason!r})"
 
 class CancelCode:
+    _CID = 0x1f040578
+
     def __init__(
         self,
         phone_number: str,
@@ -317,12 +507,24 @@ class CancelCode:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'x\x05\x04\x1f'
+        out += _tl._pack_string(self.phone_number)
+        out += _tl._pack_string(self.phone_code_hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.cancelCode"}
+        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CancelCode(phone_number={self.phone_number!r}, phone_code_hash={self.phone_code_hash!r})"
 
 class DropTempAuthKeys:
+    _CID = 0x8e48a188
+
     def __init__(
         self,
         except_auth_keys: list[int],
@@ -335,12 +537,22 @@ class DropTempAuthKeys:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x88\xa1H\x8e'
+        out += _tl.serialize(_tl._resolve(self.except_auth_keys), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.dropTempAuthKeys"}
+        obj["except_auth_keys"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DropTempAuthKeys(except_auth_keys={self.except_auth_keys!r})"
 
 class ExportLoginToken:
+    _CID = 0xb7e085fe
+
     def __init__(
         self,
         api_id: int,
@@ -359,12 +571,27 @@ class ExportLoginToken:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xfe\x85\xe0\xb7'
+        out += _struct.pack('<i', self.api_id)
+        out += _tl._pack_string(self.api_hash)
+        out += _tl.serialize(_tl._resolve(self.except_ids), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.exportLoginToken"}
+        obj["api_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["except_ids"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportLoginToken(api_id={self.api_id!r}, api_hash={self.api_hash!r}, except_ids={self.except_ids!r})"
 
 class ImportLoginToken:
+    _CID = 0x95ac5ce4
+
     def __init__(
         self,
         token: bytes,
@@ -377,12 +604,22 @@ class ImportLoginToken:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xe4\\\xac\x95'
+        out += _tl._pack_bytes(self.token)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.importLoginToken"}
+        obj["token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ImportLoginToken(token={self.token!r})"
 
 class AcceptLoginToken:
+    _CID = 0xe894ad4d
+
     def __init__(
         self,
         token: bytes,
@@ -395,12 +632,22 @@ class AcceptLoginToken:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'M\xad\x94\xe8'
+        out += _tl._pack_bytes(self.token)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.acceptLoginToken"}
+        obj["token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AcceptLoginToken(token={self.token!r})"
 
 class CheckRecoveryPassword:
+    _CID = 0x0d36bf79
+
     def __init__(
         self,
         code: str,
@@ -413,12 +660,22 @@ class CheckRecoveryPassword:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'y\xbf6\r'
+        out += _tl._pack_string(self.code)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.checkRecoveryPassword"}
+        obj["code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CheckRecoveryPassword(code={self.code!r})"
 
 class ImportWebTokenAuthorization:
+    _CID = 0x2db873a9
+
     def __init__(
         self,
         api_id: int,
@@ -437,12 +694,27 @@ class ImportWebTokenAuthorization:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa9s\xb8-'
+        out += _struct.pack('<i', self.api_id)
+        out += _tl._pack_string(self.api_hash)
+        out += _tl._pack_string(self.web_auth_token)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.importWebTokenAuthorization"}
+        obj["api_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["web_auth_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ImportWebTokenAuthorization(api_id={self.api_id!r}, api_hash={self.api_hash!r}, web_auth_token={self.web_auth_token!r})"
 
 class RequestFirebaseSms:
+    _CID = 0x8e39261e
+
     def __init__(
         self,
         phone_number: str,
@@ -467,12 +739,40 @@ class RequestFirebaseSms:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x1e&9\x8e'
+        _flags_word = (0 if self.safety_net_token is None else (1 << 0)) | (0 if self.play_integrity_token is None else (1 << 2)) | (0 if self.ios_push_secret is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.phone_number)
+        out += _tl._pack_string(self.phone_code_hash)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.safety_net_token)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_string(self.play_integrity_token)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.ios_push_secret)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.requestFirebaseSms"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["safety_net_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["play_integrity_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["ios_push_secret"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"RequestFirebaseSms(phone_number={self.phone_number!r}, phone_code_hash={self.phone_code_hash!r}, safety_net_token={self.safety_net_token!r}, play_integrity_token={self.play_integrity_token!r})"
 
 class ResetLoginEmail:
+    _CID = 0x7e960193
+
     def __init__(
         self,
         phone_number: str,
@@ -488,12 +788,24 @@ class ResetLoginEmail:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x93\x01\x96~'
+        out += _tl._pack_string(self.phone_number)
+        out += _tl._pack_string(self.phone_code_hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.resetLoginEmail"}
+        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ResetLoginEmail(phone_number={self.phone_number!r}, phone_code_hash={self.phone_code_hash!r})"
 
 class ReportMissingCode:
+    _CID = 0xcb9deff6
+
     def __init__(
         self,
         phone_number: str,
@@ -512,12 +824,26 @@ class ReportMissingCode:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf6\xef\x9d\xcb'
+        out += _tl._pack_string(self.phone_number)
+        out += _tl._pack_string(self.phone_code_hash)
+        out += _tl._pack_string(self.mnc)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.reportMissingCode"}
+        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["mnc"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ReportMissingCode(phone_number={self.phone_number!r}, phone_code_hash={self.phone_code_hash!r}, mnc={self.mnc!r})"
 
 class CheckPaidAuth:
+    _CID = 0x56e59f9c
+
     def __init__(
         self,
         phone_number: str,
@@ -536,12 +862,27 @@ class CheckPaidAuth:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x9c\x9f\xe5V'
+        out += _tl._pack_string(self.phone_number)
+        out += _tl._pack_string(self.phone_code_hash)
+        out += _struct.pack('<q', self.form_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.checkPaidAuth"}
+        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["form_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CheckPaidAuth(phone_number={self.phone_number!r}, phone_code_hash={self.phone_code_hash!r}, form_id={self.form_id!r})"
 
 class InitPasskeyLogin:
+    _CID = 0x518ad0b7
+
     def __init__(
         self,
         api_id: int,
@@ -557,12 +898,25 @@ class InitPasskeyLogin:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb7\xd0\x8aQ'
+        out += _struct.pack('<i', self.api_id)
+        out += _tl._pack_string(self.api_hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.initPasskeyLogin"}
+        obj["api_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"InitPasskeyLogin(api_id={self.api_id!r}, api_hash={self.api_hash!r})"
 
 class FinishPasskeyLogin:
+    _CID = 0x9857ad07
+
     def __init__(
         self,
         credential: Any,
@@ -581,7 +935,29 @@ class FinishPasskeyLogin:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x07\xadW\x98'
+        _flags_word = (0 if self.from_dc_id is None else (1 << 0)) | (0 if self.from_auth_key_id is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.credential), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.from_dc_id)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.from_auth_key_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "auth.finishPasskeyLogin"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["credential"], pos = _tl._read_typed(data, pos, "InputPasskeyCredential", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["from_dc_id"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["from_auth_key_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FinishPasskeyLogin(credential={self.credential!r}, from_dc_id={self.from_dc_id!r}, from_auth_key_id={self.from_auth_key_id!r})"

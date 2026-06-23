@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class GetState:
+    _CID = 0xedd4882a
+
     def __init__(self) -> None:
         pass
 
@@ -28,12 +31,20 @@ class GetState:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'*\x88\xd4\xed'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.getState"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetState()"
 
 class GetDifference:
+    _CID = 0x19c2f763
+
     def __init__(
         self,
         pts: int,
@@ -61,12 +72,45 @@ class GetDifference:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'c\xf7\xc2\x19'
+        _flags_word = (0 if self.pts_limit is None else (1 << 1)) | (0 if self.pts_total_limit is None else (1 << 0)) | (0 if self.qts_limit is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<i', self.pts)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.pts_limit)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.pts_total_limit)
+        out += _struct.pack('<ii', self.date, self.qts)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<i', self.qts_limit)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.getDifference"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["pts"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["pts_limit"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["pts_total_limit"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        obj["date"], obj["qts"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        if _flags_word & (1 << 2):
+            obj["qts_limit"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetDifference(pts={self.pts!r}, pts_limit={self.pts_limit!r}, pts_total_limit={self.pts_total_limit!r}, date={self.date!r})"
 
 class GetChannelDifference:
+    _CID = 0x03173d78
+
     def __init__(
         self,
         channel: Any,
@@ -91,7 +135,26 @@ class GetChannelDifference:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'x=\x17\x03'
+        _flags_word = (0 if self.force is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+        out += _struct.pack('<ii', self.pts, self.limit)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.getChannelDifference"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["force"] = True
+        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["filter"], pos = _tl._read_typed(data, pos, "ChannelMessagesFilter", _SCHEMA_BY_CID)
+        obj["pts"], obj["limit"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetChannelDifference(force={self.force!r}, channel={self.channel!r}, filter={self.filter!r}, pts={self.pts!r})"

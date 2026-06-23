@@ -52,10 +52,20 @@ def _resolve(v: Any) -> Any:
     return v
 
 
-def _parse_flags2_ftype(ftype: str) -> tuple[int, str]:
-    """Parse "flags2.N?inner" -> (bit, inner_type)."""
-    sep = ftype.index("?")
-    return int(ftype[7:sep]), ftype[sep + 1:]
+_BOOL_TRUE  = 0x997275b5
+_BOOL_FALSE = 0xbc799737
+_VECTOR_CID = 0x1cb5c415
+
+
+# Schema field format: (name, ftype, flag)
+# flag is None for unconditional fields, or (group, bit) for conditional ones.
+# group is "flags", "flags2", etc. — any string matching the flag-word name in TL.
+# bit is the 0-based bit index within that flag word.
+#
+# Old format (pre-Phase-2) stored flag_bit as a plain int for flags.X fields
+# and ftype="flags2.N?inner" with flag=None for flags2 fields. The new format
+# stores (group, bit) uniformly so tl.py never needs to inspect ftype strings
+# for flag-group dispatch.
 
 
 def serialize(obj: Any, schema: dict) -> bytes:
@@ -86,45 +96,35 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
     cid, fields = schema[name]
     out = _pack_uint32(cid)
 
-    # Compute flags (flags.X fields have fbit != None).
-    flag_fields = [(fn, ft, fb) for fn, ft, fb in fields if fb is not None]
-    flags = 0
-    for fname, ftype, fbit in flag_fields:
-        if obj.get(fname) is not None:
-            flags |= (1 << fbit)
-    if flag_fields:
-        out += _pack_uint32(flags)
-
-    # Compute flags2 (fields whose ftype starts with "flags2.").
-    flags2_fields = [
-        (fn, ft) for fn, ft, _ in fields
-        if isinstance(ft, str) and ft.startswith("flags2.")
-    ]
-    flags2 = 0
-    for fname, ftype in flags2_fields:
-        bit, _ = _parse_flags2_ftype(ftype)
-        if obj.get(fname) is not None:
-            flags2 |= (1 << bit)
-
-    flags2_written = False
-
-    for fname, ftype, fbit in fields:
-        # flags2.X?inner field: write the flags2 word on first encounter, then
-        # write the inner value only when the corresponding bit is set.
-        if isinstance(ftype, str) and ftype.startswith("flags2."):
-            if not flags2_written:
-                out += _pack_uint32(flags2)
-                flags2_written = True
-            bit, inner = _parse_flags2_ftype(ftype)
-            if not (flags2 & (1 << bit)):
-                continue
-            val = obj.get(fname)
-            if val is not None:
-                out += _serialize_field(val, inner, schema)
+    # Gather all flag groups present in this constructor and compute their words.
+    # Iteration order: we need the flag words written in the order their first
+    # conditional field appears in the field list, which matches the wire format.
+    # We pre-compute all group words up front, then emit each word lazily on
+    # first encounter (same lazy pattern as before, now generalised).
+    flag_words: dict[str, int] = {}
+    for fname, ftype, flag in fields:
+        if flag is None:
             continue
+        group, bit = flag
+        if group not in flag_words:
+            flag_words[group] = 0
+        if obj.get(fname) is not None:
+            flag_words[group] |= (1 << bit)
 
-        if fbit is not None:
-            if obj.get(fname) is None:
+    # "flags" is always written first as a prefix word (TL convention).
+    if "flags" in flag_words:
+        out += _pack_uint32(flag_words["flags"])
+
+    emitted: set[str] = {"flags"} if "flags" in flag_words else set()
+
+    for fname, ftype, flag in fields:
+        if flag is not None:
+            group, bit = flag
+            # Emit this group's flag word on its first appearance in field order.
+            if group not in emitted:
+                out += _pack_uint32(flag_words.get(group, 0))
+                emitted.add(group)
+            if not (flag_words.get(group, 0) & (1 << bit)):
                 continue
         val = obj.get(fname)
         if val is None:
@@ -135,7 +135,7 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
 
 
 def _serialize_field(val: Any, ftype: str, schema: dict) -> bytes:
-    LONG_TYPES  = {"long", "int64"}
+    LONG_TYPES   = {"long", "int64"}
     INT128_TYPES = {"int128"}
     INT256_TYPES = {"int256"}
     if ftype in LONG_TYPES:
@@ -151,8 +151,69 @@ def _serialize_field(val: Any, ftype: str, schema: dict) -> bytes:
 
 
 def deserialize(data: bytes, schema_by_cid: dict) -> Any:
-    result, _ = _read_value(data, 0, schema_by_cid)
-    return result
+    return _read_object(data, 0, schema_by_cid)[0]
+
+
+# Populated lazily on first deserialize call. Maps CID -> generated class
+# with a from_bytes() classmethod, so _read_object() can dispatch straight
+# to the specialized reader instead of walking the schema dict for every
+# field of every nested object.
+_CID_TO_CLASS: dict[int, type] | None = None
+
+
+def _ensure_cid_map() -> dict[int, type]:
+    global _CID_TO_CLASS
+    if _CID_TO_CLASS is None:
+        import importlib
+        import pkgutil
+        from ferogram.raw.generated import types as _types_pkg
+
+        mapping: dict[int, type] = {}
+        for _, modname, _ in pkgutil.walk_packages(
+            path=_types_pkg.__path__,
+            prefix=_types_pkg.__name__ + ".",
+        ):
+            mod = importlib.import_module(modname)
+            for attr in dir(mod):
+                obj = getattr(mod, attr)
+                if isinstance(obj, type) and hasattr(obj, "from_bytes"):
+                    cid = getattr(obj, "_CID", None)
+                    if cid is not None:
+                        mapping[cid] = obj
+        _CID_TO_CLASS = mapping
+    return _CID_TO_CLASS
+
+
+def _read_object(data: bytes, pos: int, schema_by_cid: dict) -> tuple[Any, int]:
+    """
+    Read a CID-prefixed TL object from data[pos:].
+
+    Dispatches to the generated class's specialized from_bytes() via
+    _CID_TO_CLASS when the CID is known. Falls back to the generic
+    schema-dict walk (_read_value) for anything not in the dispatch
+    table — unknown/forward-compat CIDs, and MTProto-internal
+    constructors that aren't part of api.tl.
+    """
+    cid, new_pos = _read_uint32(data, pos)
+
+    if cid == _BOOL_TRUE:
+        return True, new_pos
+    if cid == _BOOL_FALSE:
+        return False, new_pos
+
+    if cid == _VECTOR_CID:
+        count, item_pos = _read_uint32(data, new_pos)
+        items = []
+        for _ in range(count):
+            item, item_pos = _read_object(data, item_pos, schema_by_cid)
+            items.append(item)
+        return items, item_pos
+
+    cls = _ensure_cid_map().get(cid)
+    if cls is not None:
+        return cls.from_bytes(data, new_pos)
+
+    return _read_value(data, pos, schema_by_cid)
 
 
 def _read_uint32(data: bytes, pos: int) -> tuple[int, int]:
@@ -187,18 +248,14 @@ def _read_bytes(data: bytes, pos: int) -> tuple[bytes, int]:
 def _read_value(data: bytes, pos: int, schema: dict) -> tuple[Any, int]:
     cid, pos = _read_uint32(data, pos)
 
-    BOOL_TRUE  = 0x997275b5
-    BOOL_FALSE = 0xbc799737
-    VECTOR_CID = 0x1cb5c415
+    if cid == _BOOL_TRUE:  return True,  pos
+    if cid == _BOOL_FALSE: return False, pos
 
-    if cid == BOOL_TRUE:  return True,  pos
-    if cid == BOOL_FALSE: return False, pos
-
-    if cid == VECTOR_CID:
+    if cid == _VECTOR_CID:
         count, pos = _read_uint32(data, pos)
         items = []
         for _ in range(count):
-            item, pos = _read_value(data, pos, schema)
+            item, pos = _read_object(data, pos, schema)
             items.append(item)
         return items, pos
 
@@ -208,38 +265,26 @@ def _read_value(data: bytes, pos: int, schema: dict) -> tuple[Any, int]:
     name, fields = schema[cid]
     obj: dict[str, Any] = {"_": name}
 
-    # Read flags word if any field is gated on flags.X.
-    flags = 0
-    if any(fb is not None for _, _, fb in fields):
-        flags, pos = _read_uint32(data, pos)
+    # Read "flags" word first if any field is gated on it.
+    flag_words: dict[str, int] = {}
+    if any(f[2] is not None and f[2][0] == "flags" for f in fields):
+        flag_words["flags"], pos = _read_uint32(data, pos)
 
-    # flags2 is a second flags word that appears inline in the field sequence,
-    # just before the first flags2.X?... field. The generated schema omits the
-    # flags2:# marker (FIELD_RE doesn't match "#") and encodes the conditionality
-    # as ftype="flags2.N?inner" with fbit=None. We read the flags2 word lazily
-    # on the first flags2.X field encountered, which matches the wire position.
-    flags2 = 0
-    flags2_read = False
-
-    for fname, ftype, fbit in fields:
-        # flags2.X?inner conditional field.
-        if isinstance(ftype, str) and ftype.startswith("flags2."):
-            if not flags2_read:
-                flags2, pos = _read_uint32(data, pos)
-                flags2_read = True
-            bit, inner = _parse_flags2_ftype(ftype)
-            if not (flags2 & (1 << bit)):
+    for fname, ftype, flag in fields:
+        if flag is not None:
+            group, bit = flag
+            # Lazily read each new flag group word on first encounter.
+            if group not in flag_words:
+                flag_words[group], pos = _read_uint32(data, pos)
+            if not (flag_words[group] & (1 << bit)):
                 continue
-            if inner in ("true", "True"):
+            if ftype in ("true", "True"):
                 obj[fname] = True
-            else:
-                val, pos = _read_typed(data, pos, inner, schema)
-                obj[fname] = val
+                continue
+            val, pos = _read_typed(data, pos, ftype, schema)
+            obj[fname] = val
             continue
 
-        # Normal flags.X conditional or unconditional field.
-        if fbit is not None and not (flags & (1 << fbit)):
-            continue
         if ftype in ("true", "True"):
             obj[fname] = True
             continue
@@ -249,7 +294,7 @@ def _read_value(data: bytes, pos: int, schema: dict) -> tuple[Any, int]:
     return obj, pos
 
 
-def _read_typed(data: bytes, pos: int, ftype: str, schema: dict) -> tuple[Any, int]:
+def _read_typed(data: bytes, pos: int, ftype: str, schema: dict) -> tuple[Any, int]:  # noqa: E302 (called by generated from_bytes)
     if ftype == "int":    return _read_int32(data, pos)
     if ftype == "long":   return _read_int64(data, pos)
     if ftype == "double": return _read_double(data, pos)
@@ -262,17 +307,17 @@ def _read_typed(data: bytes, pos: int, ftype: str, schema: dict) -> tuple[Any, i
     if ftype == "bytes":  return _read_bytes(data, pos)
     if ftype == "Bool":
         cid, pos = _read_uint32(data, pos)
-        return cid == 0x997275b5, pos
+        return cid == _BOOL_TRUE, pos
     if ftype.startswith("Vector<") or ftype.startswith("vector<"):
         inner = ftype[7:-1]
-        cid, pos = _read_uint32(data, pos)  # 0x1cb5c415
+        cid, pos = _read_uint32(data, pos)  # _VECTOR_CID
         count, pos = _read_uint32(data, pos)
         items = []
         for _ in range(count):
             item, pos = _read_typed(data, pos, inner, schema)
             items.append(item)
         return items, pos
-    return _read_value(data, pos, schema)
+    return _read_object(data, pos, schema)
 
 
 def parse_markdown(text: str) -> tuple[str, list]:
@@ -281,7 +326,6 @@ def parse_markdown(text: str) -> tuple[str, list]:
     entities = []
     pos = 0
     plain = []
-    # single-pass regex for bold/italic/code/strikethrough
     pattern = re.compile(r'(\*\*(.+?)\*\*|\*(.+?)\*|__(.+?)__|_(.+?)_|`(.+?)`|~~(.+?)~~)', re.DOTALL)
     last = 0
     for m in pattern.finditer(text):
@@ -352,7 +396,7 @@ def parse_html(text: str) -> tuple[str, list]:
             url = ""
             if tag_body == "a":
                 etype = "messageEntityTextUrl"
-                m = re.search(r'href=["\']([^"\']+)["\']', tag_raw)
+                m = re.search(r'href=["\'"]([^"\']+)["\']', tag_raw)
                 url = m.group(1) if m else ""
             if etype:
                 pstart = sum(len(p) for p in plain_parts)

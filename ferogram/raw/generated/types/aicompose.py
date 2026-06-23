@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class TonesNotModified:
+    _CID = 0xc1f46103
+
     def __init__(self) -> None:
         pass
 
@@ -28,12 +31,20 @@ class TonesNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x03a\xf4\xc1'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.tonesNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"TonesNotModified()"
 
 class Tones:
+    _CID = 0x6c9d0efe
+
     def __init__(
         self,
         hash: int,
@@ -52,7 +63,20 @@ class Tones:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xfe\x0e\x9dl'
+        out += _struct.pack('<q', self.hash)
+        out += _tl.serialize(_tl._resolve(self.tones), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.tones"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["tones"], pos = _tl._read_typed(data, pos, "Vector<AiComposeTone>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Tones(hash={self.hash!r}, tones={self.tones!r}, users={self.users!r})"

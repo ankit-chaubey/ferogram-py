@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class EditPeerFolders:
+    _CID = 0x6847d0ab
+
     def __init__(
         self,
         folder_peers: list[Any],
@@ -32,7 +35,15 @@ class EditPeerFolders:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xab\xd0Gh'
+        out += _tl.serialize(_tl._resolve(self.folder_peers), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "folders.editPeerFolders"}
+        obj["folder_peers"], pos = _tl._read_typed(data, pos, "Vector<InputFolderPeer>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EditPeerFolders(folder_peers={self.folder_peers!r})"

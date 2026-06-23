@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class GetConfig:
+    _CID = 0xc4f9186b
+
     def __init__(self) -> None:
         pass
 
@@ -28,12 +31,20 @@ class GetConfig:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'k\x18\xf9\xc4'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getConfig"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetConfig()"
 
 class GetNearestDc:
+    _CID = 0x1fb33026
+
     def __init__(self) -> None:
         pass
 
@@ -42,12 +53,20 @@ class GetNearestDc:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'&0\xb3\x1f'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getNearestDc"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetNearestDc()"
 
 class GetAppUpdate:
+    _CID = 0x522d5a7d
+
     def __init__(
         self,
         source: str,
@@ -60,12 +79,22 @@ class GetAppUpdate:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'}Z-R'
+        out += _tl._pack_string(self.source)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getAppUpdate"}
+        obj["source"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetAppUpdate(source={self.source!r})"
 
 class GetInviteText:
+    _CID = 0x4d392343
+
     def __init__(self) -> None:
         pass
 
@@ -74,12 +103,20 @@ class GetInviteText:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'C#9M'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getInviteText"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetInviteText()"
 
 class GetSupport:
+    _CID = 0x9cdf08cd
+
     def __init__(self) -> None:
         pass
 
@@ -88,12 +125,20 @@ class GetSupport:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xcd\x08\xdf\x9c'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getSupport"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetSupport()"
 
 class SetBotUpdatesStatus:
+    _CID = 0xec22cfcd
+
     def __init__(
         self,
         pending_updates_count: int,
@@ -109,12 +154,25 @@ class SetBotUpdatesStatus:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xcd\xcf"\xec'
+        out += _struct.pack('<i', self.pending_updates_count)
+        out += _tl._pack_string(self.message)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.setBotUpdatesStatus"}
+        obj["pending_updates_count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SetBotUpdatesStatus(pending_updates_count={self.pending_updates_count!r}, message={self.message!r})"
 
 class GetCdnConfig:
+    _CID = 0x52029342
+
     def __init__(self) -> None:
         pass
 
@@ -123,12 +181,20 @@ class GetCdnConfig:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'B\x93\x02R'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getCdnConfig"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetCdnConfig()"
 
 class GetRecentMeUrls:
+    _CID = 0x3dc0f114
+
     def __init__(
         self,
         referer: str,
@@ -141,12 +207,22 @@ class GetRecentMeUrls:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x14\xf1\xc0='
+        out += _tl._pack_string(self.referer)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getRecentMeUrls"}
+        obj["referer"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetRecentMeUrls(referer={self.referer!r})"
 
 class GetTermsOfServiceUpdate:
+    _CID = 0x2ca51fd1
+
     def __init__(self) -> None:
         pass
 
@@ -155,12 +231,20 @@ class GetTermsOfServiceUpdate:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd1\x1f\xa5,'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getTermsOfServiceUpdate"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetTermsOfServiceUpdate()"
 
 class AcceptTermsOfService:
+    _CID = 0xee72f79a
+
     def __init__(
         self,
         id: Any,
@@ -173,12 +257,22 @@ class AcceptTermsOfService:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x9a\xf7r\xee'
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.acceptTermsOfService"}
+        obj["id"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"AcceptTermsOfService(id={self.id!r})"
 
 class GetDeepLinkInfo:
+    _CID = 0x3fedc75f
+
     def __init__(
         self,
         path: str,
@@ -191,12 +285,22 @@ class GetDeepLinkInfo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'_\xc7\xed?'
+        out += _tl._pack_string(self.path)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getDeepLinkInfo"}
+        obj["path"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetDeepLinkInfo(path={self.path!r})"
 
 class GetAppConfig:
+    _CID = 0x61e3f854
+
     def __init__(
         self,
         hash: int,
@@ -209,12 +313,23 @@ class GetAppConfig:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'T\xf8\xe3a'
+        out += _struct.pack('<i', self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getAppConfig"}
+        obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetAppConfig(hash={self.hash!r})"
 
 class SaveAppLog:
+    _CID = 0x6f02f748
+
     def __init__(
         self,
         events: list[Any],
@@ -227,12 +342,22 @@ class SaveAppLog:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'H\xf7\x02o'
+        out += _tl.serialize(_tl._resolve(self.events), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.saveAppLog"}
+        obj["events"], pos = _tl._read_typed(data, pos, "Vector<InputAppEvent>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SaveAppLog(events={self.events!r})"
 
 class GetPassportConfig:
+    _CID = 0xc661ad08
+
     def __init__(
         self,
         hash: int,
@@ -245,12 +370,23 @@ class GetPassportConfig:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x08\xada\xc6'
+        out += _struct.pack('<i', self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getPassportConfig"}
+        obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetPassportConfig(hash={self.hash!r})"
 
 class GetSupportName:
+    _CID = 0xd360e72c
+
     def __init__(self) -> None:
         pass
 
@@ -259,12 +395,20 @@ class GetSupportName:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b',\xe7`\xd3'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getSupportName"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetSupportName()"
 
 class GetUserInfo:
+    _CID = 0x038a08d3
+
     def __init__(
         self,
         user_id: Any,
@@ -277,12 +421,22 @@ class GetUserInfo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd3\x08\x8a\x03'
+        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getUserInfo"}
+        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetUserInfo(user_id={self.user_id!r})"
 
 class EditUserInfo:
+    _CID = 0x66b91b70
+
     def __init__(
         self,
         user_id: Any,
@@ -301,12 +455,26 @@ class EditUserInfo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'p\x1b\xb9f'
+        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._pack_string(self.message)
+        out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.editUserInfo"}
+        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EditUserInfo(user_id={self.user_id!r}, message={self.message!r}, entities={self.entities!r})"
 
 class GetPromoData:
+    _CID = 0xc0977421
+
     def __init__(self) -> None:
         pass
 
@@ -315,12 +483,20 @@ class GetPromoData:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'!t\x97\xc0'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getPromoData"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetPromoData()"
 
 class HidePromoData:
+    _CID = 0x1e251c95
+
     def __init__(
         self,
         peer: Any,
@@ -333,12 +509,22 @@ class HidePromoData:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x95\x1c%\x1e'
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.hidePromoData"}
+        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"HidePromoData(peer={self.peer!r})"
 
 class DismissSuggestion:
+    _CID = 0xf50dbaa1
+
     def __init__(
         self,
         peer: Any,
@@ -354,12 +540,24 @@ class DismissSuggestion:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa1\xba\r\xf5'
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._pack_string(self.suggestion)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.dismissSuggestion"}
+        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["suggestion"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DismissSuggestion(peer={self.peer!r}, suggestion={self.suggestion!r})"
 
 class GetCountriesList:
+    _CID = 0x735787a8
+
     def __init__(
         self,
         lang_code: str,
@@ -375,12 +573,25 @@ class GetCountriesList:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa8\x87Ws'
+        out += _tl._pack_string(self.lang_code)
+        out += _struct.pack('<i', self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getCountriesList"}
+        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetCountriesList(lang_code={self.lang_code!r}, hash={self.hash!r})"
 
 class GetPremiumPromo:
+    _CID = 0xb81b93d4
+
     def __init__(self) -> None:
         pass
 
@@ -389,12 +600,20 @@ class GetPremiumPromo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd4\x93\x1b\xb8'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getPremiumPromo"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetPremiumPromo()"
 
 class GetPeerColors:
+    _CID = 0xda80f42f
+
     def __init__(
         self,
         hash: int,
@@ -407,12 +626,23 @@ class GetPeerColors:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'/\xf4\x80\xda'
+        out += _struct.pack('<i', self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getPeerColors"}
+        obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetPeerColors(hash={self.hash!r})"
 
 class GetPeerProfileColors:
+    _CID = 0xabcfa9fd
+
     def __init__(
         self,
         hash: int,
@@ -425,12 +655,23 @@ class GetPeerProfileColors:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xfd\xa9\xcf\xab'
+        out += _struct.pack('<i', self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getPeerProfileColors"}
+        obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetPeerProfileColors(hash={self.hash!r})"
 
 class GetTimezonesList:
+    _CID = 0x49b30240
+
     def __init__(
         self,
         hash: int,
@@ -443,7 +684,16 @@ class GetTimezonesList:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'@\x02\xb3I'
+        out += _struct.pack('<i', self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "help.getTimezonesList"}
+        obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetTimezonesList(hash={self.hash!r})"

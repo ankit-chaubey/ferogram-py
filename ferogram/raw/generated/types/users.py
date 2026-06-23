@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class UserFull:
+    _CID = 0x3b6d152e
+
     def __init__(
         self,
         full_user: Any,
@@ -38,12 +41,26 @@ class UserFull:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'.\x15m;'
+        out += _tl.serialize(_tl._resolve(self.full_user), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.userFull"}
+        obj["full_user"], pos = _tl._read_typed(data, pos, "UserFull", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"UserFull(full_user={self.full_user!r}, chats={self.chats!r}, users={self.users!r})"
 
 class Users:
+    _CID = 0x62d706b8
+
     def __init__(
         self,
         users: list[Any],
@@ -56,12 +73,22 @@ class Users:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb8\x06\xd7b'
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.users"}
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Users(users={self.users!r})"
 
 class UsersSlice:
+    _CID = 0x315a4974
+
     def __init__(
         self,
         count: int,
@@ -77,12 +104,25 @@ class UsersSlice:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'tIZ1'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.usersSlice"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"UsersSlice(count={self.count!r}, users={self.users!r})"
 
 class SavedMusicNotModified:
+    _CID = 0xe3878aa4
+
     def __init__(
         self,
         count: int,
@@ -95,12 +135,23 @@ class SavedMusicNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa4\x8a\x87\xe3'
+        out += _struct.pack('<i', self.count)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.savedMusicNotModified"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SavedMusicNotModified(count={self.count!r})"
 
 class SavedMusic:
+    _CID = 0x34a2f297
+
     def __init__(
         self,
         count: int,
@@ -116,7 +167,18 @@ class SavedMusic:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x97\xf2\xa24'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.documents), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "users.savedMusic"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["documents"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SavedMusic(count={self.count!r}, documents={self.documents!r})"

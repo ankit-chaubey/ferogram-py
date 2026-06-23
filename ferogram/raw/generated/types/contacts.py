@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class ContactsNotModified:
+    _CID = 0xb74ba9d2
+
     def __init__(self) -> None:
         pass
 
@@ -28,12 +31,20 @@ class ContactsNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd2\xa9K\xb7'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.contactsNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ContactsNotModified()"
 
 class Contacts:
+    _CID = 0xeae87e42
+
     def __init__(
         self,
         contacts: list[Any],
@@ -52,12 +63,27 @@ class Contacts:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'B~\xe8\xea'
+        out += _tl.serialize(_tl._resolve(self.contacts), _SCHEMA)
+        out += _struct.pack('<i', self.saved_count)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.contacts"}
+        obj["contacts"], pos = _tl._read_typed(data, pos, "Vector<Contact>", _SCHEMA_BY_CID)
+        obj["saved_count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Contacts(contacts={self.contacts!r}, saved_count={self.saved_count!r}, users={self.users!r})"
 
 class ImportedContacts:
+    _CID = 0x77d01c3b
+
     def __init__(
         self,
         imported: list[Any],
@@ -79,12 +105,28 @@ class ImportedContacts:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b';\x1c\xd0w'
+        out += _tl.serialize(_tl._resolve(self.imported), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.popular_invites), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.retry_contacts), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.importedContacts"}
+        obj["imported"], pos = _tl._read_typed(data, pos, "Vector<ImportedContact>", _SCHEMA_BY_CID)
+        obj["popular_invites"], pos = _tl._read_typed(data, pos, "Vector<PopularContact>", _SCHEMA_BY_CID)
+        obj["retry_contacts"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ImportedContacts(imported={self.imported!r}, popular_invites={self.popular_invites!r}, retry_contacts={self.retry_contacts!r}, users={self.users!r})"
 
 class Blocked:
+    _CID = 0x0ade1591
+
     def __init__(
         self,
         blocked: list[Any],
@@ -103,12 +145,26 @@ class Blocked:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x91\x15\xde\n'
+        out += _tl.serialize(_tl._resolve(self.blocked), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.blocked"}
+        obj["blocked"], pos = _tl._read_typed(data, pos, "Vector<PeerBlocked>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Blocked(blocked={self.blocked!r}, chats={self.chats!r}, users={self.users!r})"
 
 class BlockedSlice:
+    _CID = 0xe1664194
+
     def __init__(
         self,
         count: int,
@@ -130,12 +186,29 @@ class BlockedSlice:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x94Af\xe1'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.blocked), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.blockedSlice"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["blocked"], pos = _tl._read_typed(data, pos, "Vector<PeerBlocked>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"BlockedSlice(count={self.count!r}, blocked={self.blocked!r}, chats={self.chats!r}, users={self.users!r})"
 
 class Found:
+    _CID = 0xb3134d9d
+
     def __init__(
         self,
         my_results: list[Any],
@@ -157,12 +230,28 @@ class Found:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x9dM\x13\xb3'
+        out += _tl.serialize(_tl._resolve(self.my_results), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.results), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.found"}
+        obj["my_results"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
+        obj["results"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Found(my_results={self.my_results!r}, results={self.results!r}, chats={self.chats!r}, users={self.users!r})"
 
 class ResolvedPeer:
+    _CID = 0x7f077ad9
+
     def __init__(
         self,
         peer: Any,
@@ -181,12 +270,26 @@ class ResolvedPeer:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd9z\x07\x7f'
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.resolvedPeer"}
+        obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ResolvedPeer(peer={self.peer!r}, chats={self.chats!r}, users={self.users!r})"
 
 class TopPeersNotModified:
+    _CID = 0xde266ef5
+
     def __init__(self) -> None:
         pass
 
@@ -195,12 +298,20 @@ class TopPeersNotModified:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf5n&\xde'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.topPeersNotModified"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"TopPeersNotModified()"
 
 class TopPeers:
+    _CID = 0x70b772a8
+
     def __init__(
         self,
         categories: list[Any],
@@ -219,12 +330,26 @@ class TopPeers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa8r\xb7p'
+        out += _tl.serialize(_tl._resolve(self.categories), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.topPeers"}
+        obj["categories"], pos = _tl._read_typed(data, pos, "Vector<TopPeerCategoryPeers>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"TopPeers(categories={self.categories!r}, chats={self.chats!r}, users={self.users!r})"
 
 class TopPeersDisabled:
+    _CID = 0xb52c939d
+
     def __init__(self) -> None:
         pass
 
@@ -233,12 +358,20 @@ class TopPeersDisabled:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x9d\x93,\xb5'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.topPeersDisabled"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"TopPeersDisabled()"
 
 class ContactBirthdays:
+    _CID = 0x114ff30d
+
     def __init__(
         self,
         contacts: list[Any],
@@ -254,12 +387,24 @@ class ContactBirthdays:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\r\xf3O\x11'
+        out += _tl.serialize(_tl._resolve(self.contacts), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.contactBirthdays"}
+        obj["contacts"], pos = _tl._read_typed(data, pos, "Vector<ContactBirthday>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ContactBirthdays(contacts={self.contacts!r}, users={self.users!r})"
 
 class SponsoredPeersEmpty:
+    _CID = 0xea32b4b1
+
     def __init__(self) -> None:
         pass
 
@@ -268,12 +413,20 @@ class SponsoredPeersEmpty:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb1\xb42\xea'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.sponsoredPeersEmpty"}
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SponsoredPeersEmpty()"
 
 class SponsoredPeers:
+    _CID = 0xeb032884
+
     def __init__(
         self,
         peers: list[Any],
@@ -292,7 +445,19 @@ class SponsoredPeers:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x84(\x03\xeb'
+        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "contacts.sponsoredPeers"}
+        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<SponsoredPeer>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SponsoredPeers(peers={self.peers!r}, chats={self.chats!r}, users={self.users!r})"

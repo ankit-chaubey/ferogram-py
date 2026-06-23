@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class Photos:
+    _CID = 0x8dca6aa5
+
     def __init__(
         self,
         photos: list[Any],
@@ -35,12 +38,24 @@ class Photos:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa5j\xca\x8d'
+        out += _tl.serialize(_tl._resolve(self.photos), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "photos.photos"}
+        obj["photos"], pos = _tl._read_typed(data, pos, "Vector<Photo>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Photos(photos={self.photos!r}, users={self.users!r})"
 
 class PhotosSlice:
+    _CID = 0x15051f54
+
     def __init__(
         self,
         count: int,
@@ -59,12 +74,27 @@ class PhotosSlice:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'T\x1f\x05\x15'
+        out += _struct.pack('<i', self.count)
+        out += _tl.serialize(_tl._resolve(self.photos), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "photos.photosSlice"}
+        obj["count"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["photos"], pos = _tl._read_typed(data, pos, "Vector<Photo>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"PhotosSlice(count={self.count!r}, photos={self.photos!r}, users={self.users!r})"
 
 class Photo:
+    _CID = 0x20212ca8
+
     def __init__(
         self,
         photo: Any,
@@ -80,7 +110,17 @@ class Photo:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa8,! '
+        out += _tl.serialize(_tl._resolve(self.photo), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "photos.photo"}
+        obj["photo"], pos = _tl._read_typed(data, pos, "Photo", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Photo(photo={self.photo!r}, users={self.users!r})"

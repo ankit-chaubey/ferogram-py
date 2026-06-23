@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class SaveFilePart:
+    _CID = 0xb304a621
+
     def __init__(
         self,
         file_id: int,
@@ -38,12 +41,25 @@ class SaveFilePart:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'!\xa6\x04\xb3'
+        out += _struct.pack('<qi', self.file_id, self.file_part)
+        out += _tl._pack_bytes(self.bytes)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.saveFilePart"}
+        obj["file_id"], obj["file_part"], = _struct.unpack_from('<qi', data, pos)
+        pos += 12
+        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SaveFilePart(file_id={self.file_id!r}, file_part={self.file_part!r}, bytes={self.bytes!r})"
 
 class GetFile:
+    _CID = 0xbe5335be
+
     def __init__(
         self,
         location: Any,
@@ -68,12 +84,33 @@ class GetFile:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xbe5S\xbe'
+        _flags_word = (0 if self.precise is None else (1 << 0)) | (0 if self.cdn_supported is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.location), _SCHEMA)
+        out += _struct.pack('<qi', self.offset, self.limit)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.getFile"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["precise"] = True
+        if _flags_word & (1 << 1):
+            obj["cdn_supported"] = True
+        obj["location"], pos = _tl._read_typed(data, pos, "InputFileLocation", _SCHEMA_BY_CID)
+        obj["offset"], obj["limit"], = _struct.unpack_from('<qi', data, pos)
+        pos += 12
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetFile(precise={self.precise!r}, cdn_supported={self.cdn_supported!r}, location={self.location!r}, offset={self.offset!r})"
 
 class SaveBigFilePart:
+    _CID = 0xde7b673d
+
     def __init__(
         self,
         file_id: int,
@@ -95,12 +132,25 @@ class SaveBigFilePart:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'=g{\xde'
+        out += _struct.pack('<qii', self.file_id, self.file_part, self.file_total_parts)
+        out += _tl._pack_bytes(self.bytes)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.saveBigFilePart"}
+        obj["file_id"], obj["file_part"], obj["file_total_parts"], = _struct.unpack_from('<qii', data, pos)
+        pos += 16
+        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"SaveBigFilePart(file_id={self.file_id!r}, file_part={self.file_part!r}, file_total_parts={self.file_total_parts!r}, bytes={self.bytes!r})"
 
 class GetWebFile:
+    _CID = 0x24e6818d
+
     def __init__(
         self,
         location: Any,
@@ -119,12 +169,25 @@ class GetWebFile:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x8d\x81\xe6$'
+        out += _tl.serialize(_tl._resolve(self.location), _SCHEMA)
+        out += _struct.pack('<ii', self.offset, self.limit)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.getWebFile"}
+        obj["location"], pos = _tl._read_typed(data, pos, "InputWebFileLocation", _SCHEMA_BY_CID)
+        obj["offset"], obj["limit"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetWebFile(location={self.location!r}, offset={self.offset!r}, limit={self.limit!r})"
 
 class GetCdnFile:
+    _CID = 0x395f69da
+
     def __init__(
         self,
         file_token: bytes,
@@ -143,12 +206,25 @@ class GetCdnFile:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xdai_9'
+        out += _tl._pack_bytes(self.file_token)
+        out += _struct.pack('<qi', self.offset, self.limit)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.getCdnFile"}
+        obj["file_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["offset"], obj["limit"], = _struct.unpack_from('<qi', data, pos)
+        pos += 12
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetCdnFile(file_token={self.file_token!r}, offset={self.offset!r}, limit={self.limit!r})"
 
 class ReuploadCdnFile:
+    _CID = 0x9b2754a8
+
     def __init__(
         self,
         file_token: bytes,
@@ -164,12 +240,24 @@ class ReuploadCdnFile:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b"\xa8T'\x9b"
+        out += _tl._pack_bytes(self.file_token)
+        out += _tl._pack_bytes(self.request_token)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.reuploadCdnFile"}
+        obj["file_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["request_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ReuploadCdnFile(file_token={self.file_token!r}, request_token={self.request_token!r})"
 
 class GetCdnFileHashes:
+    _CID = 0x91dc3f31
+
     def __init__(
         self,
         file_token: bytes,
@@ -185,12 +273,25 @@ class GetCdnFileHashes:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'1?\xdc\x91'
+        out += _tl._pack_bytes(self.file_token)
+        out += _struct.pack('<q', self.offset)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.getCdnFileHashes"}
+        obj["file_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["offset"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetCdnFileHashes(file_token={self.file_token!r}, offset={self.offset!r})"
 
 class GetFileHashes:
+    _CID = 0x9156982a
+
     def __init__(
         self,
         location: Any,
@@ -206,7 +307,18 @@ class GetFileHashes:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'*\x98V\x91'
+        out += _tl.serialize(_tl._resolve(self.location), _SCHEMA)
+        out += _struct.pack('<q', self.offset)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.getFileHashes"}
+        obj["location"], pos = _tl._read_typed(data, pos, "InputFileLocation", _SCHEMA_BY_CID)
+        obj["offset"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetFileHashes(location={self.location!r}, offset={self.offset!r})"

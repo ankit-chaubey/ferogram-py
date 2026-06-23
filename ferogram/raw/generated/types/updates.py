@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class State:
+    _CID = 0xa56c2a3e
+
     def __init__(
         self,
         pts: int,
@@ -44,12 +47,23 @@ class State:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'>*l\xa5'
+        out += _struct.pack('<iiiii', self.pts, self.qts, self.date, self.seq, self.unread_count)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.state"}
+        obj["pts"], obj["qts"], obj["date"], obj["seq"], obj["unread_count"], = _struct.unpack_from('<iiiii', data, pos)
+        pos += 20
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"State(pts={self.pts!r}, qts={self.qts!r}, date={self.date!r}, seq={self.seq!r})"
 
 class DifferenceEmpty:
+    _CID = 0x5d75a138
+
     def __init__(
         self,
         date: int,
@@ -65,12 +79,23 @@ class DifferenceEmpty:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'8\xa1u]'
+        out += _struct.pack('<ii', self.date, self.seq)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.differenceEmpty"}
+        obj["date"], obj["seq"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DifferenceEmpty(date={self.date!r}, seq={self.seq!r})"
 
 class Difference:
+    _CID = 0x00f49ca0
+
     def __init__(
         self,
         new_messages: list[Any],
@@ -98,12 +123,32 @@ class Difference:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa0\x9c\xf4\x00'
+        out += _tl.serialize(_tl._resolve(self.new_messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.new_encrypted_messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.other_updates), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.state), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.difference"}
+        obj["new_messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["new_encrypted_messages"], pos = _tl._read_typed(data, pos, "Vector<EncryptedMessage>", _SCHEMA_BY_CID)
+        obj["other_updates"], pos = _tl._read_typed(data, pos, "Vector<Update>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["state"], pos = _tl._read_typed(data, pos, "updates.State", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"Difference(new_messages={self.new_messages!r}, new_encrypted_messages={self.new_encrypted_messages!r}, other_updates={self.other_updates!r}, chats={self.chats!r})"
 
 class DifferenceSlice:
+    _CID = 0xa8fb1981
+
     def __init__(
         self,
         new_messages: list[Any],
@@ -131,12 +176,32 @@ class DifferenceSlice:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x81\x19\xfb\xa8'
+        out += _tl.serialize(_tl._resolve(self.new_messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.new_encrypted_messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.other_updates), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.intermediate_state), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.differenceSlice"}
+        obj["new_messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["new_encrypted_messages"], pos = _tl._read_typed(data, pos, "Vector<EncryptedMessage>", _SCHEMA_BY_CID)
+        obj["other_updates"], pos = _tl._read_typed(data, pos, "Vector<Update>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["intermediate_state"], pos = _tl._read_typed(data, pos, "updates.State", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DifferenceSlice(new_messages={self.new_messages!r}, new_encrypted_messages={self.new_encrypted_messages!r}, other_updates={self.other_updates!r}, chats={self.chats!r})"
 
 class DifferenceTooLong:
+    _CID = 0x4afe8f6d
+
     def __init__(
         self,
         pts: int,
@@ -149,12 +214,23 @@ class DifferenceTooLong:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'm\x8f\xfeJ'
+        out += _struct.pack('<i', self.pts)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.differenceTooLong"}
+        obj["pts"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DifferenceTooLong(pts={self.pts!r})"
 
 class ChannelDifferenceEmpty:
+    _CID = 0x3e11affb
+
     def __init__(
         self,
         pts: int,
@@ -173,12 +249,34 @@ class ChannelDifferenceEmpty:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xfb\xaf\x11>'
+        _flags_word = (0 if self.final is None else (1 << 0)) | (0 if self.timeout is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<i', self.pts)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.timeout)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.channelDifferenceEmpty"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["final"] = True
+        obj["pts"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["timeout"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChannelDifferenceEmpty(final={self.final!r}, pts={self.pts!r}, timeout={self.timeout!r})"
 
 class ChannelDifferenceTooLong:
+    _CID = 0xa4bcc6fe
+
     def __init__(
         self,
         dialog: Any,
@@ -206,12 +304,39 @@ class ChannelDifferenceTooLong:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xfe\xc6\xbc\xa4'
+        _flags_word = (0 if self.final is None else (1 << 0)) | (0 if self.timeout is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.timeout)
+        out += _tl.serialize(_tl._resolve(self.dialog), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.channelDifferenceTooLong"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["final"] = True
+        if _flags_word & (1 << 1):
+            obj["timeout"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        obj["dialog"], pos = _tl._read_typed(data, pos, "Dialog", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChannelDifferenceTooLong(final={self.final!r}, timeout={self.timeout!r}, dialog={self.dialog!r}, messages={self.messages!r})"
 
 class ChannelDifference:
+    _CID = 0x2064674e
+
     def __init__(
         self,
         pts: int,
@@ -242,7 +367,35 @@ class ChannelDifference:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'Ngd '
+        _flags_word = (0 if self.final is None else (1 << 0)) | (0 if self.timeout is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<i', self.pts)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.timeout)
+        out += _tl.serialize(_tl._resolve(self.new_messages), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.other_updates), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updates.channelDifference"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["final"] = True
+        obj["pts"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["timeout"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        obj["new_messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["other_updates"], pos = _tl._read_typed(data, pos, "Vector<Update>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ChannelDifference(final={self.final!r}, pts={self.pts!r}, timeout={self.timeout!r}, new_messages={self.new_messages!r})"

@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class UpdateProfilePhoto:
+    _CID = 0x09e82039
+
     def __init__(
         self,
         id: Any,
@@ -38,12 +41,32 @@ class UpdateProfilePhoto:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'9 \xe8\t'
+        _flags_word = (0 if self.fallback is None else (1 << 0)) | (0 if self.bot is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "photos.updateProfilePhoto"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["fallback"] = True
+        if _flags_word & (1 << 1):
+            obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_typed(data, pos, "InputPhoto", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"UpdateProfilePhoto(fallback={self.fallback!r}, bot={self.bot!r}, id={self.id!r})"
 
 class UploadProfilePhoto:
+    _CID = 0x0388a3b5
+
     def __init__(
         self,
         fallback: bool | None = None,
@@ -71,12 +94,47 @@ class UploadProfilePhoto:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xb5\xa3\x88\x03'
+        _flags_word = (0 if self.fallback is None else (1 << 3)) | (0 if self.bot is None else (1 << 5)) | (0 if self.file is None else (1 << 0)) | (0 if self.video is None else (1 << 1)) | (0 if self.video_start_ts is None else (1 << 2)) | (0 if self.video_emoji_markup is None else (1 << 4))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 5):
+            out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.video), _SCHEMA)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<d', self.video_start_ts)
+        if _flags_word & (1 << 4):
+            out += _tl.serialize(_tl._resolve(self.video_emoji_markup), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "photos.uploadProfilePhoto"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 3):
+            obj["fallback"] = True
+        if _flags_word & (1 << 5):
+            obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["file"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["video"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["video_start_ts"] = _struct.unpack_from('<d', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 4):
+            obj["video_emoji_markup"], pos = _tl._read_typed(data, pos, "VideoSize", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"UploadProfilePhoto(fallback={self.fallback!r}, bot={self.bot!r}, file={self.file!r}, video={self.video!r})"
 
 class DeletePhotos:
+    _CID = 0x87cf7f2f
+
     def __init__(
         self,
         id: list[Any],
@@ -89,12 +147,22 @@ class DeletePhotos:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'/\x7f\xcf\x87'
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "photos.deletePhotos"}
+        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputPhoto>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DeletePhotos(id={self.id!r})"
 
 class GetUserPhotos:
+    _CID = 0x91cd32a8
+
     def __init__(
         self,
         user_id: Any,
@@ -116,12 +184,25 @@ class GetUserPhotos:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xa82\xcd\x91'
+        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _struct.pack('<iqi', self.offset, self.max_id, self.limit)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "photos.getUserPhotos"}
+        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["offset"], obj["max_id"], obj["limit"], = _struct.unpack_from('<iqi', data, pos)
+        pos += 16
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetUserPhotos(user_id={self.user_id!r}, offset={self.offset!r}, max_id={self.max_id!r}, limit={self.limit!r})"
 
 class UploadContactProfilePhoto:
+    _CID = 0xe14c4a71
+
     def __init__(
         self,
         user_id: Any,
@@ -152,7 +233,40 @@ class UploadContactProfilePhoto:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'qJL\xe1'
+        _flags_word = (0 if self.suggest is None else (1 << 3)) | (0 if self.save is None else (1 << 4)) | (0 if self.file is None else (1 << 0)) | (0 if self.video is None else (1 << 1)) | (0 if self.video_start_ts is None else (1 << 2)) | (0 if self.video_emoji_markup is None else (1 << 5))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.video), _SCHEMA)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<d', self.video_start_ts)
+        if _flags_word & (1 << 5):
+            out += _tl.serialize(_tl._resolve(self.video_emoji_markup), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "photos.uploadContactProfilePhoto"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 3):
+            obj["suggest"] = True
+        if _flags_word & (1 << 4):
+            obj["save"] = True
+        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["file"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["video"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["video_start_ts"] = _struct.unpack_from('<d', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 5):
+            obj["video_emoji_markup"], pos = _tl._read_typed(data, pos, "VideoSize", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"UploadContactProfilePhoto(suggest={self.suggest!r}, save={self.save!r}, user_id={self.user_id!r}, file={self.file!r})"

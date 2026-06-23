@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class File:
+    _CID = 0x096a18d5
+
     def __init__(
         self,
         type: Any,
@@ -38,12 +41,27 @@ class File:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xd5\x18j\t'
+        out += _tl.serialize(_tl._resolve(self.type), _SCHEMA)
+        out += _struct.pack('<i', self.mtime)
+        out += _tl._pack_bytes(self.bytes)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.file"}
+        obj["type"], pos = _tl._read_typed(data, pos, "storage.FileType", _SCHEMA_BY_CID)
+        obj["mtime"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"File(type={self.type!r}, mtime={self.mtime!r}, bytes={self.bytes!r})"
 
 class FileCdnRedirect:
+    _CID = 0xf18cda44
+
     def __init__(
         self,
         dc_id: int,
@@ -68,12 +86,31 @@ class FileCdnRedirect:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'D\xda\x8c\xf1'
+        out += _struct.pack('<i', self.dc_id)
+        out += _tl._pack_bytes(self.file_token)
+        out += _tl._pack_bytes(self.encryption_key)
+        out += _tl._pack_bytes(self.encryption_iv)
+        out += _tl.serialize(_tl._resolve(self.file_hashes), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.fileCdnRedirect"}
+        obj["dc_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["file_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["encryption_key"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["encryption_iv"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["file_hashes"], pos = _tl._read_typed(data, pos, "Vector<FileHash>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"FileCdnRedirect(dc_id={self.dc_id!r}, file_token={self.file_token!r}, encryption_key={self.encryption_key!r}, encryption_iv={self.encryption_iv!r})"
 
 class WebFile:
+    _CID = 0x21e753bc
+
     def __init__(
         self,
         size: int,
@@ -98,12 +135,32 @@ class WebFile:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xbcS\xe7!'
+        out += _struct.pack('<i', self.size)
+        out += _tl._pack_string(self.mime_type)
+        out += _tl.serialize(_tl._resolve(self.file_type), _SCHEMA)
+        out += _struct.pack('<i', self.mtime)
+        out += _tl._pack_bytes(self.bytes)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.webFile"}
+        obj["size"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["mime_type"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["file_type"], pos = _tl._read_typed(data, pos, "storage.FileType", _SCHEMA_BY_CID)
+        obj["mtime"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"WebFile(size={self.size!r}, mime_type={self.mime_type!r}, file_type={self.file_type!r}, mtime={self.mtime!r})"
 
 class CdnFileReuploadNeeded:
+    _CID = 0xeea8e46e
+
     def __init__(
         self,
         request_token: bytes,
@@ -116,12 +173,22 @@ class CdnFileReuploadNeeded:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'n\xe4\xa8\xee'
+        out += _tl._pack_bytes(self.request_token)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.cdnFileReuploadNeeded"}
+        obj["request_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CdnFileReuploadNeeded(request_token={self.request_token!r})"
 
 class CdnFile:
+    _CID = 0xa99fca4f
+
     def __init__(
         self,
         bytes: bytes,
@@ -134,7 +201,15 @@ class CdnFile:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'O\xca\x9f\xa9'
+        out += _tl._pack_bytes(self.bytes)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "upload.cdnFile"}
+        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CdnFile(bytes={self.bytes!r})"

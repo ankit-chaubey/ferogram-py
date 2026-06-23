@@ -14,12 +14,15 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 from __future__ import annotations
+import struct as _struct
 from typing import Any
 from ... import tl as _tl
-from .._tl_schema import _SCHEMA
+from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class ExportChatlistInvite:
+    _CID = 0x8472478e
+
     def __init__(
         self,
         chatlist: Any,
@@ -38,12 +41,26 @@ class ExportChatlistInvite:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x8eGr\x84'
+        out += _tl.serialize(_tl._resolve(self.chatlist), _SCHEMA)
+        out += _tl._pack_string(self.title)
+        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.exportChatlistInvite"}
+        obj["chatlist"], pos = _tl._read_typed(data, pos, "InputChatlist", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"ExportChatlistInvite(chatlist={self.chatlist!r}, title={self.title!r}, peers={self.peers!r})"
 
 class DeleteExportedInvite:
+    _CID = 0x719c5c5e
+
     def __init__(
         self,
         chatlist: Any,
@@ -59,12 +76,24 @@ class DeleteExportedInvite:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'^\\\x9cq'
+        out += _tl.serialize(_tl._resolve(self.chatlist), _SCHEMA)
+        out += _tl._pack_string(self.slug)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.deleteExportedInvite"}
+        obj["chatlist"], pos = _tl._read_typed(data, pos, "InputChatlist", _SCHEMA_BY_CID)
+        obj["slug"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"DeleteExportedInvite(chatlist={self.chatlist!r}, slug={self.slug!r})"
 
 class EditExportedInvite:
+    _CID = 0x653db63d
+
     def __init__(
         self,
         chatlist: Any,
@@ -86,12 +115,36 @@ class EditExportedInvite:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'=\xb6=e'
+        _flags_word = (0 if self.title is None else (1 << 1)) | (0 if self.peers is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.chatlist), _SCHEMA)
+        out += _tl._pack_string(self.slug)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.title)
+        if _flags_word & (1 << 2):
+            out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.editExportedInvite"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["chatlist"], pos = _tl._read_typed(data, pos, "InputChatlist", _SCHEMA_BY_CID)
+        obj["slug"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["peers"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"EditExportedInvite(chatlist={self.chatlist!r}, slug={self.slug!r}, title={self.title!r}, peers={self.peers!r})"
 
 class GetExportedInvites:
+    _CID = 0xce03da83
+
     def __init__(
         self,
         chatlist: Any,
@@ -104,12 +157,22 @@ class GetExportedInvites:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x83\xda\x03\xce'
+        out += _tl.serialize(_tl._resolve(self.chatlist), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.getExportedInvites"}
+        obj["chatlist"], pos = _tl._read_typed(data, pos, "InputChatlist", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetExportedInvites(chatlist={self.chatlist!r})"
 
 class CheckChatlistInvite:
+    _CID = 0x41c10fff
+
     def __init__(
         self,
         slug: str,
@@ -122,12 +185,22 @@ class CheckChatlistInvite:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xff\x0f\xc1A'
+        out += _tl._pack_string(self.slug)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.checkChatlistInvite"}
+        obj["slug"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"CheckChatlistInvite(slug={self.slug!r})"
 
 class JoinChatlistInvite:
+    _CID = 0xa6b1e39a
+
     def __init__(
         self,
         slug: str,
@@ -143,12 +216,24 @@ class JoinChatlistInvite:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x9a\xe3\xb1\xa6'
+        out += _tl._pack_string(self.slug)
+        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.joinChatlistInvite"}
+        obj["slug"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"JoinChatlistInvite(slug={self.slug!r}, peers={self.peers!r})"
 
 class GetChatlistUpdates:
+    _CID = 0x89419521
+
     def __init__(
         self,
         chatlist: Any,
@@ -161,12 +246,22 @@ class GetChatlistUpdates:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'!\x95A\x89'
+        out += _tl.serialize(_tl._resolve(self.chatlist), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.getChatlistUpdates"}
+        obj["chatlist"], pos = _tl._read_typed(data, pos, "InputChatlist", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetChatlistUpdates(chatlist={self.chatlist!r})"
 
 class JoinChatlistUpdates:
+    _CID = 0xe089f8f5
+
     def __init__(
         self,
         chatlist: Any,
@@ -182,12 +277,24 @@ class JoinChatlistUpdates:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xf5\xf8\x89\xe0'
+        out += _tl.serialize(_tl._resolve(self.chatlist), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.joinChatlistUpdates"}
+        obj["chatlist"], pos = _tl._read_typed(data, pos, "InputChatlist", _SCHEMA_BY_CID)
+        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"JoinChatlistUpdates(chatlist={self.chatlist!r}, peers={self.peers!r})"
 
 class HideChatlistUpdates:
+    _CID = 0x66e486fb
+
     def __init__(
         self,
         chatlist: Any,
@@ -200,12 +307,22 @@ class HideChatlistUpdates:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\xfb\x86\xe4f'
+        out += _tl.serialize(_tl._resolve(self.chatlist), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.hideChatlistUpdates"}
+        obj["chatlist"], pos = _tl._read_typed(data, pos, "InputChatlist", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"HideChatlistUpdates(chatlist={self.chatlist!r})"
 
 class GetLeaveChatlistSuggestions:
+    _CID = 0xfdbcd714
+
     def __init__(
         self,
         chatlist: Any,
@@ -218,12 +335,22 @@ class GetLeaveChatlistSuggestions:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b'\x14\xd7\xbc\xfd'
+        out += _tl.serialize(_tl._resolve(self.chatlist), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.getLeaveChatlistSuggestions"}
+        obj["chatlist"], pos = _tl._read_typed(data, pos, "InputChatlist", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"GetLeaveChatlistSuggestions(chatlist={self.chatlist!r})"
 
 class LeaveChatlist:
+    _CID = 0x74fae13a
+
     def __init__(
         self,
         chatlist: Any,
@@ -239,7 +366,17 @@ class LeaveChatlist:
         }}
 
     def to_bytes(self) -> bytes:
-        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+        out = b':\xe1\xfat'
+        out += _tl.serialize(_tl._resolve(self.chatlist), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "chatlists.leaveChatlist"}
+        obj["chatlist"], pos = _tl._read_typed(data, pos, "InputChatlist", _SCHEMA_BY_CID)
+        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
+        return obj, pos
 
     def __repr__(self) -> str:
         return f"LeaveChatlist(chatlist={self.chatlist!r}, peers={self.peers!r})"
