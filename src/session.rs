@@ -12,10 +12,6 @@ use ferogram_session::{
 
 use crate::py_err;
 
-// ---------------------------------------------------------------------------
-// FileSession
-// ---------------------------------------------------------------------------
-
 /// Stores the session in a compact binary file on disk (default).
 ///
 /// Usage::
@@ -45,10 +41,6 @@ impl FileSession {
     }
 }
 
-// ---------------------------------------------------------------------------
-// MemorySession
-// ---------------------------------------------------------------------------
-
 /// Keeps the session in memory only. Nothing survives process exit.
 ///
 /// Useful for ephemeral scripts, tests, or one-shot tasks.
@@ -70,10 +62,6 @@ impl MemorySession {
         "MemorySession()".into()
     }
 }
-
-// ---------------------------------------------------------------------------
-// StringSession
-// ---------------------------------------------------------------------------
 
 /// Portable base64 string session.
 ///
@@ -108,10 +96,6 @@ impl StringSession {
     }
 }
 
-// ---------------------------------------------------------------------------
-// SqliteSession
-// ---------------------------------------------------------------------------
-
 /// Stores the session in a local SQLite database.
 ///
 /// Each table row is updated individually on every change - safe for
@@ -143,10 +127,6 @@ impl SqliteSession {
         format!("SqliteSession({:?})", self.path)
     }
 }
-
-// ---------------------------------------------------------------------------
-// LibSqlSession
-// ---------------------------------------------------------------------------
 
 /// libSQL / Turso session backend.
 ///
@@ -237,10 +217,6 @@ impl LibSqlSession {
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// CustomSession
-// ---------------------------------------------------------------------------
 
 /// Wrap any Python object as a session backend.
 ///
@@ -341,10 +317,6 @@ impl SessionBackend for PythonBackend {
         &self.label
     }
 }
-
-// ---------------------------------------------------------------------------
-// resolve_session
-// ---------------------------------------------------------------------------
 
 /// Resolve a Python session object to an `Arc<dyn SessionBackend>`.
 ///
