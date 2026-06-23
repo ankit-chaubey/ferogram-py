@@ -1,6 +1,6 @@
 [package]
 name        = "ferogram-py"
-version     = "0.4.1"
+version     = "0.5.0"
 edition     = "2024"
 description = "Python bindings for ferogram (Rust MTProto)"
 license     = "MIT OR Apache-2.0"
@@ -10,13 +10,16 @@ name       = "_ferogram"
 crate-type = ["cdylib"]
 
 [dependencies]
-hex                 = "0.4"
-ferogram            = { version = "0.6.0", features = ["sqlite-session", "libsql-session"] }
-pyo3                = { version = "0.24", features = ["extension-module", "abi3-py313"] }
+ferogram-mtsender   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "8c9e00db5db284a4a5993ddbe7a90c4f13810ce9" }
+ferogram-session    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "8c9e00db5db284a4a5993ddbe7a90c4f13810ce9", features = ["sqlite-session", "libsql-session"] }
+ferogram-connect    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "8c9e00db5db284a4a5993ddbe7a90c4f13810ce9" }
+ferogram-tl-types   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "8c9e00db5db284a4a5993ddbe7a90c4f13810ce9" }
+ferogram-crypto     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "8c9e00db5db284a4a5993ddbe7a90c4f13810ce9" }
+getrandom           = "0.2"
+base64              = "0.22"
+pyo3                = { version = "0.24", features = ["extension-module", "abi3-py39"] }
 pyo3-async-runtimes = { version = "0.24", features = ["tokio-runtime"] }
 tokio               = { version = "1", features = ["full"] }
-# Note: do NOT add ferogram-tl-types as a direct dep - use ferogram::tl instead
-# to avoid a duplicate-crate version conflict (crates.io vs git).
 
 [profile.release]
 strip     = true

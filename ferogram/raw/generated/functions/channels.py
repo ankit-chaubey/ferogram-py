@@ -844,21 +844,27 @@ class ToggleJoinRequest:
         self,
         channel: Any,
         enabled: bool,
+        apply_to_invites: bool | None = None,
+        guard_bot: Any | None = None,
     ) -> None:
+        self.apply_to_invites = apply_to_invites
         self.channel = channel
         self.enabled = enabled
+        self.guard_bot = guard_bot
 
     def to_dict(self) -> dict:
         return {"_": "channels.toggleJoinRequest", **{
+            "apply_to_invites": _tl._resolve(self.apply_to_invites),
             "channel": _tl._resolve(self.channel),
             "enabled": _tl._resolve(self.enabled),
+            "guard_bot": _tl._resolve(self.guard_bot),
         }}
 
     def to_bytes(self) -> bytes:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"ToggleJoinRequest(channel={self.channel!r}, enabled={self.enabled!r})"
+        return f"ToggleJoinRequest(apply_to_invites={self.apply_to_invites!r}, channel={self.channel!r}, enabled={self.enabled!r}, guard_bot={self.guard_bot!r})"
 
 class ReorderUsernames:
     def __init__(

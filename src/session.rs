@@ -6,7 +6,7 @@ use pyo3::types::PyBytes;
 use std::io;
 use std::sync::Arc;
 
-use ferogram::session_backend::{
+use ferogram_session::{
     BinaryFileBackend, InMemoryBackend, PersistedSession, SessionBackend, StringSessionBackend,
 };
 
@@ -368,14 +368,13 @@ pub fn resolve_session(py: Python<'_>, obj: &PyObject) -> PyResult<Arc<dyn Sessi
 
     // SqliteSession
     if let Ok(s) = obj.downcast_bound::<SqliteSession>(py) {
-        let backend =
-            ferogram::session_backend::SqliteBackend::open(&s.get().path).map_err(py_err)?;
+        let backend = ferogram_session::SqliteBackend::open(&s.get().path).map_err(py_err)?;
         return Ok(Arc::new(backend));
     }
 
     // LibSqlSession
     if let Ok(s) = obj.downcast_bound::<LibSqlSession>(py) {
-        use ferogram::session_backend::LibSqlBackend;
+        use ferogram_session::LibSqlBackend;
         let backend = match &s.get().kind {
             LibSqlKind::Local(path) => LibSqlBackend::open_local(path).map_err(py_err)?,
             LibSqlKind::Memory => LibSqlBackend::in_memory().map_err(py_err)?,

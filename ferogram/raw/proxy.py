@@ -193,7 +193,7 @@ async def resolve_peer(client: Any, peer: Any) -> dict:
     if isinstance(peer, str) and peer.lower() in ("me", "self"):
         return {"_": "inputPeerSelf"}
     if isinstance(peer, str):
-        return await client.resolve(peer)
+        return await _resolve_str_peer(client, peer)
     if isinstance(peer, int):
         return await _resolve_int_peer(client, peer)
     raise ValueError(
@@ -202,12 +202,35 @@ async def resolve_peer(client: Any, peer: Any) -> dict:
     )
 
 
-async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
-    if hasattr(client._raw, "get_input_peer"):
-        rust_result = await client._raw.get_input_peer(peer_id)
-        if rust_result is not None:
-            return rust_result
+async def _resolve_str_peer(client: Any, peer: str) -> dict:
+    uname = peer.lstrip("@")
+    if "/" in uname:
+        uname = uname.rstrip("/").split("/")[-1]
+    result = await client._rpc({"_": "contacts.resolveUsername", "username": uname})
+    found_peer = result.get("peer", {}) if isinstance(result, dict) else {}
+    t = found_peer.get("_", "")
+    if t == "peerUser":
+        uid = found_peer.get("user_id", 0)
+        for u in result.get("users") or []:
+            if u.get("id") == uid:
+                ah = u.get("access_hash", 0)
+                client._peer_cache.store_user(uid, ah)
+                return {"_": "inputPeerUser", "user_id": uid, "access_hash": ah}
+        return {"_": "inputPeerUser", "user_id": uid, "access_hash": 0}
+    if t == "peerChannel":
+        cid = found_peer.get("channel_id", 0)
+        for ch in result.get("chats") or []:
+            if ch.get("id") == cid:
+                ah = ch.get("access_hash", 0)
+                client._peer_cache.store_channel(cid, ah)
+                return {"_": "inputPeerChannel", "channel_id": cid, "access_hash": ah}
+        return {"_": "inputPeerChannel", "channel_id": cid, "access_hash": 0}
+    if t == "peerChat":
+        return {"_": "inputPeerChat", "chat_id": found_peer.get("chat_id", 0)}
+    raise ValueError(f"Could not resolve username {peer!r}")
 
+
+async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
     cache: PeerCache = client._peer_cache
 
     if peer_id > 0:

@@ -194,12 +194,18 @@ class Search:
         self,
         q: str,
         limit: int,
+        broadcasts: bool | None = None,
+        bots: bool | None = None,
     ) -> None:
+        self.broadcasts = broadcasts
+        self.bots = bots
         self.q = q
         self.limit = limit
 
     def to_dict(self) -> dict:
         return {"_": "contacts.search", **{
+            "broadcasts": _tl._resolve(self.broadcasts),
+            "bots": _tl._resolve(self.bots),
             "q": _tl._resolve(self.q),
             "limit": _tl._resolve(self.limit),
         }}
@@ -208,7 +214,7 @@ class Search:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"Search(q={self.q!r}, limit={self.limit!r})"
+        return f"Search(broadcasts={self.broadcasts!r}, bots={self.bots!r}, q={self.q!r}, limit={self.limit!r})"
 
 class ResolveUsername:
     def __init__(

@@ -15,23 +15,41 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 __all__ = [
-    "ChatAction",
-    "PrivacyKey",
-    "PrivacyRule",
-    "InlineMessageId",
-    "InlineArticle",
-    "InlinePhoto",
-    "InlineDocument",
+    # enums / value types
+    "ChatAction", "PrivacyKey", "PrivacyRule",
+    "InlineMessageId", "InlineArticle", "InlinePhoto", "InlineDocument",
+    # entity types
+    "User", "UserFull", "Chat", "Message", "Dialog", "ChatMember",
+    "Authorization", "ForumTopic", "BotInfo",
+    "InviteLinkMember", "ReadParticipant", "AdminLogEvent", "StickerSetInfo",
+    "BroadcastStats", "MegagroupStats", "NotifySettings",
 ]
 
 
-# Chat actions
+def _peer_to_id(peer: Any) -> int | None:
+    if peer is None:
+        return None
+    if isinstance(peer, dict):
+        return peer.get("user_id") or peer.get("channel_id") or peer.get("chat_id")
+    return None
+
+
+def _int(d: dict, key: str, default: int = 0) -> int:
+    return int(d.get(key) or default)
+
+
+def _str(d: dict, key: str, default: str = "") -> str:
+    return str(d.get(key) or default)
+
+
+def _bool(d: dict, key: str) -> bool:
+    return bool(d.get(key))
+
 
 class ChatAction(str, Enum):
-    """Constants for send_chat_action()."""
-
     TYPING          = "typing"
     UPLOAD_PHOTO    = "upload_photo"
     RECORD_VIDEO    = "record_video"
@@ -45,11 +63,7 @@ class ChatAction(str, Enum):
     CANCEL          = "cancel"
 
 
-# Privacy
-
 class PrivacyKey(str, Enum):
-    """Key constants for get_privacy() / set_privacy()."""
-
     STATUS_TIMESTAMP = "status_timestamp"
     CHAT_INVITE      = "chat_invite"
     CALL             = "call"
@@ -62,20 +76,14 @@ class PrivacyKey(str, Enum):
 
 
 class PrivacyRule(str, Enum):
-    """Rule constants for set_privacy()."""
+    ALLOW_ALL         = "allow_all"
+    ALLOW_CONTACTS    = "allow_contacts"
+    DISALLOW_ALL      = "disallow_all"
+    DISALLOW_CONTACTS = "disallow_contacts"
 
-    ALLOW_ALL          = "allow_all"
-    ALLOW_CONTACTS     = "allow_contacts"
-    DISALLOW_ALL       = "disallow_all"
-    DISALLOW_CONTACTS  = "disallow_contacts"
-
-
-# Inline message identity
 
 @dataclass
 class InlineMessageId:
-    """Identifies an inline bot message for edit_inline_message()."""
-
     dc_id: int
     id_bytes: bytes
 
@@ -83,12 +91,8 @@ class InlineMessageId:
         return f"InlineMessageId(dc_id={self.dc_id}, len={len(self.id_bytes)})"
 
 
-# Inline query result wrappers
-
 @dataclass
 class InlineArticle:
-    """Article result for answer_inline_query()."""
-
     id: str
     title: str
     message_text: str
@@ -105,8 +109,6 @@ class InlineArticle:
 
 @dataclass
 class InlinePhoto:
-    """Photo result for answer_inline_query()."""
-
     id: str
     title: str
     message_text: str
@@ -127,8 +129,6 @@ class InlinePhoto:
 
 @dataclass
 class InlineDocument:
-    """Document result for answer_inline_query()."""
-
     id: str
     title: str
     message_text: str
@@ -144,11 +144,452 @@ class InlineDocument:
                 None, 0, 0, self.mime_type, self.reply_markup)
 
 
-# Internal helper
-
 def _inline_result_to_tuple(r: object) -> tuple:
-    """Coerce an inline result to the raw tuple the Rust layer expects."""
     if isinstance(r, (InlineArticle, InlinePhoto, InlineDocument)):
         return r._to_tuple()
-    # Legacy tuple passthrough
     return r  # type: ignore[return-value]
+
+
+@dataclass
+class User:
+    id: int
+    first_name: str
+    last_name: str
+    username: str | None
+    phone: str | None
+    is_bot: bool
+    is_verified: bool
+    is_restricted: bool
+    is_scam: bool
+    is_fake: bool
+    is_premium: bool
+    access_hash: int
+    lang_code: str
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "User":
+        return cls(
+            id=_int(d, "id"),
+            first_name=_str(d, "first_name"),
+            last_name=_str(d, "last_name"),
+            username=d.get("username") or (d.get("usernames") or [{}])[0].get("username"),
+            phone=d.get("phone"),
+            is_bot=_bool(d, "bot"),
+            is_verified=_bool(d, "verified"),
+            is_restricted=_bool(d, "restricted"),
+            is_scam=_bool(d, "scam"),
+            is_fake=_bool(d, "fake"),
+            is_premium=_bool(d, "premium"),
+            access_hash=_int(d, "access_hash"),
+            lang_code=_str(d, "lang_code"),
+            _raw=d,
+        )
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip()
+
+    def __repr__(self) -> str:
+        return f"User(id={self.id}, name={self.full_name!r})"
+
+
+@dataclass
+class UserFull:
+    id: int
+    about: str
+    common_chats_count: int
+    blocked: bool
+    phone_calls_available: bool
+    video_calls_available: bool
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "UserFull":
+        full = d.get("full_user", d)
+        return cls(
+            id=_int(full, "id"),
+            about=_str(full, "about"),
+            common_chats_count=_int(full, "common_chats_count"),
+            blocked=_bool(full, "blocked"),
+            phone_calls_available=_bool(full, "phone_calls_available"),
+            video_calls_available=_bool(full, "video_calls_available"),
+            _raw=d,
+        )
+
+
+@dataclass
+class Chat:
+    id: int
+    title: str
+    username: str | None
+    is_channel: bool
+    is_megagroup: bool
+    is_gigagroup: bool
+    is_broadcast: bool
+    members_count: int | None
+    access_hash: int
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "Chat":
+        t = d.get("_", "")
+        return cls(
+            id=_int(d, "id"),
+            title=_str(d, "title"),
+            username=d.get("username") or (d.get("usernames") or [{}])[0].get("username"),
+            is_channel="channel" in t.lower(),
+            is_megagroup=_bool(d, "megagroup"),
+            is_gigagroup=_bool(d, "gigagroup"),
+            is_broadcast=_bool(d, "broadcast"),
+            members_count=d.get("participants_count"),
+            access_hash=_int(d, "access_hash"),
+            _raw=d,
+        )
+
+    def __repr__(self) -> str:
+        return f"Chat(id={self.id}, title={self.title!r})"
+
+
+@dataclass
+class Message:
+    id: int
+    text: str
+    sender_id: int | None
+    peer_id: dict
+    date: int
+    edit_date: int | None
+    reply_to_msg_id: int | None
+    forward_from_id: int | None
+    media: dict | None
+    entities: list
+    views: int | None
+    via_bot_id: int | None
+    grouped_id: int | None
+    out: bool
+    mentioned: bool
+    silent: bool
+    pinned: bool
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "Message":
+        reply_to = d.get("reply_to") or {}
+        fwd = d.get("fwd_from") or {}
+        return cls(
+            id=_int(d, "id"),
+            text=_str(d, "message"),
+            sender_id=_peer_to_id(d.get("from_id")),
+            peer_id=d.get("peer_id") or {},
+            date=_int(d, "date"),
+            edit_date=d.get("edit_date"),
+            reply_to_msg_id=reply_to.get("reply_to_msg_id") if isinstance(reply_to, dict) else None,
+            forward_from_id=_peer_to_id(fwd.get("from_id")) if isinstance(fwd, dict) else None,
+            media=d.get("media"),
+            entities=d.get("entities") or [],
+            views=d.get("views"),
+            via_bot_id=d.get("via_bot_id"),
+            grouped_id=d.get("grouped_id"),
+            out=_bool(d, "out"),
+            mentioned=_bool(d, "mentioned"),
+            silent=_bool(d, "silent"),
+            pinned=_bool(d, "pinned"),
+            _raw=d,
+        )
+
+    @property
+    def chat_id(self) -> int:
+        return _peer_to_id(self.peer_id) or 0
+
+    def __repr__(self) -> str:
+        return f"Message(id={self.id}, text={self.text[:40]!r})"
+
+
+@dataclass
+class Dialog:
+    peer: dict
+    top_message: int
+    unread_count: int
+    unread_mentions_count: int
+    unread_reactions_count: int
+    pinned: bool
+    folder_id: int | None
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "Dialog":
+        return cls(
+            peer=d.get("peer") or {},
+            top_message=_int(d, "top_message"),
+            unread_count=_int(d, "unread_count"),
+            unread_mentions_count=_int(d, "unread_mentions_count"),
+            unread_reactions_count=_int(d, "unread_reactions_count"),
+            pinned=_bool(d, "pinned"),
+            folder_id=d.get("folder_id"),
+            _raw=d,
+        )
+
+    @property
+    def peer_id(self) -> int:
+        return _peer_to_id(self.peer) or 0
+
+    def __repr__(self) -> str:
+        return f"Dialog(peer={self.peer}, unread={self.unread_count})"
+
+
+@dataclass
+class ChatMember:
+    user_id: int
+    rank: str
+    is_admin: bool
+    is_creator: bool
+    is_banned: bool
+    banned_until: int | None
+    joined_date: int | None
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "ChatMember":
+        t = d.get("_", "")
+        return cls(
+            user_id=_int(d, "user_id"),
+            rank=_str(d, "rank"),
+            is_admin="Admin" in t or "Creator" in t,
+            is_creator="Creator" in t,
+            is_banned="Banned" in t,
+            banned_until=d.get("banned_rights", {}).get("until_date") if isinstance(d.get("banned_rights"), dict) else None,
+            joined_date=d.get("date"),
+            _raw=d,
+        )
+
+    def __repr__(self) -> str:
+        return f"ChatMember(user_id={self.user_id}, admin={self.is_admin})"
+
+
+@dataclass
+class Authorization:
+    hash: int
+    device_model: str
+    platform: str
+    system_version: str
+    api_id: int
+    app_name: str
+    date_created: int
+    date_active: int
+    ip: str
+    country: str
+    region: str
+    current: bool
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "Authorization":
+        return cls(
+            hash=_int(d, "hash"),
+            device_model=_str(d, "device_model"),
+            platform=_str(d, "platform"),
+            system_version=_str(d, "system_version"),
+            api_id=_int(d, "api_id"),
+            app_name=_str(d, "app_name"),
+            date_created=_int(d, "date_created"),
+            date_active=_int(d, "date_active"),
+            ip=_str(d, "ip"),
+            country=_str(d, "country"),
+            region=_str(d, "region"),
+            current=_bool(d, "current"),
+            _raw=d,
+        )
+
+    def __repr__(self) -> str:
+        return f"Authorization(device={self.device_model!r}, ip={self.ip!r})"
+
+
+@dataclass
+class ForumTopic:
+    id: int
+    title: str
+    icon_color: int
+    icon_emoji_id: int | None
+    top_message: int
+    unread_count: int
+    closed: bool
+    pinned: bool
+    hidden: bool
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "ForumTopic":
+        return cls(
+            id=_int(d, "id"),
+            title=_str(d, "title"),
+            icon_color=_int(d, "icon_color"),
+            icon_emoji_id=d.get("icon_emoji_id"),
+            top_message=_int(d, "top_message"),
+            unread_count=_int(d, "unread_count"),
+            closed=_bool(d, "closed"),
+            pinned=_bool(d, "pinned"),
+            hidden=_bool(d, "hidden"),
+            _raw=d,
+        )
+
+    def __repr__(self) -> str:
+        return f"ForumTopic(id={self.id}, title={self.title!r})"
+
+
+@dataclass
+class BotInfo:
+    name: str
+    about: str
+    description: str
+    commands: list[dict]
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "BotInfo":
+        return cls(
+            name=_str(d, "name"),
+            about=_str(d, "about"),
+            description=_str(d, "description"),
+            commands=d.get("commands") or [],
+            _raw=d,
+        )
+
+
+@dataclass
+class InviteLinkMember:
+    user_id: int
+    date: int
+    approved: bool
+    requested: bool
+    via_chatlist: bool
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "InviteLinkMember":
+        return cls(
+            user_id=_int(d, "user_id"),
+            date=_int(d, "date"),
+            approved=_bool(d, "approved"),
+            requested=_bool(d, "requested"),
+            via_chatlist=_bool(d, "via_chatlist"),
+            _raw=d,
+        )
+
+
+@dataclass
+class ReadParticipant:
+    user_id: int
+    date: int
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "ReadParticipant":
+        return cls(user_id=_int(d, "user_id"), date=_int(d, "date"), _raw=d)
+
+
+@dataclass
+class AdminLogEvent:
+    id: int
+    date: int
+    user_id: int
+    action: dict
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "AdminLogEvent":
+        return cls(
+            id=_int(d, "id"),
+            date=_int(d, "date"),
+            user_id=_int(d, "user_id"),
+            action=d.get("action") or {},
+            _raw=d,
+        )
+
+
+@dataclass
+class StickerSetInfo:
+    id: int
+    access_hash: int
+    title: str
+    short_name: str
+    count: int
+    animated: bool
+    videos: bool
+    emojis: bool
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "StickerSetInfo":
+        s = d.get("set", d)
+        return cls(
+            id=_int(s, "id"),
+            access_hash=_int(s, "access_hash"),
+            title=_str(s, "title"),
+            short_name=_str(s, "short_name"),
+            count=_int(s, "count"),
+            animated=_bool(s, "animated"),
+            videos=_bool(s, "videos"),
+            emojis=_bool(s, "emojis"),
+            _raw=d,
+        )
+
+
+@dataclass
+class BroadcastStats:
+    period: dict
+    followers: dict
+    views_per_post: dict
+    shares_per_post: dict
+    reactions_per_post: dict
+    enabled_notifications: dict
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "BroadcastStats":
+        return cls(
+            period=d.get("period") or {},
+            followers=d.get("followers") or {},
+            views_per_post=d.get("views_per_post") or {},
+            shares_per_post=d.get("shares_per_post") or {},
+            reactions_per_post=d.get("reactions_per_post") or {},
+            enabled_notifications=d.get("enabled_notifications") or {},
+            _raw=d,
+        )
+
+
+@dataclass
+class MegagroupStats:
+    period: dict
+    members: dict
+    messages: dict
+    viewers: dict
+    posters: dict
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "MegagroupStats":
+        return cls(
+            period=d.get("period") or {},
+            members=d.get("members") or {},
+            messages=d.get("messages") or {},
+            viewers=d.get("viewers") or {},
+            posters=d.get("posters") or {},
+            _raw=d,
+        )
+
+
+@dataclass
+class NotifySettings:
+    mute_until: int
+    silent: bool
+    show_previews: bool | None
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_tl(cls, d: dict) -> "NotifySettings":
+        return cls(
+            mute_until=_int(d, "mute_until"),
+            silent=_bool(d, "silent"),
+            show_previews=d.get("show_previews"),
+            _raw=d,
+        )

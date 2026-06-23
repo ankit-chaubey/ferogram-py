@@ -1,28 +1,20 @@
 // Copyright (c) Ankit Chaubey <ankitchaubey.dev@gmail.com>
-// SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// ferogram is a high-performance Telegram MTProto framework written in Rust.
-// ferogram-py provides Python bindings built on top of the Rust core for
-// building Telegram clients, bots, and applications with a simple API.
+// ferogram: async Telegram MTProto client in Rust
+// https://github.com/ankit-chaubey/ferogram
 //
-// Rust core: https://github.com/ankit-chaubey/ferogram
-// Python bindings: https://github.com/ankit-chaubey/ferogram-py
+// Licensed under either the MIT License or the Apache License 2.0.
+// See the LICENSE-MIT or LICENSE-APACHE file in this repository:
+// https://github.com/ankit-chaubey/ferogram
 //
-// If you use or modify this code, keep this notice at the top of the file
-// and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
+// Feel free to use, modify, and share this code.
+// Please keep this notice when redistributing.
 
-// Raw TL invoke: Python passes serialized TL bytes, Rust sends via MTProto,
-// returns raw response bytes. Python handles ser/de on both ends.
-//
-// Use ferogram::tl for all TL traits to avoid a duplicate-crate version
-// conflict with ferogram's internal copy of ferogram-tl-types.
+use ferogram_tl_types::{Cursor, Deserializable, RemoteCall, Serializable};
 
-use ferogram::tl::{Cursor, Deserializable, RemoteCall, Serializable};
-use pyo3::prelude::*;
-
-use crate::py_err;
-
-struct RawCall(Vec<u8>);
+// Wraps arbitrary pre-serialized TL bytes as a RemoteCall so they go through
+// the full MTProto encrypted path (rpc_call), not rpc_call_raw.
+pub struct RawCall(pub Vec<u8>);
 
 impl Serializable for RawCall {
     fn serialize(&self, buf: &mut impl Extend<u8>) {
@@ -34,18 +26,12 @@ impl RemoteCall for RawCall {
     type Return = RawBytes;
 }
 
-struct RawBytes(Vec<u8>);
+pub struct RawBytes(pub Vec<u8>);
 
 impl Deserializable for RawBytes {
-    fn deserialize(buf: &mut Cursor<'_>) -> ferogram::tl::deserialize::Result<Self> {
+    fn deserialize(buf: &mut Cursor<'_>) -> ferogram_tl_types::deserialize::Result<Self> {
         let mut out = Vec::new();
         buf.read_to_end(&mut out);
         Ok(RawBytes(out))
     }
-}
-
-pub async fn invoke_raw_inner(client: &ferogram::Client, tl_bytes: Vec<u8>) -> PyResult<Vec<u8>> {
-    let call = RawCall(tl_bytes);
-    let result = client.invoke(&call).await.map_err(py_err)?;
-    Ok(result.0)
 }

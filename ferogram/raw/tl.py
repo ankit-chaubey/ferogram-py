@@ -273,3 +273,88 @@ def _read_typed(data: bytes, pos: int, ftype: str, schema: dict) -> tuple[Any, i
             items.append(item)
         return items, pos
     return _read_value(data, pos, schema)
+
+
+def parse_markdown(text: str) -> tuple[str, list]:
+    """Strip basic markdown (* _ ` ~) and return (plain_text, entities)."""
+    import re
+    entities = []
+    pos = 0
+    plain = []
+    # single-pass regex for bold/italic/code/strikethrough
+    pattern = re.compile(r'(\*\*(.+?)\*\*|\*(.+?)\*|__(.+?)__|_(.+?)_|`(.+?)`|~~(.+?)~~)', re.DOTALL)
+    last = 0
+    for m in pattern.finditer(text):
+        plain.append(text[last:m.start()])
+        inner = next(g for g in m.groups()[1:] if g is not None)
+        start = sum(len(s) for s in plain)
+        plain.append(inner)
+        length = len(inner)
+        raw = m.group(0)
+        if raw.startswith("**"):
+            entities.append({"_": "messageEntityBold", "offset": start, "length": length})
+        elif raw.startswith("*") or raw.startswith("_"):
+            entities.append({"_": "messageEntityItalic", "offset": start, "length": length})
+        elif raw.startswith("`"):
+            entities.append({"_": "messageEntityCode", "offset": start, "length": length})
+        elif raw.startswith("~~"):
+            entities.append({"_": "messageEntityStrike", "offset": start, "length": length})
+        last = m.end()
+    plain.append(text[last:])
+    return "".join(plain), entities
+
+
+def parse_html(text: str) -> tuple[str, list]:
+    """Strip basic HTML tags (<b> <i> <code> <s> <u> <a>) and return (plain_text, entities)."""
+    import re
+    tag_map = {
+        "b": "messageEntityBold", "strong": "messageEntityBold",
+        "i": "messageEntityItalic", "em": "messageEntityItalic",
+        "code": "messageEntityCode", "pre": "messageEntityPre",
+        "s": "messageEntityStrike", "strike": "messageEntityStrike", "del": "messageEntityStrike",
+        "u": "messageEntityUnderline",
+    }
+    entities: list = []
+    plain_parts: list = []
+    pos = 0
+    stack: list = []  # (entity_type, plain_start, url)
+    i = 0
+    src = text
+    while i < len(src):
+        if src[i] != "<":
+            plain_parts.append(src[i])
+            i += 1
+            continue
+        end = src.find(">", i)
+        if end == -1:
+            plain_parts.append(src[i])
+            i += 1
+            continue
+        tag_raw = src[i+1:end]
+        i = end + 1
+        closing = tag_raw.startswith("/")
+        tag_body = tag_raw.lstrip("/").split()[0].lower()
+        if closing:
+            for j in range(len(stack) - 1, -1, -1):
+                etype, pstart, url = stack[j]
+                if tag_map.get(tag_body) == etype or tag_body == "a":
+                    cur_pos = sum(len(p) for p in plain_parts)
+                    length = cur_pos - pstart
+                    if length > 0:
+                        ent: dict = {"_": etype, "offset": pstart, "length": length}
+                        if url:
+                            ent["url"] = url
+                        entities.append(ent)
+                    stack.pop(j)
+                    break
+        else:
+            etype = tag_map.get(tag_body)
+            url = ""
+            if tag_body == "a":
+                etype = "messageEntityTextUrl"
+                m = re.search(r'href=["\']([^"\']+)["\']', tag_raw)
+                url = m.group(1) if m else ""
+            if etype:
+                pstart = sum(len(p) for p in plain_parts)
+                stack.append((etype, pstart, url))
+    return "".join(plain_parts), entities

@@ -1,86 +1,35 @@
 // Copyright (c) Ankit Chaubey <ankitchaubey.dev@gmail.com>
-// SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// ferogram is a high-performance Telegram MTProto framework written in Rust.
-// ferogram-py provides Python bindings built on top of the Rust core for
-// building Telegram clients, bots, and applications with a simple API.
+// ferogram: async Telegram MTProto client in Rust
+// https://github.com/ankit-chaubey/ferogram
 //
-// Rust core: https://github.com/ankit-chaubey/ferogram
-// Python bindings: https://github.com/ankit-chaubey/ferogram-py
+// Licensed under either the MIT License or the Apache License 2.0.
+// See the LICENSE-MIT or LICENSE-APACHE file in this repository:
+// https://github.com/ankit-chaubey/ferogram
 //
-// If you use or modify this code, keep this notice at the top of the file
-// and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
+// Feel free to use, modify, and share this code.
+// Please keep this notice when redistributing.
 
-use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
-pub mod auth;
-pub mod client;
-pub mod keyboards;
-pub mod message;
+pub mod connection;
 pub mod raw;
 pub mod session;
-pub mod types;
-pub mod updates;
+pub mod srp;
 
 pub fn py_err(e: impl std::fmt::Display) -> PyErr {
-    PyRuntimeError::new_err(e.to_string())
+    pyo3::exceptions::PyRuntimeError::new_err(e.to_string())
 }
 
 #[pymodule]
 fn _ferogram(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<client::Client>()?;
-    m.add_class::<auth::ClientBuilder>()?;
-    m.add_class::<auth::LoginToken>()?;
-    m.add_class::<auth::PasswordToken>()?;
+    m.add_class::<connection::DcConnection>()?;
     m.add_class::<session::FileSession>()?;
     m.add_class::<session::MemorySession>()?;
     m.add_class::<session::StringSession>()?;
     m.add_class::<session::SqliteSession>()?;
     m.add_class::<session::LibSqlSession>()?;
     m.add_class::<session::CustomSession>()?;
-    m.add_class::<message::Message>()?;
-    m.add_class::<types::User>()?;
-    m.add_class::<types::Dialog>()?;
-    m.add_class::<types::ChatMember>()?;
-    m.add_class::<types::UserFull>()?;
-    m.add_class::<types::Chat>()?;
-    m.add_class::<types::Authorization>()?;
-    m.add_class::<types::ForumTopic>()?;
-    m.add_class::<types::BotInfo>()?;
-    m.add_class::<types::InviteLinkMember>()?;
-    m.add_class::<types::ReadParticipant>()?;
-    m.add_class::<types::AdminLogEvent>()?;
-    m.add_class::<types::StickerSetInfo>()?;
-    m.add_class::<types::BroadcastStats>()?;
-    m.add_class::<types::MegagroupStats>()?;
-    m.add_class::<types::NotifySettings>()?;
-    // update types
-    m.add_class::<updates::CallbackQuery>()?;
-    m.add_class::<updates::MessageDeletion>()?;
-    m.add_class::<updates::InlineQuery>()?;
-    m.add_class::<updates::InlineSend>()?;
-    m.add_class::<updates::UserStatus>()?;
-    m.add_class::<updates::ChatAction>()?;
-    m.add_class::<updates::ParticipantUpdate>()?;
-    m.add_class::<updates::JoinRequest>()?;
-    m.add_class::<updates::MessageReaction>()?;
-    m.add_class::<updates::PollVote>()?;
-    m.add_class::<updates::BotStopped>()?;
-    m.add_class::<updates::RawUpdate>()?;
-    // new in 0.3.6 / updated in 0.3.7 (binding v0.2.0)
-    m.add_class::<types::ShippingQuery>()?;
-    m.add_class::<types::PreCheckoutQuery>()?;
-    m.add_class::<types::ChatBoost>()?;
-    m.add_class::<types::MiniAppSession>()?;
-    // new in 0.3.9 (binding v0.2.1)
-    m.add_class::<updates::GuestChatQuery>()?;
-    // keyboard builders (binding v0.2.2)
-    m.add_class::<keyboards::InlineButton>()?;
-    m.add_class::<keyboards::InlineKeyboard>()?;
-    m.add_class::<keyboards::ReplyButton>()?;
-    m.add_class::<keyboards::ReplyKeyboard>()?;
-    m.add_class::<keyboards::RemoveKeyboard>()?;
-    m.add_class::<keyboards::ForceReply>()?;
+    m.add_function(wrap_pyfunction!(srp::srp_calculate, m)?)?;
     Ok(())
 }

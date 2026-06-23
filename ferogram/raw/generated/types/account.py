@@ -823,3 +823,47 @@ class PasskeyRegistrationOptions:
 
     def __repr__(self) -> str:
         return f"PasskeyRegistrationOptions(options={self.options!r})"
+
+class WebBrowserSettingsNotModified:
+    def __init__(self) -> None:
+        pass
+
+    def to_dict(self) -> dict:
+        return {"_": "account.webBrowserSettingsNotModified", **{
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"WebBrowserSettingsNotModified()"
+
+class WebBrowserSettings:
+    def __init__(
+        self,
+        external_exceptions: list[Any],
+        inapp_exceptions: list[Any],
+        hash: int,
+        open_external_browser: bool | None = None,
+        display_close_button: bool | None = None,
+    ) -> None:
+        self.open_external_browser = open_external_browser
+        self.display_close_button = display_close_button
+        self.external_exceptions = external_exceptions
+        self.inapp_exceptions = inapp_exceptions
+        self.hash = hash
+
+    def to_dict(self) -> dict:
+        return {"_": "account.webBrowserSettings", **{
+            "open_external_browser": _tl._resolve(self.open_external_browser),
+            "display_close_button": _tl._resolve(self.display_close_button),
+            "external_exceptions": _tl._resolve(self.external_exceptions),
+            "inapp_exceptions": _tl._resolve(self.inapp_exceptions),
+            "hash": _tl._resolve(self.hash),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"WebBrowserSettings(open_external_browser={self.open_external_browser!r}, display_close_button={self.display_close_button!r}, external_exceptions={self.external_exceptions!r}, inapp_exceptions={self.inapp_exceptions!r})"

@@ -11,7 +11,6 @@
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
-
 import os
 import sys
 
@@ -27,37 +26,55 @@ if _main_file:
 
 from .client import Client, StopPropagation, ContinuePropagation
 from . import filters
-from ._ferogram import FileSession, MemorySession, StringSession, SqliteSession, LibSqlSession, CustomSession
-from ._ferogram import User, Dialog, ChatMember, UserFull, Message
-from ._ferogram import Chat, Authorization, ForumTopic, BotInfo
-from ._ferogram import InviteLinkMember, ReadParticipant, AdminLogEvent, StickerSetInfo
-from ._ferogram import BroadcastStats, MegagroupStats, NotifySettings
-from ._ferogram import InlineButton, InlineKeyboard, ReplyButton, ReplyKeyboard
-from ._ferogram import RemoveKeyboard, ForceReply
+
+# Session classes stay in Rust
+from ._ferogram import (
+    FileSession, MemorySession, StringSession,
+    SqliteSession, LibSqlSession, CustomSession,
+)
+
+# All types now pure Python
+from .types import User, Message, Chat, Dialog, ChatMember, UserFull
+from .types import Authorization, ForumTopic, BotInfo
+from .types import InviteLinkMember, ReadParticipant, AdminLogEvent
+from .types import StickerSetInfo, BroadcastStats, MegagroupStats, NotifySettings
 from .types import (
-    ChatAction,
-    PrivacyKey,
-    PrivacyRule,
-    InlineMessageId,
-    InlineArticle,
-    InlinePhoto,
-    InlineDocument,
+    ChatAction, PrivacyKey, PrivacyRule,
+    InlineMessageId, InlineArticle, InlinePhoto, InlineDocument,
+)
+
+from .keyboards import InlineButton, InlineKeyboard, ReplyButton, ReplyKeyboard
+from .keyboards import RemoveKeyboard, ForceReply
+
+from .updates import (
+    NewMessage, EditedMessage, MessageDeletion,
+    CallbackQuery, InlineQuery, InlineSend,
+    UserStatus, ParticipantUpdate, JoinRequest,
+    MessageReaction, PollVote, BotStopped,
+    ShippingQuery, PreCheckoutQuery, ChatBoost, RawUpdate,
 )
 
 __all__ = [
     # Core
-    "Client", "filters",
-    "StopPropagation", "ContinuePropagation",
-    # Rust types
-    "User", "Dialog", "ChatMember", "UserFull", "Message",
-    "Chat", "Authorization", "ForumTopic", "BotInfo",
-    "InviteLinkMember", "ReadParticipant", "AdminLogEvent", "StickerSetInfo",
-    "BroadcastStats", "MegagroupStats", "NotifySettings",
-    # Keyboard builders
-    "InlineButton", "InlineKeyboard",
-    "ReplyButton", "ReplyKeyboard",
-    "RemoveKeyboard", "ForceReply",
-    # Typed wrappers
+    "Client", "filters", "StopPropagation", "ContinuePropagation",
+    # Session (Rust)
+    "FileSession", "MemorySession", "StringSession",
+    "SqliteSession", "LibSqlSession", "CustomSession",
+    # Entity types
+    "User", "UserFull", "Message", "Chat", "Dialog", "ChatMember",
+    "Authorization", "ForumTopic", "BotInfo",
+    "InviteLinkMember", "ReadParticipant", "AdminLogEvent",
+    "StickerSetInfo", "BroadcastStats", "MegagroupStats", "NotifySettings",
+    # Value types
     "ChatAction", "PrivacyKey", "PrivacyRule",
     "InlineMessageId", "InlineArticle", "InlinePhoto", "InlineDocument",
+    # Keyboards
+    "InlineButton", "InlineKeyboard", "ReplyButton", "ReplyKeyboard",
+    "RemoveKeyboard", "ForceReply",
+    # Update events
+    "NewMessage", "EditedMessage", "MessageDeletion",
+    "CallbackQuery", "InlineQuery", "InlineSend",
+    "UserStatus", "ParticipantUpdate", "JoinRequest",
+    "MessageReaction", "PollVote", "BotStopped",
+    "ShippingQuery", "PreCheckoutQuery", "ChatBoost", "RawUpdate",
 ]

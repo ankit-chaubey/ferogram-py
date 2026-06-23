@@ -1415,6 +1415,7 @@ class User:
         bot_forum_can_manage_topics: Any,
         bot_can_manage_bots: Any,
         bot_guestchat: Any,
+        bot_guard: Any,
         id: int,
         usernames: Any,
         stories_max_id: Any,
@@ -1483,6 +1484,7 @@ class User:
         self.bot_forum_can_manage_topics = bot_forum_can_manage_topics
         self.bot_can_manage_bots = bot_can_manage_bots
         self.bot_guestchat = bot_guestchat
+        self.bot_guard = bot_guard
         self.id = id
         self.access_hash = access_hash
         self.first_name = first_name
@@ -1535,6 +1537,7 @@ class User:
             "bot_forum_can_manage_topics": _tl._resolve(self.bot_forum_can_manage_topics),
             "bot_can_manage_bots": _tl._resolve(self.bot_can_manage_bots),
             "bot_guestchat": _tl._resolve(self.bot_guestchat),
+            "bot_guard": _tl._resolve(self.bot_guard),
             "id": _tl._resolve(self.id),
             "access_hash": _tl._resolve(self.access_hash),
             "first_name": _tl._resolve(self.first_name),
@@ -2118,6 +2121,7 @@ class ChannelFull:
         stargifts_count: Any,
         send_paid_messages_stars: Any,
         main_tab: Any,
+        guard_bot_id: Any,
         can_view_participants: bool | None = None,
         can_set_username: bool | None = None,
         can_set_stickers: bool | None = None,
@@ -2219,6 +2223,7 @@ class ChannelFull:
         self.stargifts_count = stargifts_count
         self.send_paid_messages_stars = send_paid_messages_stars
         self.main_tab = main_tab
+        self.guard_bot_id = guard_bot_id
 
     def to_dict(self) -> dict:
         return {"_": "channelFull", **{
@@ -2288,6 +2293,7 @@ class ChannelFull:
             "stargifts_count": _tl._resolve(self.stargifts_count),
             "send_paid_messages_stars": _tl._resolve(self.send_paid_messages_stars),
             "main_tab": _tl._resolve(self.main_tab),
+            "guard_bot_id": _tl._resolve(self.guard_bot_id),
         }}
 
     def to_bytes(self) -> bytes:
@@ -2499,6 +2505,7 @@ class Message:
         suggested_post: Any,
         schedule_repeat_period: Any,
         summary_from_language: Any,
+        rich_message: Any,
         out: bool | None = None,
         mentioned: bool | None = None,
         media_unread: bool | None = None,
@@ -2578,6 +2585,7 @@ class Message:
         self.suggested_post = suggested_post
         self.schedule_repeat_period = schedule_repeat_period
         self.summary_from_language = summary_from_language
+        self.rich_message = rich_message
 
     def to_dict(self) -> dict:
         return {"_": "message", **{
@@ -2629,6 +2637,7 @@ class Message:
             "suggested_post": _tl._resolve(self.suggested_post),
             "schedule_repeat_period": _tl._resolve(self.schedule_repeat_period),
             "summary_from_language": _tl._resolve(self.summary_from_language),
+            "rich_message": _tl._resolve(self.rich_message),
         }}
 
     def to_bytes(self) -> bytes:
@@ -8336,6 +8345,7 @@ class UpdateBotChatInviteRequester:
         about: str,
         invite: Any,
         qts: int,
+        query_id: int | None = None,
     ) -> None:
         self.peer = peer
         self.date = date
@@ -8343,6 +8353,7 @@ class UpdateBotChatInviteRequester:
         self.about = about
         self.invite = invite
         self.qts = qts
+        self.query_id = query_id
 
     def to_dict(self) -> dict:
         return {"_": "updateBotChatInviteRequester", **{
@@ -8352,6 +8363,7 @@ class UpdateBotChatInviteRequester:
             "about": _tl._resolve(self.about),
             "invite": _tl._resolve(self.invite),
             "qts": _tl._resolve(self.qts),
+            "query_id": _tl._resolve(self.query_id),
         }}
 
     def to_bytes(self) -> bytes:
@@ -9670,6 +9682,105 @@ class UpdateAiComposeTones:
 
     def __repr__(self) -> str:
         return f"UpdateAiComposeTones()"
+
+class UpdateJoinChatWebViewDecision:
+    def __init__(
+        self,
+        peer: Any,
+        query_id: int,
+        result: Any,
+    ) -> None:
+        self.peer = peer
+        self.query_id = query_id
+        self.result = result
+
+    def to_dict(self) -> dict:
+        return {"_": "updateJoinChatWebViewDecision", **{
+            "peer": _tl._resolve(self.peer),
+            "query_id": _tl._resolve(self.query_id),
+            "result": _tl._resolve(self.result),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"UpdateJoinChatWebViewDecision(peer={self.peer!r}, query_id={self.query_id!r}, result={self.result!r})"
+
+class UpdateNewBotConnection:
+    def __init__(
+        self,
+        bot_id: int,
+        confirmed: bool | None = None,
+        date: int | None = None,
+        device: str | None = None,
+        location: str | None = None,
+    ) -> None:
+        self.confirmed = confirmed
+        self.bot_id = bot_id
+        self.date = date
+        self.device = device
+        self.location = location
+
+    def to_dict(self) -> dict:
+        return {"_": "updateNewBotConnection", **{
+            "confirmed": _tl._resolve(self.confirmed),
+            "bot_id": _tl._resolve(self.bot_id),
+            "date": _tl._resolve(self.date),
+            "device": _tl._resolve(self.device),
+            "location": _tl._resolve(self.location),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"UpdateNewBotConnection(confirmed={self.confirmed!r}, bot_id={self.bot_id!r}, date={self.date!r}, device={self.device!r})"
+
+class UpdateWebBrowserSettings:
+    def __init__(
+        self,
+        open_external_browser: bool | None = None,
+        display_close_button: bool | None = None,
+    ) -> None:
+        self.open_external_browser = open_external_browser
+        self.display_close_button = display_close_button
+
+    def to_dict(self) -> dict:
+        return {"_": "updateWebBrowserSettings", **{
+            "open_external_browser": _tl._resolve(self.open_external_browser),
+            "display_close_button": _tl._resolve(self.display_close_button),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"UpdateWebBrowserSettings(open_external_browser={self.open_external_browser!r}, display_close_button={self.display_close_button!r})"
+
+class UpdateWebBrowserException:
+    def __init__(
+        self,
+        exception: Any,
+        delete: bool | None = None,
+        open_external_browser: bool | None = None,
+    ) -> None:
+        self.delete = delete
+        self.open_external_browser = open_external_browser
+        self.exception = exception
+
+    def to_dict(self) -> dict:
+        return {"_": "updateWebBrowserException", **{
+            "delete": _tl._resolve(self.delete),
+            "open_external_browser": _tl._resolve(self.open_external_browser),
+            "exception": _tl._resolve(self.exception),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"UpdateWebBrowserException(delete={self.delete!r}, open_external_browser={self.open_external_browser!r}, exception={self.exception!r})"
 
 class UpdatesTooLong:
     def __init__(self) -> None:
@@ -10997,6 +11108,48 @@ class SendMessageTextDraftAction:
 
     def __repr__(self) -> str:
         return f"SendMessageTextDraftAction(random_id={self.random_id!r}, text={self.text!r})"
+
+class InputSendMessageRichMessageDraftAction:
+    def __init__(
+        self,
+        random_id: int,
+        rich_message: Any,
+    ) -> None:
+        self.random_id = random_id
+        self.rich_message = rich_message
+
+    def to_dict(self) -> dict:
+        return {"_": "inputSendMessageRichMessageDraftAction", **{
+            "random_id": _tl._resolve(self.random_id),
+            "rich_message": _tl._resolve(self.rich_message),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"InputSendMessageRichMessageDraftAction(random_id={self.random_id!r}, rich_message={self.rich_message!r})"
+
+class SendMessageRichMessageDraftAction:
+    def __init__(
+        self,
+        random_id: int,
+        rich_message: Any,
+    ) -> None:
+        self.random_id = random_id
+        self.rich_message = rich_message
+
+    def to_dict(self) -> dict:
+        return {"_": "sendMessageRichMessageDraftAction", **{
+            "random_id": _tl._resolve(self.random_id),
+            "rich_message": _tl._resolve(self.rich_message),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"SendMessageRichMessageDraftAction(random_id={self.random_id!r}, rich_message={self.rich_message!r})"
 
 class InputPrivacyKeyStatusTimestamp:
     def __init__(self) -> None:
@@ -14528,6 +14681,27 @@ class InputBotInlineMessageMediaWebPage:
     def __repr__(self) -> str:
         return f"InputBotInlineMessageMediaWebPage(invert_media={self.invert_media!r}, force_large_media={self.force_large_media!r}, force_small_media={self.force_small_media!r}, optional={self.optional!r})"
 
+class InputBotInlineMessageRichMessage:
+    def __init__(
+        self,
+        rich_message: Any,
+        reply_markup: Any | None = None,
+    ) -> None:
+        self.reply_markup = reply_markup
+        self.rich_message = rich_message
+
+    def to_dict(self) -> dict:
+        return {"_": "inputBotInlineMessageRichMessage", **{
+            "reply_markup": _tl._resolve(self.reply_markup),
+            "rich_message": _tl._resolve(self.rich_message),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"InputBotInlineMessageRichMessage(reply_markup={self.reply_markup!r}, rich_message={self.rich_message!r})"
+
 class InputBotInlineResult:
     def __init__(
         self,
@@ -14884,6 +15058,27 @@ class BotInlineMessageMediaWebPage:
 
     def __repr__(self) -> str:
         return f"BotInlineMessageMediaWebPage(invert_media={self.invert_media!r}, force_large_media={self.force_large_media!r}, force_small_media={self.force_small_media!r}, manual={self.manual!r})"
+
+class BotInlineMessageRichMessage:
+    def __init__(
+        self,
+        rich_message: Any,
+        reply_markup: Any | None = None,
+    ) -> None:
+        self.reply_markup = reply_markup
+        self.rich_message = rich_message
+
+    def to_dict(self) -> dict:
+        return {"_": "botInlineMessageRichMessage", **{
+            "reply_markup": _tl._resolve(self.reply_markup),
+            "rich_message": _tl._resolve(self.rich_message),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"BotInlineMessageRichMessage(reply_markup={self.reply_markup!r}, rich_message={self.rich_message!r})"
 
 class BotInlineResult:
     def __init__(
@@ -15322,6 +15517,7 @@ class DraftMessage:
         media: Any | None = None,
         effect: int | None = None,
         suggested_post: Any | None = None,
+        rich_message: Any | None = None,
     ) -> None:
         self.no_webpage = no_webpage
         self.invert_media = invert_media
@@ -15332,6 +15528,7 @@ class DraftMessage:
         self.date = date
         self.effect = effect
         self.suggested_post = suggested_post
+        self.rich_message = rich_message
 
     def to_dict(self) -> dict:
         return {"_": "draftMessage", **{
@@ -15344,6 +15541,7 @@ class DraftMessage:
             "date": _tl._resolve(self.date),
             "effect": _tl._resolve(self.effect),
             "suggested_post": _tl._resolve(self.suggested_post),
+            "rich_message": _tl._resolve(self.rich_message),
         }}
 
     def to_bytes(self) -> bytes:
@@ -15909,6 +16107,267 @@ class TextAnchor:
     def __repr__(self) -> str:
         return f"TextAnchor(text={self.text!r}, name={self.name!r})"
 
+class TextMath:
+    def __init__(
+        self,
+        source: str,
+    ) -> None:
+        self.source = source
+
+    def to_dict(self) -> dict:
+        return {"_": "textMath", **{
+            "source": _tl._resolve(self.source),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextMath(source={self.source!r})"
+
+class TextCustomEmoji:
+    def __init__(
+        self,
+        document_id: int,
+        alt: str,
+    ) -> None:
+        self.document_id = document_id
+        self.alt = alt
+
+    def to_dict(self) -> dict:
+        return {"_": "textCustomEmoji", **{
+            "document_id": _tl._resolve(self.document_id),
+            "alt": _tl._resolve(self.alt),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextCustomEmoji(document_id={self.document_id!r}, alt={self.alt!r})"
+
+class TextSpoiler:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "textSpoiler", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextSpoiler(text={self.text!r})"
+
+class TextMention:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "textMention", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextMention(text={self.text!r})"
+
+class TextHashtag:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "textHashtag", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextHashtag(text={self.text!r})"
+
+class TextBotCommand:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "textBotCommand", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextBotCommand(text={self.text!r})"
+
+class TextCashtag:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "textCashtag", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextCashtag(text={self.text!r})"
+
+class TextAutoUrl:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "textAutoUrl", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextAutoUrl(text={self.text!r})"
+
+class TextAutoEmail:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "textAutoEmail", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextAutoEmail(text={self.text!r})"
+
+class TextAutoPhone:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "textAutoPhone", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextAutoPhone(text={self.text!r})"
+
+class TextBankCard:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "textBankCard", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextBankCard(text={self.text!r})"
+
+class TextMentionName:
+    def __init__(
+        self,
+        text: Any,
+        user_id: int,
+    ) -> None:
+        self.text = text
+        self.user_id = user_id
+
+    def to_dict(self) -> dict:
+        return {"_": "textMentionName", **{
+            "text": _tl._resolve(self.text),
+            "user_id": _tl._resolve(self.user_id),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextMentionName(text={self.text!r}, user_id={self.user_id!r})"
+
+class TextDate:
+    def __init__(
+        self,
+        text: Any,
+        date: int,
+        relative: bool | None = None,
+        short_time: bool | None = None,
+        long_time: bool | None = None,
+        short_date: bool | None = None,
+        long_date: bool | None = None,
+        day_of_week: bool | None = None,
+    ) -> None:
+        self.relative = relative
+        self.short_time = short_time
+        self.long_time = long_time
+        self.short_date = short_date
+        self.long_date = long_date
+        self.day_of_week = day_of_week
+        self.text = text
+        self.date = date
+
+    def to_dict(self) -> dict:
+        return {"_": "textDate", **{
+            "relative": _tl._resolve(self.relative),
+            "short_time": _tl._resolve(self.short_time),
+            "long_time": _tl._resolve(self.long_time),
+            "short_date": _tl._resolve(self.short_date),
+            "long_date": _tl._resolve(self.long_date),
+            "day_of_week": _tl._resolve(self.day_of_week),
+            "text": _tl._resolve(self.text),
+            "date": _tl._resolve(self.date),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"TextDate(relative={self.relative!r}, short_time={self.short_time!r}, long_time={self.long_time!r}, short_date={self.short_date!r})"
+
 class PageBlockUnsupported:
     def __init__(self) -> None:
         pass
@@ -16170,9 +16629,11 @@ class PageBlockPhoto:
         self,
         photo_id: int,
         caption: Any,
+        spoiler: bool | None = None,
         url: str | None = None,
         webpage_id: int | None = None,
     ) -> None:
+        self.spoiler = spoiler
         self.photo_id = photo_id
         self.caption = caption
         self.url = url
@@ -16180,6 +16641,7 @@ class PageBlockPhoto:
 
     def to_dict(self) -> dict:
         return {"_": "pageBlockPhoto", **{
+            "spoiler": _tl._resolve(self.spoiler),
             "photo_id": _tl._resolve(self.photo_id),
             "caption": _tl._resolve(self.caption),
             "url": _tl._resolve(self.url),
@@ -16190,7 +16652,7 @@ class PageBlockPhoto:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"PageBlockPhoto(photo_id={self.photo_id!r}, caption={self.caption!r}, url={self.url!r}, webpage_id={self.webpage_id!r})"
+        return f"PageBlockPhoto(spoiler={self.spoiler!r}, photo_id={self.photo_id!r}, caption={self.caption!r}, url={self.url!r})"
 
 class PageBlockVideo:
     def __init__(
@@ -16199,9 +16661,11 @@ class PageBlockVideo:
         caption: Any,
         autoplay: bool | None = None,
         loop: bool | None = None,
+        spoiler: bool | None = None,
     ) -> None:
         self.autoplay = autoplay
         self.loop = loop
+        self.spoiler = spoiler
         self.video_id = video_id
         self.caption = caption
 
@@ -16209,6 +16673,7 @@ class PageBlockVideo:
         return {"_": "pageBlockVideo", **{
             "autoplay": _tl._resolve(self.autoplay),
             "loop": _tl._resolve(self.loop),
+            "spoiler": _tl._resolve(self.spoiler),
             "video_id": _tl._resolve(self.video_id),
             "caption": _tl._resolve(self.caption),
         }}
@@ -16217,7 +16682,7 @@ class PageBlockVideo:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"PageBlockVideo(autoplay={self.autoplay!r}, loop={self.loop!r}, video_id={self.video_id!r}, caption={self.caption!r})"
+        return f"PageBlockVideo(autoplay={self.autoplay!r}, loop={self.loop!r}, spoiler={self.spoiler!r}, video_id={self.video_id!r})"
 
 class PageBlockCover:
     def __init__(
@@ -16442,19 +16907,28 @@ class PageBlockOrderedList:
     def __init__(
         self,
         items: list[Any],
+        reversed: bool | None = None,
+        start: int | None = None,
+        type: str | None = None,
     ) -> None:
+        self.reversed = reversed
         self.items = items
+        self.start = start
+        self.type = type
 
     def to_dict(self) -> dict:
         return {"_": "pageBlockOrderedList", **{
+            "reversed": _tl._resolve(self.reversed),
             "items": _tl._resolve(self.items),
+            "start": _tl._resolve(self.start),
+            "type": _tl._resolve(self.type),
         }}
 
     def to_bytes(self) -> bytes:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"PageBlockOrderedList(items={self.items!r})"
+        return f"PageBlockOrderedList(reversed={self.reversed!r}, items={self.items!r}, start={self.start!r}, type={self.type!r})"
 
 class PageBlockDetails:
     def __init__(
@@ -16530,6 +17004,201 @@ class PageBlockMap:
 
     def __repr__(self) -> str:
         return f"PageBlockMap(geo={self.geo!r}, zoom={self.zoom!r}, w={self.w!r}, h={self.h!r})"
+
+class PageBlockHeading1:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "pageBlockHeading1", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"PageBlockHeading1(text={self.text!r})"
+
+class PageBlockHeading2:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "pageBlockHeading2", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"PageBlockHeading2(text={self.text!r})"
+
+class PageBlockHeading3:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "pageBlockHeading3", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"PageBlockHeading3(text={self.text!r})"
+
+class PageBlockHeading4:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "pageBlockHeading4", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"PageBlockHeading4(text={self.text!r})"
+
+class PageBlockHeading5:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "pageBlockHeading5", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"PageBlockHeading5(text={self.text!r})"
+
+class PageBlockHeading6:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "pageBlockHeading6", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"PageBlockHeading6(text={self.text!r})"
+
+class PageBlockMath:
+    def __init__(
+        self,
+        source: str,
+    ) -> None:
+        self.source = source
+
+    def to_dict(self) -> dict:
+        return {"_": "pageBlockMath", **{
+            "source": _tl._resolve(self.source),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"PageBlockMath(source={self.source!r})"
+
+class PageBlockThinking:
+    def __init__(
+        self,
+        text: Any,
+    ) -> None:
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "pageBlockThinking", **{
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"PageBlockThinking(text={self.text!r})"
+
+class InputPageBlockMap:
+    def __init__(
+        self,
+        geo: Any,
+        zoom: int,
+        w: int,
+        h: int,
+        caption: Any,
+    ) -> None:
+        self.geo = geo
+        self.zoom = zoom
+        self.w = w
+        self.h = h
+        self.caption = caption
+
+    def to_dict(self) -> dict:
+        return {"_": "inputPageBlockMap", **{
+            "geo": _tl._resolve(self.geo),
+            "zoom": _tl._resolve(self.zoom),
+            "w": _tl._resolve(self.w),
+            "h": _tl._resolve(self.h),
+            "caption": _tl._resolve(self.caption),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"InputPageBlockMap(geo={self.geo!r}, zoom={self.zoom!r}, w={self.w!r}, h={self.h!r})"
+
+class PageBlockBlockquoteBlocks:
+    def __init__(
+        self,
+        blocks: list[Any],
+        caption: Any,
+    ) -> None:
+        self.blocks = blocks
+        self.caption = caption
+
+    def to_dict(self) -> dict:
+        return {"_": "pageBlockBlockquoteBlocks", **{
+            "blocks": _tl._resolve(self.blocks),
+            "caption": _tl._resolve(self.caption),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"PageBlockBlockquoteBlocks(blocks={self.blocks!r}, caption={self.caption!r})"
 
 class PhoneCallDiscardReasonMissed:
     def __init__(self) -> None:
@@ -20278,11 +20947,17 @@ class PageListItemText:
     def __init__(
         self,
         text: Any,
+        checkbox: bool | None = None,
+        checked: bool | None = None,
     ) -> None:
+        self.checkbox = checkbox
+        self.checked = checked
         self.text = text
 
     def to_dict(self) -> dict:
         return {"_": "pageListItemText", **{
+            "checkbox": _tl._resolve(self.checkbox),
+            "checked": _tl._resolve(self.checked),
             "text": _tl._resolve(self.text),
         }}
 
@@ -20290,17 +20965,23 @@ class PageListItemText:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"PageListItemText(text={self.text!r})"
+        return f"PageListItemText(checkbox={self.checkbox!r}, checked={self.checked!r}, text={self.text!r})"
 
 class PageListItemBlocks:
     def __init__(
         self,
         blocks: list[Any],
+        checkbox: bool | None = None,
+        checked: bool | None = None,
     ) -> None:
+        self.checkbox = checkbox
+        self.checked = checked
         self.blocks = blocks
 
     def to_dict(self) -> dict:
         return {"_": "pageListItemBlocks", **{
+            "checkbox": _tl._resolve(self.checkbox),
+            "checked": _tl._resolve(self.checked),
             "blocks": _tl._resolve(self.blocks),
         }}
 
@@ -20308,49 +20989,73 @@ class PageListItemBlocks:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"PageListItemBlocks(blocks={self.blocks!r})"
+        return f"PageListItemBlocks(checkbox={self.checkbox!r}, checked={self.checked!r}, blocks={self.blocks!r})"
 
 class PageListOrderedItemText:
     def __init__(
         self,
-        num: str,
         text: Any,
+        checkbox: bool | None = None,
+        checked: bool | None = None,
+        num: str | None = None,
+        value: int | None = None,
+        type: str | None = None,
     ) -> None:
+        self.checkbox = checkbox
+        self.checked = checked
         self.num = num
         self.text = text
+        self.value = value
+        self.type = type
 
     def to_dict(self) -> dict:
         return {"_": "pageListOrderedItemText", **{
+            "checkbox": _tl._resolve(self.checkbox),
+            "checked": _tl._resolve(self.checked),
             "num": _tl._resolve(self.num),
             "text": _tl._resolve(self.text),
+            "value": _tl._resolve(self.value),
+            "type": _tl._resolve(self.type),
         }}
 
     def to_bytes(self) -> bytes:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"PageListOrderedItemText(num={self.num!r}, text={self.text!r})"
+        return f"PageListOrderedItemText(checkbox={self.checkbox!r}, checked={self.checked!r}, num={self.num!r}, text={self.text!r})"
 
 class PageListOrderedItemBlocks:
     def __init__(
         self,
-        num: str,
         blocks: list[Any],
+        checkbox: bool | None = None,
+        checked: bool | None = None,
+        num: str | None = None,
+        value: int | None = None,
+        type: str | None = None,
     ) -> None:
+        self.checkbox = checkbox
+        self.checked = checked
         self.num = num
         self.blocks = blocks
+        self.value = value
+        self.type = type
 
     def to_dict(self) -> dict:
         return {"_": "pageListOrderedItemBlocks", **{
+            "checkbox": _tl._resolve(self.checkbox),
+            "checked": _tl._resolve(self.checked),
             "num": _tl._resolve(self.num),
             "blocks": _tl._resolve(self.blocks),
+            "value": _tl._resolve(self.value),
+            "type": _tl._resolve(self.type),
         }}
 
     def to_bytes(self) -> bytes:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"PageListOrderedItemBlocks(num={self.num!r}, blocks={self.blocks!r})"
+        return f"PageListOrderedItemBlocks(checkbox={self.checkbox!r}, checked={self.checked!r}, num={self.num!r}, blocks={self.blocks!r})"
 
 class PageRelatedArticle:
     def __init__(
@@ -22222,6 +22927,7 @@ class MessageReplyHeader:
         reply_to_scheduled: bool | None = None,
         forum_topic: bool | None = None,
         quote: bool | None = None,
+        reply_to_ephemeral: bool | None = None,
         reply_to_msg_id: int | None = None,
         reply_to_peer_id: Any | None = None,
         reply_from: Any | None = None,
@@ -22236,6 +22942,7 @@ class MessageReplyHeader:
         self.reply_to_scheduled = reply_to_scheduled
         self.forum_topic = forum_topic
         self.quote = quote
+        self.reply_to_ephemeral = reply_to_ephemeral
         self.reply_to_msg_id = reply_to_msg_id
         self.reply_to_peer_id = reply_to_peer_id
         self.reply_from = reply_from
@@ -22252,6 +22959,7 @@ class MessageReplyHeader:
             "reply_to_scheduled": _tl._resolve(self.reply_to_scheduled),
             "forum_topic": _tl._resolve(self.forum_topic),
             "quote": _tl._resolve(self.quote),
+            "reply_to_ephemeral": _tl._resolve(self.reply_to_ephemeral),
             "reply_to_msg_id": _tl._resolve(self.reply_to_msg_id),
             "reply_to_peer_id": _tl._resolve(self.reply_to_peer_id),
             "reply_from": _tl._resolve(self.reply_from),
@@ -22268,7 +22976,7 @@ class MessageReplyHeader:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"MessageReplyHeader(reply_to_scheduled={self.reply_to_scheduled!r}, forum_topic={self.forum_topic!r}, quote={self.quote!r}, reply_to_msg_id={self.reply_to_msg_id!r})"
+        return f"MessageReplyHeader(reply_to_scheduled={self.reply_to_scheduled!r}, forum_topic={self.forum_topic!r}, quote={self.quote!r}, reply_to_ephemeral={self.reply_to_ephemeral!r})"
 
 class MessageReplyStoryHeader:
     def __init__(
@@ -23366,10 +24074,12 @@ class WebViewResultUrl:
         url: str,
         fullsize: bool | None = None,
         fullscreen: bool | None = None,
+        same_origin: bool | None = None,
         query_id: int | None = None,
     ) -> None:
         self.fullsize = fullsize
         self.fullscreen = fullscreen
+        self.same_origin = same_origin
         self.query_id = query_id
         self.url = url
 
@@ -23377,6 +24087,7 @@ class WebViewResultUrl:
         return {"_": "webViewResultUrl", **{
             "fullsize": _tl._resolve(self.fullsize),
             "fullscreen": _tl._resolve(self.fullscreen),
+            "same_origin": _tl._resolve(self.same_origin),
             "query_id": _tl._resolve(self.query_id),
             "url": _tl._resolve(self.url),
         }}
@@ -23385,7 +24096,7 @@ class WebViewResultUrl:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"WebViewResultUrl(fullsize={self.fullsize!r}, fullscreen={self.fullscreen!r}, query_id={self.query_id!r}, url={self.url!r})"
+        return f"WebViewResultUrl(fullsize={self.fullsize!r}, fullscreen={self.fullscreen!r}, same_origin={self.same_origin!r}, query_id={self.query_id!r})"
 
 class WebViewMessageSent:
     def __init__(
@@ -26911,23 +27622,32 @@ class ConnectedBot:
         bot_id: int,
         recipients: Any,
         rights: Any,
+        device: str | None = None,
+        date: int | None = None,
+        location: str | None = None,
     ) -> None:
         self.bot_id = bot_id
         self.recipients = recipients
         self.rights = rights
+        self.device = device
+        self.date = date
+        self.location = location
 
     def to_dict(self) -> dict:
         return {"_": "connectedBot", **{
             "bot_id": _tl._resolve(self.bot_id),
             "recipients": _tl._resolve(self.recipients),
             "rights": _tl._resolve(self.rights),
+            "device": _tl._resolve(self.device),
+            "date": _tl._resolve(self.date),
+            "location": _tl._resolve(self.location),
         }}
 
     def to_bytes(self) -> bytes:
         return _tl.serialize_object(self.to_dict(), _SCHEMA)
 
     def __repr__(self) -> str:
-        return f"ConnectedBot(bot_id={self.bot_id!r}, recipients={self.recipients!r}, rights={self.rights!r})"
+        return f"ConnectedBot(bot_id={self.bot_id!r}, recipients={self.recipients!r}, rights={self.rights!r}, device={self.device!r})"
 
 class Birthday:
     def __init__(
@@ -30275,3 +30995,249 @@ class AiComposeToneExample:
 
     def __repr__(self) -> str:
         return f"AiComposeToneExample(from={self.from_!r}, to={self.to!r})"
+
+class JoinChatBotResultApproved:
+    def __init__(self) -> None:
+        pass
+
+    def to_dict(self) -> dict:
+        return {"_": "joinChatBotResultApproved", **{
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"JoinChatBotResultApproved()"
+
+class JoinChatBotResultDeclined:
+    def __init__(self) -> None:
+        pass
+
+    def to_dict(self) -> dict:
+        return {"_": "joinChatBotResultDeclined", **{
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"JoinChatBotResultDeclined()"
+
+class JoinChatBotResultQueued:
+    def __init__(self) -> None:
+        pass
+
+    def to_dict(self) -> dict:
+        return {"_": "joinChatBotResultQueued", **{
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"JoinChatBotResultQueued()"
+
+class JoinChatBotResultWebView:
+    def __init__(
+        self,
+        url: str,
+    ) -> None:
+        self.url = url
+
+    def to_dict(self) -> dict:
+        return {"_": "joinChatBotResultWebView", **{
+            "url": _tl._resolve(self.url),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"JoinChatBotResultWebView(url={self.url!r})"
+
+class WebDomainException:
+    def __init__(
+        self,
+        domain: str,
+        url: str,
+        title: str,
+        favicon: int | None = None,
+    ) -> None:
+        self.domain = domain
+        self.url = url
+        self.title = title
+        self.favicon = favicon
+
+    def to_dict(self) -> dict:
+        return {"_": "webDomainException", **{
+            "domain": _tl._resolve(self.domain),
+            "url": _tl._resolve(self.url),
+            "title": _tl._resolve(self.title),
+            "favicon": _tl._resolve(self.favicon),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"WebDomainException(domain={self.domain!r}, url={self.url!r}, title={self.title!r}, favicon={self.favicon!r})"
+
+class InputRichFilePhoto:
+    def __init__(
+        self,
+        id: str,
+        photo: Any,
+    ) -> None:
+        self.id = id
+        self.photo = photo
+
+    def to_dict(self) -> dict:
+        return {"_": "inputRichFilePhoto", **{
+            "id": _tl._resolve(self.id),
+            "photo": _tl._resolve(self.photo),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"InputRichFilePhoto(id={self.id!r}, photo={self.photo!r})"
+
+class InputRichFileDocument:
+    def __init__(
+        self,
+        id: str,
+        document: Any,
+    ) -> None:
+        self.id = id
+        self.document = document
+
+    def to_dict(self) -> dict:
+        return {"_": "inputRichFileDocument", **{
+            "id": _tl._resolve(self.id),
+            "document": _tl._resolve(self.document),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"InputRichFileDocument(id={self.id!r}, document={self.document!r})"
+
+class InputRichMessage:
+    def __init__(
+        self,
+        blocks: list[Any],
+        rtl: bool | None = None,
+        noautolink: bool | None = None,
+        photos: list[Any] | None = None,
+        documents: list[Any] | None = None,
+        users: list[Any] | None = None,
+    ) -> None:
+        self.rtl = rtl
+        self.noautolink = noautolink
+        self.blocks = blocks
+        self.photos = photos
+        self.documents = documents
+        self.users = users
+
+    def to_dict(self) -> dict:
+        return {"_": "inputRichMessage", **{
+            "rtl": _tl._resolve(self.rtl),
+            "noautolink": _tl._resolve(self.noautolink),
+            "blocks": _tl._resolve(self.blocks),
+            "photos": _tl._resolve(self.photos),
+            "documents": _tl._resolve(self.documents),
+            "users": _tl._resolve(self.users),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"InputRichMessage(rtl={self.rtl!r}, noautolink={self.noautolink!r}, blocks={self.blocks!r}, photos={self.photos!r})"
+
+class InputRichMessageHTML:
+    def __init__(
+        self,
+        html: str,
+        rtl: bool | None = None,
+        noautolink: bool | None = None,
+        files: list[Any] | None = None,
+    ) -> None:
+        self.rtl = rtl
+        self.noautolink = noautolink
+        self.html = html
+        self.files = files
+
+    def to_dict(self) -> dict:
+        return {"_": "inputRichMessageHTML", **{
+            "rtl": _tl._resolve(self.rtl),
+            "noautolink": _tl._resolve(self.noautolink),
+            "html": _tl._resolve(self.html),
+            "files": _tl._resolve(self.files),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"InputRichMessageHTML(rtl={self.rtl!r}, noautolink={self.noautolink!r}, html={self.html!r}, files={self.files!r})"
+
+class InputRichMessageMarkdown:
+    def __init__(
+        self,
+        markdown: str,
+        rtl: bool | None = None,
+        noautolink: bool | None = None,
+        files: list[Any] | None = None,
+    ) -> None:
+        self.rtl = rtl
+        self.noautolink = noautolink
+        self.markdown = markdown
+        self.files = files
+
+    def to_dict(self) -> dict:
+        return {"_": "inputRichMessageMarkdown", **{
+            "rtl": _tl._resolve(self.rtl),
+            "noautolink": _tl._resolve(self.noautolink),
+            "markdown": _tl._resolve(self.markdown),
+            "files": _tl._resolve(self.files),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"InputRichMessageMarkdown(rtl={self.rtl!r}, noautolink={self.noautolink!r}, markdown={self.markdown!r}, files={self.files!r})"
+
+class RichMessage:
+    def __init__(
+        self,
+        blocks: list[Any],
+        photos: list[Any],
+        documents: list[Any],
+        rtl: bool | None = None,
+        part: bool | None = None,
+    ) -> None:
+        self.rtl = rtl
+        self.part = part
+        self.blocks = blocks
+        self.photos = photos
+        self.documents = documents
+
+    def to_dict(self) -> dict:
+        return {"_": "richMessage", **{
+            "rtl": _tl._resolve(self.rtl),
+            "part": _tl._resolve(self.part),
+            "blocks": _tl._resolve(self.blocks),
+            "photos": _tl._resolve(self.photos),
+            "documents": _tl._resolve(self.documents),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"RichMessage(rtl={self.rtl!r}, part={self.part!r}, blocks={self.blocks!r}, photos={self.photos!r})"

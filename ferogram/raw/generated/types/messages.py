@@ -2114,3 +2114,45 @@ class ComposedMessageWithAI:
 
     def __repr__(self) -> str:
         return f"ComposedMessageWithAI(result_text={self.result_text!r}, diff_text={self.diff_text!r})"
+
+class ChatInviteJoinResultOk:
+    def __init__(
+        self,
+        updates: Any,
+    ) -> None:
+        self.updates = updates
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.chatInviteJoinResultOk", **{
+            "updates": _tl._resolve(self.updates),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"ChatInviteJoinResultOk(updates={self.updates!r})"
+
+class ChatInviteJoinResultWebView:
+    def __init__(
+        self,
+        bot_id: int,
+        webview: Any,
+        users: list[Any],
+    ) -> None:
+        self.bot_id = bot_id
+        self.webview = webview
+        self.users = users
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.chatInviteJoinResultWebView", **{
+            "bot_id": _tl._resolve(self.bot_id),
+            "webview": _tl._resolve(self.webview),
+            "users": _tl._resolve(self.users),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"ChatInviteJoinResultWebView(bot_id={self.bot_id!r}, webview={self.webview!r}, users={self.users!r})"

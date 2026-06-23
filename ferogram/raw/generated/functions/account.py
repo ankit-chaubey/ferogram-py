@@ -2421,3 +2421,98 @@ class DeletePasskey:
 
     def __repr__(self) -> str:
         return f"DeletePasskey(id={self.id!r})"
+
+class ConfirmBotConnection:
+    def __init__(
+        self,
+        bot_id: Any,
+    ) -> None:
+        self.bot_id = bot_id
+
+    def to_dict(self) -> dict:
+        return {"_": "account.confirmBotConnection", **{
+            "bot_id": _tl._resolve(self.bot_id),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"ConfirmBotConnection(bot_id={self.bot_id!r})"
+
+class GetWebBrowserSettings:
+    def __init__(
+        self,
+        hash: int,
+    ) -> None:
+        self.hash = hash
+
+    def to_dict(self) -> dict:
+        return {"_": "account.getWebBrowserSettings", **{
+            "hash": _tl._resolve(self.hash),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"GetWebBrowserSettings(hash={self.hash!r})"
+
+class UpdateWebBrowserSettings:
+    def __init__(
+        self,
+        open_external_browser: bool | None = None,
+        display_close_button: bool | None = None,
+    ) -> None:
+        self.open_external_browser = open_external_browser
+        self.display_close_button = display_close_button
+
+    def to_dict(self) -> dict:
+        return {"_": "account.updateWebBrowserSettings", **{
+            "open_external_browser": _tl._resolve(self.open_external_browser),
+            "display_close_button": _tl._resolve(self.display_close_button),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"UpdateWebBrowserSettings(open_external_browser={self.open_external_browser!r}, display_close_button={self.display_close_button!r})"
+
+class ToggleWebBrowserSettingsException:
+    def __init__(
+        self,
+        url: str,
+        delete: bool | None = None,
+        open_external_browser: bool | None = None,
+    ) -> None:
+        self.delete = delete
+        self.open_external_browser = open_external_browser
+        self.url = url
+
+    def to_dict(self) -> dict:
+        return {"_": "account.toggleWebBrowserSettingsException", **{
+            "delete": _tl._resolve(self.delete),
+            "open_external_browser": _tl._resolve(self.open_external_browser),
+            "url": _tl._resolve(self.url),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"ToggleWebBrowserSettingsException(delete={self.delete!r}, open_external_browser={self.open_external_browser!r}, url={self.url!r})"
+
+class DeleteWebBrowserSettingsExceptions:
+    def __init__(self) -> None:
+        pass
+
+    def to_dict(self) -> dict:
+        return {"_": "account.deleteWebBrowserSettingsExceptions", **{
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"DeleteWebBrowserSettingsExceptions()"

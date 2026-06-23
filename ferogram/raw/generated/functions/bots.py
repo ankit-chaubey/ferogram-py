@@ -815,3 +815,24 @@ class EditAccessSettings:
 
     def __repr__(self) -> str:
         return f"EditAccessSettings(restricted={self.restricted!r}, bot={self.bot!r}, add_users={self.add_users!r})"
+
+class SetJoinChatResults:
+    def __init__(
+        self,
+        query_id: int,
+        result: Any,
+    ) -> None:
+        self.query_id = query_id
+        self.result = result
+
+    def to_dict(self) -> dict:
+        return {"_": "bots.setJoinChatResults", **{
+            "query_id": _tl._resolve(self.query_id),
+            "result": _tl._resolve(self.result),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"SetJoinChatResults(query_id={self.query_id!r}, result={self.result!r})"

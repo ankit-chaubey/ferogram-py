@@ -313,6 +313,7 @@ class SendMessage:
         effect: int | None = None,
         allow_paid_stars: int | None = None,
         suggested_post: Any | None = None,
+        rich_message: Any | None = None,
     ) -> None:
         self.no_webpage = no_webpage
         self.silent = silent
@@ -335,6 +336,7 @@ class SendMessage:
         self.effect = effect
         self.allow_paid_stars = allow_paid_stars
         self.suggested_post = suggested_post
+        self.rich_message = rich_message
 
     def to_dict(self) -> dict:
         return {"_": "messages.sendMessage", **{
@@ -359,6 +361,7 @@ class SendMessage:
             "effect": _tl._resolve(self.effect),
             "allow_paid_stars": _tl._resolve(self.allow_paid_stars),
             "suggested_post": _tl._resolve(self.suggested_post),
+            "rich_message": _tl._resolve(self.rich_message),
         }}
 
     def to_bytes(self) -> bytes:
@@ -1584,6 +1587,7 @@ class EditMessage:
         schedule_date: int | None = None,
         schedule_repeat_period: int | None = None,
         quick_reply_shortcut_id: int | None = None,
+        rich_message: Any | None = None,
     ) -> None:
         self.no_webpage = no_webpage
         self.invert_media = invert_media
@@ -1596,6 +1600,7 @@ class EditMessage:
         self.schedule_date = schedule_date
         self.schedule_repeat_period = schedule_repeat_period
         self.quick_reply_shortcut_id = quick_reply_shortcut_id
+        self.rich_message = rich_message
 
     def to_dict(self) -> dict:
         return {"_": "messages.editMessage", **{
@@ -1610,6 +1615,7 @@ class EditMessage:
             "schedule_date": _tl._resolve(self.schedule_date),
             "schedule_repeat_period": _tl._resolve(self.schedule_repeat_period),
             "quick_reply_shortcut_id": _tl._resolve(self.quick_reply_shortcut_id),
+            "rich_message": _tl._resolve(self.rich_message),
         }}
 
     def to_bytes(self) -> bytes:
@@ -1628,6 +1634,7 @@ class EditInlineBotMessage:
         media: Any | None = None,
         reply_markup: Any | None = None,
         entities: list[Any] | None = None,
+        rich_message: Any | None = None,
     ) -> None:
         self.no_webpage = no_webpage
         self.invert_media = invert_media
@@ -1636,6 +1643,7 @@ class EditInlineBotMessage:
         self.media = media
         self.reply_markup = reply_markup
         self.entities = entities
+        self.rich_message = rich_message
 
     def to_dict(self) -> dict:
         return {"_": "messages.editInlineBotMessage", **{
@@ -1646,6 +1654,7 @@ class EditInlineBotMessage:
             "media": _tl._resolve(self.media),
             "reply_markup": _tl._resolve(self.reply_markup),
             "entities": _tl._resolve(self.entities),
+            "rich_message": _tl._resolve(self.rich_message),
         }}
 
     def to_bytes(self) -> bytes:
@@ -1744,6 +1753,7 @@ class SaveDraft:
         media: Any | None = None,
         effect: int | None = None,
         suggested_post: Any | None = None,
+        rich_message: Any | None = None,
     ) -> None:
         self.no_webpage = no_webpage
         self.invert_media = invert_media
@@ -1754,6 +1764,7 @@ class SaveDraft:
         self.media = media
         self.effect = effect
         self.suggested_post = suggested_post
+        self.rich_message = rich_message
 
     def to_dict(self) -> dict:
         return {"_": "messages.saveDraft", **{
@@ -1766,6 +1777,7 @@ class SaveDraft:
             "media": _tl._resolve(self.media),
             "effect": _tl._resolve(self.effect),
             "suggested_post": _tl._resolve(self.suggested_post),
+            "rich_message": _tl._resolve(self.rich_message),
         }}
 
     def to_bytes(self) -> bytes:
@@ -6326,3 +6338,24 @@ class GetPersonalChannelHistory:
 
     def __repr__(self) -> str:
         return f"GetPersonalChannelHistory(user_id={self.user_id!r}, limit={self.limit!r}, max_id={self.max_id!r}, min_id={self.min_id!r})"
+
+class GetRichMessage:
+    def __init__(
+        self,
+        peer: Any,
+        id: int,
+    ) -> None:
+        self.peer = peer
+        self.id = id
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.getRichMessage", **{
+            "peer": _tl._resolve(self.peer),
+            "id": _tl._resolve(self.id),
+        }}
+
+    def to_bytes(self) -> bytes:
+        return _tl.serialize_object(self.to_dict(), _SCHEMA)
+
+    def __repr__(self) -> str:
+        return f"GetRichMessage(peer={self.peer!r}, id={self.id!r})"
