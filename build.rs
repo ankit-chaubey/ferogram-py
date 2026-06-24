@@ -25,10 +25,13 @@ fn main() {
 
     // Use the exact Python interpreter maturin chose (handles venvs, conda,
     // pyenv, and explicit PYO3_PYTHON overrides alike).
-    let python = pyo3_build_config::get()
-        .executable
-        .clone()
-        .expect("pyo3-build-config found no Python executable");
+    let python = match pyo3_build_config::get().executable.clone() {
+        Some(py) => py,
+        None => {
+            println!("cargo:warning=Skipping TL codegen: no Python executable found");
+            return;
+        }
+    };
 
     let status = Command::new(&python)
         .args([
