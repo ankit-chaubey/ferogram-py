@@ -33,7 +33,16 @@ def _peer_to_id(peer: Any) -> int | None:
     if peer is None:
         return None
     if isinstance(peer, dict):
-        return peer.get("user_id") or peer.get("channel_id") or peer.get("chat_id")
+        t = peer.get("_", "")
+        if t == "peerUser" or "user_id" in peer:
+            uid = peer.get("user_id")
+            return uid if uid else None
+        if t == "peerChannel" or "channel_id" in peer:
+            cid = peer.get("channel_id")
+            return -(1_000_000_000 + cid) if cid else None
+        if t == "peerChat" or "chat_id" in peer:
+            cid = peer.get("chat_id")
+            return -cid if cid else None
     return None
 
 

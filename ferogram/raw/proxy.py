@@ -234,39 +234,41 @@ async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
     cache: PeerCache = client._peer_cache
 
     if peer_id > 0:
+        # --- user ---
         ah = cache.get_user(peer_id)
         if ah is not None:
             return {"_": "inputPeerUser", "user_id": peer_id, "access_hash": ah}
-    else:
-        abs_id = abs(peer_id)
-        if abs_id > 1_000_000_000:
-            channel_id = abs_id - 1_000_000_000
-            ah = cache.get_channel(channel_id)
-            if ah is not None:
-                return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
-        else:
-            return {"_": "inputPeerChat", "chat_id": abs(peer_id)}
-
-    if peer_id > 0:
+        # cache miss: fetch from API
+        # users.getUsers returns a list directly, not a dict
         result = await client.invoke(_make_get_users([peer_id]))
-        users  = result.get("users") or (result if isinstance(result, list) else [result])
+        users = result if isinstance(result, list) else result.get("users") or []
         for u in users:
             if u.get("id") == peer_id:
                 ah = u.get("access_hash", 0)
                 cache.store_user(peer_id, ah)
                 return {"_": "inputPeerUser", "user_id": peer_id, "access_hash": ah}
         raise ValueError(f"User {peer_id} not found")
+
     else:
         abs_id = abs(peer_id)
+        if abs_id <= 1_000_000_000:
+            # regular group chat, no access_hash needed
+            return {"_": "inputPeerChat", "chat_id": abs_id}
+
+        # supergroup / channel
         channel_id = abs_id - 1_000_000_000
+        ah = cache.get_channel(channel_id)
+        if ah is not None:
+            return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
+        # cache miss: fetch from API
         result = await client.invoke(_make_get_channels([peer_id]))
-        chats  = result.get("chats") or []
+        chats = result.get("chats") or [] if isinstance(result, dict) else result or []
         for ch in chats:
             if ch.get("id") == channel_id:
                 ah = ch.get("access_hash", 0)
                 cache.store_channel(channel_id, ah)
                 return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
-        raise ValueError(f"Channel {peer_id} not found")
+        raise ValueError(f"Channel/supergroup {peer_id} not found")
 
 
 def _make_get_users(user_ids: list[int]) -> dict:

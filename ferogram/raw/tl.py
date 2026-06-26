@@ -59,13 +59,9 @@ _VECTOR_CID = 0x1cb5c415
 
 # Schema field format: (name, ftype, flag)
 # flag is None for unconditional fields, or (group, bit) for conditional ones.
-# group is "flags", "flags2", etc. — any string matching the flag-word name in TL.
+# group is "flags", "flags2", etc. - any string matching the flag-word name in TL.
 # bit is the 0-based bit index within that flag word.
-#
-# Old format (pre-Phase-2) stored flag_bit as a plain int for flags.X fields
-# and ftype="flags2.N?inner" with flag=None for flags2 fields. The new format
-# stores (group, bit) uniformly so tl.py never needs to inspect ftype strings
-# for flag-group dispatch.
+
 
 
 def serialize(obj: Any, schema: dict) -> bytes:
@@ -154,10 +150,7 @@ def deserialize(data: bytes, schema_by_cid: dict) -> Any:
     return _read_object(data, 0, schema_by_cid)[0]
 
 
-# Populated lazily on first deserialize call. Maps CID -> generated class
-# with a from_bytes() classmethod, so _read_object() can dispatch straight
-# to the specialized reader instead of walking the schema dict for every
-# field of every nested object.
+# CID -> generated class; populated lazily on first deserialize call.
 _CID_TO_CLASS: dict[int, type] | None = None
 
 
@@ -320,48 +313,64 @@ def _read_typed(data: bytes, pos: int, ftype: str, schema: dict) -> tuple[Any, i
     return _read_object(data, pos, schema)
 
 
-def parse_markdown(text: str) -> tuple[str, list]:
-    """Strip basic markdown (* _ ` ~) and return (plain_text, entities)."""
+
+
+def _html_unescape(s: str) -> str:
+    """Unescape basic HTML entities."""
+    return (s
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", '"')
+        .replace("&#39;", "'")
+        .replace("&nbsp;", "\u00a0")
+    )
+
+
+def _attr(tag_raw: str, name: str) -> str:
+    """Extract an attribute value from a raw tag string."""
     import re
-    entities = []
-    pos = 0
-    plain = []
-    pattern = re.compile(r'(\*\*(.+?)\*\*|\*(.+?)\*|__(.+?)__|_(.+?)_|`(.+?)`|~~(.+?)~~)', re.DOTALL)
-    last = 0
-    for m in pattern.finditer(text):
-        plain.append(text[last:m.start()])
-        inner = next(g for g in m.groups()[1:] if g is not None)
-        start = sum(len(s) for s in plain)
-        plain.append(inner)
-        length = len(inner)
-        raw = m.group(0)
-        if raw.startswith("**"):
-            entities.append({"_": "messageEntityBold", "offset": start, "length": length})
-        elif raw.startswith("*") or raw.startswith("_"):
-            entities.append({"_": "messageEntityItalic", "offset": start, "length": length})
-        elif raw.startswith("`"):
-            entities.append({"_": "messageEntityCode", "offset": start, "length": length})
-        elif raw.startswith("~~"):
-            entities.append({"_": "messageEntityStrike", "offset": start, "length": length})
-        last = m.end()
-    plain.append(text[last:])
-    return "".join(plain), entities
+    m = re.search(rf'{re.escape(name)}=["\']([^"\']*)["\']', tag_raw)
+    return m.group(1) if m else ""
 
 
 def parse_html(text: str) -> tuple[str, list]:
-    """Strip basic HTML tags (<b> <i> <code> <s> <u> <a>) and return (plain_text, entities)."""
+    """Parse HTML-formatted text into (plain_text, MessageEntity list).
+
+    Supported tags:
+      <b> <strong>                       bold
+      <i> <em>                           italic
+      <u> <ins>                          underline
+      <s> <strike> <del>                 strikethrough
+      <code>                             code (inline)
+      <pre language="...">               pre block
+      <mark>                             spoiler
+      <tg-spoiler>                       spoiler
+      <blockquote>                       blockquote
+      <tg-emoji emoji-id="...">          custom emoji
+      <img src="tg://emoji?id=..."/>     custom emoji (self-close form)
+      <a href="...">                     text URL / mailto / tel / tg://user
+      <tg-time unix="..." format="...">  formatted date
+    """
     import re
-    tag_map = {
+    TAG_MAP: dict[str, str] = {
         "b": "messageEntityBold", "strong": "messageEntityBold",
         "i": "messageEntityItalic", "em": "messageEntityItalic",
-        "code": "messageEntityCode", "pre": "messageEntityPre",
+        "u": "messageEntityUnderline", "ins": "messageEntityUnderline",
         "s": "messageEntityStrike", "strike": "messageEntityStrike", "del": "messageEntityStrike",
-        "u": "messageEntityUnderline",
+        "code": "messageEntityCode",
+        "pre": "messageEntityPre",
+        "mark": "messageEntitySpoiler",
+        "tg-spoiler": "messageEntitySpoiler",
+        "blockquote": "messageEntityBlockquote",
     }
     entities: list = []
-    plain_parts: list = []
-    pos = 0
-    stack: list = []  # (entity_type, plain_start, url)
+    plain_parts: list[str] = []
+    stack: list[tuple[str, int, dict]] = []
+
+    def cur_offset() -> int:
+        return sum(len(p) for p in plain_parts)
+
     i = 0
     src = text
     while i < len(src):
@@ -374,31 +383,294 @@ def parse_html(text: str) -> tuple[str, list]:
             plain_parts.append(src[i])
             i += 1
             continue
-        tag_raw = src[i+1:end]
+        tag_full = src[i + 1:end]
         i = end + 1
-        closing = tag_raw.startswith("/")
-        tag_body = tag_raw.lstrip("/").split()[0].lower()
+
+        self_close = tag_full.endswith("/")
+        if self_close:
+            tag_full = tag_full[:-1].rstrip()
+
+        closing = tag_full.startswith("/")
+        if closing:
+            tag_name = tag_full[1:].split()[0].lower()
+            attrs_raw = ""
+        else:
+            parts_split = tag_full.split(None, 1)
+            tag_name = parts_split[0].lower()
+            attrs_raw = parts_split[1] if len(parts_split) > 1 else ""
+
+        if self_close:
+            if not closing and tag_name == "img":
+                src_val = _attr(attrs_raw, "src")
+                m_eid = re.search(r'tg://emoji\?id=(\d+)', src_val)
+                if m_eid:
+                    off = cur_offset()
+                    alt = _attr(attrs_raw, "alt")
+                    char = alt or "\U0001f44d"
+                    plain_parts.append(char)
+                    entities.append({
+                        "_": "messageEntityCustomEmoji",
+                        "offset": off,
+                        "length": len(char),
+                        "document_id": int(m_eid.group(1)),
+                    })
+            continue
+
         if closing:
             for j in range(len(stack) - 1, -1, -1):
-                etype, pstart, url = stack[j]
-                if tag_map.get(tag_body) == etype or tag_body == "a":
-                    cur_pos = sum(len(p) for p in plain_parts)
-                    length = cur_pos - pstart
-                    if length > 0:
+                etype, pstart, extra = stack[j]
+                if extra.get("_tag") == tag_name:
+                    length = cur_offset() - pstart
+                    if length > 0 and etype != "__skip__":
                         ent: dict = {"_": etype, "offset": pstart, "length": length}
-                        if url:
-                            ent["url"] = url
+                        ent.update({k: v for k, v in extra.items() if k != "_tag"})
                         entities.append(ent)
                     stack.pop(j)
                     break
-        else:
-            etype = tag_map.get(tag_body)
-            url = ""
-            if tag_body == "a":
+            continue
+
+        # opening tags
+        if tag_name == "a":
+            href = _attr(attrs_raw, "href")
+            if href.startswith("mailto:"):
+                etype = "messageEntityEmail"
+                extra_d: dict = {"_tag": "a", "url": href}
+            elif href.startswith("tel:"):
+                etype = "messageEntityPhone"
+                extra_d = {"_tag": "a", "url": href}
+            elif re.match(r'tg://user\?id=(\d+)', href):
+                uid = int(re.match(r'tg://user\?id=(\d+)', href).group(1))
+                etype = "messageEntityMentionName"
+                extra_d = {"_tag": "a", "user_id": uid}
+            elif href.startswith("#"):
+                stack.append(("__skip__", cur_offset(), {"_tag": "a"}))
+                continue
+            else:
                 etype = "messageEntityTextUrl"
-                m = re.search(r'href=["\'"]([^"\']+)["\']', tag_raw)
-                url = m.group(1) if m else ""
-            if etype:
-                pstart = sum(len(p) for p in plain_parts)
-                stack.append((etype, pstart, url))
-    return "".join(plain_parts), entities
+                extra_d = {"_tag": "a", "url": href}
+            stack.append((etype, cur_offset(), extra_d))
+
+        elif tag_name == "tg-emoji":
+            emoji_id_str = _attr(attrs_raw, "emoji-id")
+            if emoji_id_str:
+                stack.append(("messageEntityCustomEmoji", cur_offset(), {
+                    "_tag": "tg-emoji",
+                    "document_id": int(emoji_id_str),
+                }))
+
+        elif tag_name == "tg-time":
+            unix_str = _attr(attrs_raw, "unix")
+            fmt = _attr(attrs_raw, "format")
+            if unix_str:
+                stack.append(("messageEntityFormattedDate", cur_offset(), {
+                    "_tag": "tg-time",
+                    "date": int(unix_str),
+                    "relative": "r" in fmt,
+                    "short_time": "t" in fmt,
+                    "long_time": "T" in fmt,
+                    "short_date": "d" in fmt,
+                    "long_date": "D" in fmt,
+                    "day_of_week": "w" in fmt,
+                }))
+
+        elif tag_name == "tg-math":
+            stack.append(("messageEntityCode", cur_offset(), {"_tag": "tg-math"}))
+
+        elif tag_name == "pre":
+            lang = _attr(attrs_raw, "language") or _attr(attrs_raw, "lang") or ""
+            stack.append(("messageEntityPre", cur_offset(), {"_tag": "pre", "language": lang}))
+
+        elif tag_name in TAG_MAP:
+            etype = TAG_MAP[tag_name]
+            stack.append((etype, cur_offset(), {"_tag": tag_name}))
+        # ignore unknown/block tags (h1-h6, p, div, br, aside, details, tg-collage, etc.)
+
+    # flush unclosed frames
+    for etype, pstart, extra in stack:
+        length = cur_offset() - pstart
+        if length > 0 and etype not in ("__skip__",):
+            ent = {"_": etype, "offset": pstart, "length": length}
+            ent.update({k: v for k, v in extra.items() if k != "_tag"})
+            entities.append(ent)
+
+    plain = _html_unescape("".join(plain_parts))
+    return plain, entities
+
+
+def parse_markdown(text: str) -> tuple[str, list]:
+    """Parse Telegram-style rich Markdown into (plain_text, MessageEntity list).
+
+    Supported:
+      **bold** / __bold__
+      *italic* / _italic_
+      ~~strikethrough~~
+      `inline code`
+      ||spoiler|| / ==spoiler==
+      ```lang code block```
+      [text](url)  links / mailto / tel / tg://user mention
+      ![alt](tg://emoji?id=...)  custom emoji
+      $math$  inline formula (code entity)
+      > blockquote lines
+      # Heading lines (kept as plain text)
+      [^id] footnote refs (stripped)
+    """
+    import re
+    entities: list = []
+    plain_parts: list[str] = []
+
+    def cur_offset() -> int:
+        return sum(len(p) for p in plain_parts)
+
+    def push(fragment: str, etype: str, extra: dict | None = None) -> None:
+        off = cur_offset()
+        plain_parts.append(fragment)
+        ent: dict = {"_": etype, "offset": off, "length": len(fragment)}
+        if extra:
+            ent.update(extra)
+        entities.append(ent)
+
+    # Pre-process block-level constructs line by line.
+    lines = text.split("\n")
+    processed: list[str] = []
+    in_code = False
+    code_lang = ""
+    code_buf: list[str] = []
+
+    for line in lines:
+        if in_code:
+            if line.strip().startswith("```"):
+                processed.append("\x00PRE\x00" + code_lang + "\x00" + "\n".join(code_buf))
+                in_code = False
+                code_lang = ""
+                code_buf = []
+            else:
+                code_buf.append(line)
+            continue
+
+        s = line.rstrip()
+        if s.startswith("```"):
+            in_code = True
+            code_lang = s[3:].strip()
+            code_buf = []
+            continue
+
+        # block math $$...$$ on its own line
+        if re.match(r'^\$\$(.+)\$\$$', s):
+            formula = re.match(r'^\$\$(.+)\$\$$', s).group(1)
+            processed.append("\x00MATH\x00" + formula)
+            continue
+
+        # blockquote
+        if s.startswith(">"):
+            processed.append("\x00QUOTE\x00" + s[1:].lstrip())
+            continue
+
+        # heading: strip markers, keep content
+        m_h = re.match(r'^#{1,6}\s+(.*)', s)
+        if m_h:
+            processed.append(m_h.group(1))
+            continue
+
+        # horizontal rule
+        if re.match(r'^[-*_]{3,}\s*$', s):
+            continue
+
+        # footnote definitions
+        if re.match(r'^\[\^[^\]]+\]:', s):
+            continue
+
+        processed.append(line)
+
+    if in_code and code_buf:
+        processed.append("\x00PRE\x00" + code_lang + "\x00" + "\n".join(code_buf))
+
+    src = "\n".join(processed)
+
+    INLINE = re.compile(
+        r'(?s)'
+        r'(\x00PRE\x00([^\x00]*)\x00(.*?)(?=\n\x00|\Z))'
+        r'|(\x00MATH\x00([^\n]*))'
+        r'|(\x00QUOTE\x00([^\n]*))'
+        r'|(\|\|(.+?)\|\|)'
+        r'|(==(.+?)==)'
+        r'|(\$\$(.+?)\$\$)'
+        r'|(\$([^$\s][^$\n]*?)\$)'
+        r'|(\*\*(.+?)\*\*)'
+        r'|(__(.+?)__)'
+        r'|(\*([^*\n]+?)\*)'
+        r'|(_([^_\n]+?)_)'
+        r'|(~~(.+?)~~)'
+        r'|(```([a-zA-Z0-9]*)\n(.*?)```)'
+        r'|(`([^`\n]+?)`)'
+        r'|(\[(\^[^\]]+)\](?!\())'
+        r'|(!?\[([^\]]*)\]\(([^)]+)\))'
+    )
+
+    pos = 0
+    for m in INLINE.finditer(src):
+        plain_parts.append(src[pos:m.start()])
+        pos = m.end()
+        g = m.groups()
+
+        if g[0] is not None:
+            push(g[2] or "", "messageEntityPre", {"language": g[1] or ""})
+        elif g[3] is not None:
+            push(g[4] or "", "messageEntityCode")
+        elif g[5] is not None:
+            content = g[6] or ""
+            off = cur_offset()
+            plain_parts.append(content)
+            if content:
+                entities.append({"_": "messageEntityBlockquote", "offset": off, "length": len(content)})
+        elif g[7] is not None:
+            push(g[8], "messageEntitySpoiler")
+        elif g[9] is not None:
+            push(g[10], "messageEntitySpoiler")
+        elif g[11] is not None:
+            push(g[12], "messageEntityCode")
+        elif g[13] is not None:
+            push(g[14], "messageEntityCode")
+        elif g[15] is not None:
+            push(g[16], "messageEntityBold")
+        elif g[17] is not None:
+            push(g[18], "messageEntityBold")
+        elif g[19] is not None:
+            push(g[20], "messageEntityItalic")
+        elif g[21] is not None:
+            push(g[22], "messageEntityItalic")
+        elif g[23] is not None:
+            push(g[24], "messageEntityStrike")
+        elif g[25] is not None:
+            push(g[27] or "", "messageEntityPre", {"language": g[26] or ""})
+        elif g[28] is not None:
+            push(g[29], "messageEntityCode")
+        elif g[30] is not None:
+            pass  # footnote ref stripped
+        elif g[32] is not None:
+            full_m = m.group(0)
+            is_img = full_m.startswith("!")
+            label = g[33] or ""
+            url = (g[34] or "").strip()
+            if is_img:
+                me = re.match(r'tg://emoji\?id=(\d+)', url)
+                if me:
+                    push(label or "\U0001f44d", "messageEntityCustomEmoji",
+                         {"document_id": int(me.group(1))})
+                elif label:
+                    plain_parts.append(label)
+            else:
+                if url.startswith("mailto:"):
+                    push(label, "messageEntityEmail", {"url": url})
+                elif url.startswith("tel:"):
+                    push(label, "messageEntityPhone", {"url": url})
+                elif re.match(r'tg://user\?id=(\d+)', url):
+                    uid = int(re.match(r'tg://user\?id=(\d+)', url).group(1))
+                    push(label, "messageEntityMentionName", {"user_id": uid})
+                else:
+                    push(label, "messageEntityTextUrl", {"url": url})
+
+    plain_parts.append(src[pos:])
+    plain = "".join(plain_parts)
+    # strip any unmatched sentinels
+    plain = re.sub(r'\x00[A-Z]+\x00[^\x00]*\x00?', '', plain)
+    return plain, entities

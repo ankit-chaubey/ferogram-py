@@ -24,7 +24,7 @@ if _main_file:
             "Rename your file to something like 'bot.py', 'main.py', or 'app.py'."
         )
 
-from .client import Client, StopPropagation, ContinuePropagation
+from .client import Client, StopPropagation, ContinuePropagation, TransferHandle, TransferCancelled
 from . import filters
 
 # Session classes stay in Rust
@@ -45,6 +45,7 @@ from .types import (
 
 from .keyboards import InlineButton, InlineKeyboard, ReplyButton, ReplyKeyboard
 from .keyboards import RemoveKeyboard, ForceReply
+from .rich import _RichMixin as _RichMixin  # re-exported for type stubs
 
 from .updates import (
     NewMessage, EditedMessage, MessageDeletion,
@@ -57,6 +58,7 @@ from .updates import (
 __all__ = [
     # Core
     "Client", "filters", "StopPropagation", "ContinuePropagation",
+    "TransferHandle", "TransferCancelled",
     # Session (Rust)
     "FileSession", "MemorySession", "StringSession",
     "SqliteSession", "LibSqlSession", "CustomSession",

@@ -27,29 +27,42 @@ def _make(fn: Callable) -> Filter:
     return fn
 
 
+def _get_msg(m: Any) -> Any:
+    """Unwrap NewMessage/EditedMessage wrapper to the inner Message object."""
+    return getattr(m, "message", m)
+
+def _get_text(m: Any) -> str:
+    return getattr(_get_msg(m), "text", None) or ""
+
+def _get_chat_id(m: Any) -> int | None:
+    return getattr(_get_msg(m), "chat_id", None)
+
+def _get_from_id(m: Any) -> int | None:
+    return getattr(_get_msg(m), "sender_id", None)
+
 
 all       = _make(lambda _: True)
-private   = _make(lambda m: getattr(m, "is_private", None) or (m.from_id is not None and m.chat_id == m.from_id))
-group     = _make(lambda m: getattr(m, "is_group", None) or m.chat_id < 0)
-channel   = _make(lambda m: m.chat_id < 0 and not getattr(m, "from_id", None))
-text      = _make(lambda m: bool(getattr(m, "text", None)))
-photo     = _make(lambda m: getattr(m, "has_photo", False))
-document  = _make(lambda m: getattr(m, "has_document", False))
-media     = _make(lambda m: getattr(m, "has_media", False))
-outgoing  = _make(lambda m: getattr(m, "outgoing", False))
-incoming  = _make(lambda m: not getattr(m, "outgoing", True))
-mentioned = _make(lambda m: getattr(m, "mentioned", False))
-album     = _make(lambda m: getattr(m, "grouped_id", None) is not None)
-reply     = _make(lambda m: getattr(m, "reply_to_message_id", None) is not None)
-forwarded = _make(lambda m: getattr(m, "is_forwarded", False))
-via_bot   = _make(lambda m: getattr(m, "via_bot_id", None) is not None)
-pinned    = _make(lambda m: getattr(m, "pinned", False))
+private   = _make(lambda m: _get_chat_id(m) is not None and _get_chat_id(m) > 0)
+group     = _make(lambda m: (_get_chat_id(m) or 0) < 0)
+channel   = _make(lambda m: (_get_chat_id(m) or 0) < 0 and not _get_from_id(m))
+text      = _make(lambda m: bool(_get_text(m)))
+photo     = _make(lambda m: getattr(_get_msg(m), "has_photo", False))
+document  = _make(lambda m: getattr(_get_msg(m), "has_document", False))
+media     = _make(lambda m: bool(getattr(_get_msg(m), "media", None)))
+outgoing  = _make(lambda m: getattr(_get_msg(m), "out", False))
+incoming  = _make(lambda m: not getattr(_get_msg(m), "out", True))
+mentioned = _make(lambda m: getattr(_get_msg(m), "mentioned", False))
+album     = _make(lambda m: getattr(_get_msg(m), "grouped_id", None) is not None)
+reply     = _make(lambda m: getattr(_get_msg(m), "reply_to_msg_id", None) is not None)
+forwarded = _make(lambda m: getattr(_get_msg(m), "forward_from_id", None) is not None)
+via_bot   = _make(lambda m: getattr(_get_msg(m), "via_bot_id", None) is not None)
+pinned    = _make(lambda m: getattr(_get_msg(m), "pinned", False))
 
 
 def command(*names: str, prefix: str = "/") -> Filter:
     lower = {n.lstrip(prefix).lower() for n in names}
     def check(m: Any) -> bool:
-        t = getattr(m, "text", None) or ""
+        t = _get_text(m)
         if not t.startswith(prefix):
             return False
         cmd = t[len(prefix):].split()[0].split("@")[0].lower()
@@ -60,41 +73,38 @@ def command(*names: str, prefix: str = "/") -> Filter:
 def regex(pattern: str | re.Pattern, flags: int = 0) -> Filter:
     compiled = re.compile(pattern, flags) if isinstance(pattern, str) else pattern
     def check(m: Any) -> bool:
-        t = getattr(m, "text", None) or ""
-        return bool(compiled.search(t))
+        return bool(compiled.search(_get_text(m)))
     return check
 
 
 def text_contains(substr: str, case_sensitive: bool = False) -> Filter:
     sub = substr if case_sensitive else substr.lower()
     def check(m: Any) -> bool:
-        t = getattr(m, "text", None) or ""
+        t = _get_text(m)
         return sub in (t if case_sensitive else t.lower())
     return check
 
 
 def startswith(prefix: str) -> Filter:
     def check(m: Any) -> bool:
-        t = getattr(m, "text", None) or ""
-        return t.startswith(prefix)
+        return _get_text(m).startswith(prefix)
     return check
 
 
 def endswith(suffix: str) -> Filter:
     def check(m: Any) -> bool:
-        t = getattr(m, "text", None) or ""
-        return t.endswith(suffix)
+        return _get_text(m).endswith(suffix)
     return check
 
 
 def user(*user_ids: int) -> Filter:
     ids = set(user_ids)
-    return _make(lambda m: getattr(m, "from_id", None) in ids)
+    return _make(lambda m: _get_from_id(m) in ids)
 
 
 def chat(*chat_ids: int) -> Filter:
     ids = set(chat_ids)
-    return _make(lambda m: getattr(m, "chat_id", None) in ids)
+    return _make(lambda m: _get_chat_id(m) in ids)
 
 
 

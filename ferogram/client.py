@@ -28,6 +28,7 @@ from ._ferogram import (
     SqliteSession, LibSqlSession, CustomSession,
 )
 from .raw import tl as _tl
+from .rich import _RichMixin
 from .raw.generated._tl_schema import _SCHEMA, _SCHEMA_BY_CID, LAYER
 from .raw.proxy import RawProxy, PeerCache, resolve_peer as _resolve_peer_fn
 from .types import (
@@ -38,9 +39,123 @@ from .types import (
 from .updates import wrap_update
 from .keyboards import InlineKeyboard, ReplyKeyboard, RemoveKeyboard, ForceReply
 
-__all__ = ["Client", "StopPropagation", "ContinuePropagation"]
+__all__ = ["Client", "StopPropagation", "ContinuePropagation", "TransferHandle"]
 
 _log = logging.getLogger("ferogram")
+
+
+class TransferHandle:
+    """Pause / resume / cancel control for upload and download operations.
+
+    Mirrors ferogram's Rust TransferHandle. Create one, optionally pass it to
+    upload_file / download_media / upload_with_progress / download_with_progress,
+    and call pause() / resume() / cancel() from any coroutine or thread.
+
+    Progress is read via .progress() which returns a dict with keys:
+        done       - bytes transferred so far
+        total      - total bytes (0 if unknown)
+        elapsed_ms - milliseconds elapsed since transfer started
+        percent    - completion 0.0-100.0
+        speed_bps  - bytes per second
+        eta_secs   - estimated seconds remaining
+        speed_human - e.g. "1.4 MB/s"
+        bytes_human - e.g. "12.3 MB / 50.0 MB"
+
+    Example::
+
+        handle = TransferHandle()
+        asyncio.get_event_loop().call_later(10, handle.cancel)
+        await client.upload_with_progress("big.mp4", on_progress=lambda d, t: print(f"{d}/{t}"), handle=handle)
+    """
+
+    def __init__(self) -> None:
+        import time
+        self._paused    = False
+        self._cancelled = False
+        self._done      = 0
+        self._total     = 0
+        self._start_ms  = int(time.time() * 1000)
+
+    def pause(self) -> None:
+        """Pause after the current chunk finishes."""
+        self._paused = True
+
+    def resume(self) -> None:
+        """Resume a paused transfer."""
+        self._paused = False
+
+    def cancel(self) -> None:
+        """Cancel the transfer. The worker raises TransferCancelled after the current chunk."""
+        self._cancelled = True
+
+    def is_paused(self) -> bool:
+        return self._paused
+
+    def is_cancelled(self) -> bool:
+        return self._cancelled
+
+    def progress(self) -> dict:
+        import time
+        now_ms   = int(time.time() * 1000)
+        elapsed  = max(now_ms - self._start_ms, 1)
+        done     = self._done
+        total    = self._total
+        elapsed_s = elapsed / 1000.0
+        speed    = int(done / elapsed_s) if elapsed_s > 0 else 0
+        pct      = (done / total * 100.0) if total > 0 else 0.0
+        eta      = int((total - done) / speed) if speed > 0 and done < total else 0
+
+        if speed >= 1024 * 1024:
+            speed_h = f"{speed / (1024 * 1024):.1f} MB/s"
+        elif speed >= 1024:
+            speed_h = f"{speed / 1024:.1f} KB/s"
+        else:
+            speed_h = f"{speed} B/s"
+
+        def _fmt(b: int) -> str:
+            if b >= 1024 ** 3:
+                return f"{b / 1024**3:.1f} GB"
+            if b >= 1024 ** 2:
+                return f"{b / 1024**2:.1f} MB"
+            if b >= 1024:
+                return f"{b / 1024:.1f} KB"
+            return f"{b} B"
+
+        return {
+            "done":        done,
+            "total":       total,
+            "elapsed_ms":  elapsed,
+            "percent":     min(pct, 100.0),
+            "speed_bps":   speed,
+            "eta_secs":    eta,
+            "speed_human": speed_h,
+            "bytes_human": f"{_fmt(done)} / {_fmt(total)}",
+        }
+
+    # Internal helpers used by Client methods
+    def _set_total(self, total: int) -> None:
+        self._total = total
+
+    def _add_bytes(self, n: int) -> None:
+        self._done += n
+
+    def _reset_start(self) -> None:
+        import time
+        self._start_ms = int(time.time() * 1000)
+        self._done = 0
+
+    async def _poll_pause_cancel(self) -> None:
+        """Yield to the event loop while paused; raise if cancelled."""
+        while True:
+            if self._cancelled:
+                raise TransferCancelled("transfer cancelled by caller")
+            if not self._paused:
+                return
+            await asyncio.sleep(0.1)
+
+
+class TransferCancelled(Exception):
+    """Raised when a TransferHandle is cancelled during upload or download."""
 
 _Handler = tuple[Callable, list[Callable]]
 
@@ -52,15 +167,29 @@ _SYSTEM_LANG     = "en"
 _LANG_PACK       = ""
 
 # invokeWithLayer / initConnection / help.getConfig constructor IDs (not in api.tl schema)
-_CID_INVOKE_WITH_LAYER = 0xda9b0d0d
-_CID_INIT_CONNECTION   = 0xc1cd5ea9
-_CID_HELP_GET_CONFIG   = 0xc4f9186b
+_CID_INVOKE_WITH_LAYER     = 0xda9b0d0d
+_CID_INIT_CONNECTION       = 0xc1cd5ea9
+_CID_HELP_GET_CONFIG       = 0xc4f9186b
+_CID_IMPORT_AUTHORIZATION  = 0xa57a7dad
 
 
 def _pack_u32(v: int) -> bytes: return struct.pack("<I", v & 0xFFFFFFFF)
 def _pack_i32(v: int) -> bytes: return struct.pack("<i", v)
+def _pack_i64(v: int) -> bytes: return struct.pack("<q", v)
 def _pack_str(s: str)  -> bytes:
     b = s.encode()
+    n = len(b)
+    if n <= 253:
+        header = bytes([n])
+        pad = (4 - (n + 1) % 4) % 4
+    else:
+        header = bytes([254, n & 0xFF, (n >> 8) & 0xFF, (n >> 16) & 0xFF])
+        pad = (4 - n % 4) % 4
+    return header + b + b"\x00" * pad
+
+
+def _pack_bytes(b: bytes) -> bytes:
+    # TL "bytes" uses the same length-prefixed/padded wire format as "string".
     n = len(b)
     if n <= 253:
         header = bytes([n])
@@ -100,6 +229,11 @@ def _build_help_get_config() -> bytes:
     return _pack_u32(_CID_HELP_GET_CONFIG)
 
 
+def _build_import_authorization(id_: int, bytes_: bytes) -> bytes:
+    # auth.importAuthorization#a57a7dad id:long bytes:bytes = auth.Authorization
+    return _pack_u32(_CID_IMPORT_AUTHORIZATION) + _pack_i64(id_) + _pack_bytes(bytes_)
+
+
 class StopPropagation(Exception):
     """Raise inside a handler to stop processing all further handlers for this update."""
 
@@ -134,7 +268,7 @@ _VOICE_MIME   = "audio/ogg"
 _STICKER_MIME = "image/webp"
 
 
-class Client:
+class Client(_RichMixin):
     def __init__(
         self,
         session: "str | FileSession | MemorySession | StringSession | SqliteSession | LibSqlSession | CustomSession" = "ferogram",
@@ -198,6 +332,16 @@ class Client:
         self._workers                 = workers
         self._flood_sleep_threshold   = flood_sleep_threshold
         self._conn: DcConnection | None = None
+        self._dc_id: int = 0
+        # DCs we've already bound a worker connection's auth key to via
+        # auth.importAuthorization this process run (export tokens are
+        # single-use, so this is only ever done once per foreign DC).
+        self._auth_imported_dcs: set[int] = set()
+        # DcConnection.connect() loads + saves the session file on every
+        # call. Worker connections for parallel transfers are opened one at
+        # a time under this lock so two opens can't race that load/save
+        # cycle and clobber each other's auth key entries.
+        self._worker_conn_lock = asyncio.Lock()
         self._handlers: dict[str, dict[int, list[_Handler]]] = {
             e: {} for e in _ALL_EVENTS
         }
@@ -548,17 +692,78 @@ class Client:
         await self._init_connection()
         _log.info("migrated to DC%d", dc_id)
 
-    async def _init_connection(self) -> None:
-        api_id, api_hash = self._require_creds()
-        inner = _build_help_get_config()
-        init  = _build_init_connection(
+    async def _init_connection_on(self, conn: "DcConnection", inner: bytes | None = None) -> dict:
+        """Send invokeWithLayer(initConnection(...)) on an arbitrary connection.
+
+        `inner` defaults to help.getConfig (the normal registration query).
+        Pass a different pre-serialized inner query (e.g.
+        auth.importAuthorization) to combine connection registration with
+        authorization binding in a single round trip -- the same thing
+        ferogram's Rust core does in `Client::open_worker_conn`.
+        """
+        api_id, _ = self._require_creds()
+        if inner is None:
+            inner = _build_help_get_config()
+        init = _build_init_connection(
             api_id, self.device, self.system_version, self.app_version,
             self.system_lang_code, self.lang_pack, self.lang_code, inner,
         )
         wrapped = _build_invoke_with_layer(LAYER, init)
-        conn = self._require_conn()
         resp_bytes = await conn.rpc_call(wrapped)
-        _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)  # Config - parsed for DC info
+        return _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+
+    async def _init_connection(self) -> None:
+        await self._init_connection_on(self._require_conn())
+
+    def _session_backend(self):
+        """Resolve self.session into a concrete session backend object."""
+        session = self.session
+        if self.session_string:
+            return StringSession(self.session_string)
+        if isinstance(session, str):
+            path = session if session.endswith(".session") else session + ".session"
+            return FileSession(path)
+        return session
+
+    async def _open_worker_conn(self, dc_id: int | None = None) -> "DcConnection":
+        """Open an independent, fully-authorized DcConnection to `dc_id`.
+
+        This is what makes parallel transfers actually parallel: each
+        worker gets its own socket and its own `rpc_call`, so concurrent
+        calls never contend on the lock inside a single shared
+        DcConnection. Mirrors ferogram's Rust `Client::open_worker_conn`.
+
+        - Same DC as the home connection: reuses the cached home auth key.
+          No DH, no authorization step.
+        - A different DC: reuses a cached key for that DC if the session
+          already has one, otherwise performs a fresh DH. Either way the
+          resulting connection is bound to the account via
+          auth.exportAuthorization / auth.importAuthorization unless this
+          DC was already bound earlier in this run (export tokens are
+          single-use, so that binding only ever happens once per DC per
+          process).
+        """
+        api_id, api_hash = self._require_creds()
+        target_dc = dc_id or self._dc_id
+        session = self._session_backend()
+
+        # DcConnection.connect() persists to the session backend on every
+        # call. Serialize opens so concurrent worker startups can't
+        # load+save the session file at the same time and clobber each
+        # other's entries; this only costs one handshake's worth of
+        # latency at transfer setup, not per-chunk.
+        async with self._worker_conn_lock:
+            conn = await DcConnection.connect(session, api_id, api_hash, target_dc)
+
+            if target_dc == self._dc_id or target_dc in self._auth_imported_dcs:
+                await self._init_connection_on(conn)
+                return conn
+
+            export = await self._rpc({"_": "auth.exportAuthorization", "dc_id": target_dc})
+            inner = _build_import_authorization(export["id"], export["bytes"])
+            await self._init_connection_on(conn, inner=inner)
+            self._auth_imported_dcs.add(target_dc)
+            return conn
 
     async def _resolve_peer(self, peer: Any) -> dict:
         return await _resolve_peer_fn(self, peer)
@@ -618,6 +823,7 @@ class Client:
 
         _log.info("connecting (session=%r)", repr(session))
         self._conn = await DcConnection.connect(session, api_id, api_hash)
+        self._dc_id = self._conn.dc_id
         await self._init_connection()
         if not await self.is_authorized():
             if self.bot_token:
@@ -674,7 +880,8 @@ class Client:
         return await self.start()
 
     async def __aexit__(self, *_: Any) -> None:
-        pass
+        if self._conn:
+            self._conn = None
 
 
     async def is_authorized(self) -> bool:
@@ -792,15 +999,26 @@ class Client:
     async def send_to_self(self, text: str) -> None:
         await self.send_message("me", text)
 
-    async def edit_message(self, peer: str, message_id: int, new_text: str) -> None:
+    async def edit_message(self, peer: str, message_id: int, new_text: str, *,
+                           parse_mode: str | None = None) -> None:
+        pm = self._resolve_pm(parse_mode)
+        if pm in ("markdown", "md"):
+            plain, entities = _tl.parse_markdown(new_text)
+        elif pm == "html":
+            plain, entities = _tl.parse_html(new_text)
+        else:
+            plain, entities = new_text, []
         input_peer = await self._resolve_peer(peer)
-        await self._rpc({
+        req: dict = {
             "_": "messages.editMessage",
             "peer": input_peer,
             "id": message_id,
-            "message": new_text,
+            "message": plain,
             "no_webpage": True,
-        })
+        }
+        if entities:
+            req["entities"] = entities
+        await self._rpc(req)
 
     async def delete_message(self, message_id: int, revoke: bool = True) -> None:
         await self.delete_messages([message_id], revoke)
@@ -958,10 +1176,6 @@ class Client:
         })
         return result.get("messages", []) if isinstance(result, dict) else []
 
-    async def delete_dialog(self, peer: str) -> None:
-        input_peer = await self._resolve_peer(peer)
-        await self._rpc({"_": "messages.deleteHistory", "peer": input_peer, "max_id": 0, "revoke": False})
-
     async def get_pinned_message(self, peer: str) -> dict | None:
         input_peer = await self._resolve_peer(peer)
         result = await self._rpc({
@@ -1070,12 +1284,13 @@ class Client:
         votes = result.get("votes", []) if isinstance(result, dict) else []
         return [(v.get("user_id", 0), v.get("option", b"")) for v in votes]
 
-    async def get_poll_results(self, peer: str, msg_id: int, poll_hash: int = 0) -> None:
+    async def get_poll_results(self, peer: str, msg_id: int, poll_hash: int = 0) -> dict:
         input_peer = await self._resolve_peer(peer)
-        await self._rpc({"_": "messages.getPollResults", "peer": input_peer, "msg_id": msg_id})
+        result = await self._rpc({"_": "messages.getPollResults", "peer": input_peer, "msg_id": msg_id})
+        return result if isinstance(result, dict) else {}
 
-    async def poll_results(self, peer: str, msg_id: int) -> str:
-        return await self.get_poll_stats(peer, msg_id)
+    async def poll_results(self, peer: str, msg_id: int) -> dict:
+        return await self.get_poll_results(peer, msg_id)
 
     async def get_poll_stats(self, peer: str, msg_id: int) -> str:
         input_peer = await self._resolve_peer(peer)
@@ -1116,8 +1331,20 @@ class Client:
             out.append((peer_id, emoji))
         return out
 
-    async def delete_reaction(self, peer: str, msg_id: int, participant: str) -> None:
-        pass  # no direct TL for removing another user's reaction
+    async def delete_reaction(self, peer: str, msg_id: int) -> None:
+        """Remove your own reaction from a message.
+
+        MTProto has no method to remove another user's reaction.
+        Sends messages.sendReaction with an empty reaction list, which
+        clears the calling user's reaction on the given message.
+        """
+        input_peer = await self._resolve_peer(peer)
+        await self._rpc({
+            "_": "messages.sendReaction",
+            "peer": input_peer,
+            "msg_id": msg_id,
+            "reaction": [],
+        })
 
 
     async def get_dialogs(self, limit: int = 100) -> list[dict]:
@@ -1165,8 +1392,7 @@ class Client:
         await self._rpc({"_": "messages.toggleDialogPin", "peer": {"_": "inputDialogPeer", "peer": input_peer}, "pinned": False})
 
     async def delete_dialog(self, peer: str) -> None:
-        input_peer = await self._resolve_peer(peer)
-        await self._rpc({"_": "messages.deleteHistory", "peer": input_peer, "max_id": 0, "revoke": False})
+        await self.delete_chat_history(peer, max_id=0, revoke=False)
 
     async def delete_chat_history(self, peer: str, max_id: int = 0, revoke: bool = False) -> None:
         input_peer = await self._resolve_peer(peer)
@@ -1428,30 +1654,50 @@ class Client:
         await self._rpc({"_": "channels.deleteTopicHistory", "channel": input_peer, "top_msg_id": top_msg_id})
 
 
-    async def send_photo(self, peer: str, path: str, caption: str = "") -> dict:
+    async def send_photo(self, peer: str, path: str, caption: str = "", *,
+                         parse_mode: str | None = None) -> dict:
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
+        pm = self._resolve_pm(parse_mode)
+        if pm in ("markdown", "md"):
+            plain_cap, cap_entities = _tl.parse_markdown(caption)
+        elif pm == "html":
+            plain_cap, cap_entities = _tl.parse_html(caption)
+        else:
+            plain_cap, cap_entities = caption, []
         input_peer = await self._resolve_peer(peer)
         file_input = await self.upload_file(path)
-        return await self._rpc({
+        req: dict = {
             "_": "messages.sendMedia",
             "peer": input_peer,
             "media": {"_": "inputMediaUploadedPhoto", "file": file_input},
-            "message": caption,
+            "message": plain_cap,
             "random_id": random.randint(-(2**63), 2**63 - 1),
-        })
+        }
+        if cap_entities:
+            req["entities"] = cap_entities
+        return await self._rpc(req)
 
-    async def send_file(self, peer: str, path: str, caption: str = "", mime_type: str | None = None) -> dict:
-        return await self.send_document(peer, path, caption, mime_type)
+    async def send_file(self, peer: str, path: str, caption: str = "", mime_type: str | None = None, *,
+                        parse_mode: str | None = None) -> dict:
+        return await self.send_document(peer, path, caption, mime_type, parse_mode=parse_mode)
 
-    async def send_document(self, peer: str, path: str, caption: str = "", mime_type: str | None = None) -> dict:
+    async def send_document(self, peer: str, path: str, caption: str = "", mime_type: str | None = None, *,
+                             parse_mode: str | None = None) -> dict:
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
+        pm = self._resolve_pm(parse_mode)
+        if pm in ("markdown", "md"):
+            plain_cap, cap_entities = _tl.parse_markdown(caption)
+        elif pm == "html":
+            plain_cap, cap_entities = _tl.parse_html(caption)
+        else:
+            plain_cap, cap_entities = caption, []
         input_peer = await self._resolve_peer(peer)
         file_input = await self.upload_file(path)
         if mime_type is None:
             mime_type = "application/octet-stream"
-        return await self._rpc({
+        req: dict = {
             "_": "messages.sendMedia",
             "peer": input_peer,
             "media": {
@@ -1460,9 +1706,12 @@ class Client:
                 "mime_type": mime_type,
                 "attributes": [{"_": "documentAttributeFilename", "file_name": os.path.basename(path)}],
             },
-            "message": caption,
+            "message": plain_cap,
             "random_id": random.randint(-(2**63), 2**63 - 1),
-        })
+        }
+        if cap_entities:
+            req["entities"] = cap_entities
+        return await self._rpc(req)
 
     async def send_audio(self, peer: str, path: str, caption: str = "") -> dict:
         if not os.path.isfile(path):
@@ -1484,63 +1733,301 @@ class Client:
             raise FileNotFoundError(f"No such file: {path!r}")
         return await self.send_document(peer, path, "", _STICKER_MIME)
 
-    async def upload_file(self, path: str) -> dict:
-        PART_SIZE     = 512 * 1024
+    # Transfer helpers (mirrors ferogram Rust: part sizes, workers, progress)
+
+    @staticmethod
+    def _upload_part_size(file_size: int) -> tuple[int, int]:
+        """Choose part size and total parts matching ferogram's upload_part_size()."""
+        if file_size < 1024 * 1024:
+            ps = 32 * 1024
+        elif file_size < 32 * 1024 * 1024:
+            ps = 64 * 1024
+        elif file_size < 512 * 1024 * 1024:
+            ps = 128 * 1024
+        elif file_size < 1024 * 1024 * 1024:
+            ps = 256 * 1024
+        else:
+            ps = 512 * 1024
+        total_parts = (file_size + ps - 1) // ps
+        if total_parts > 4000:
+            ps = (file_size + 3999) // 4000
+            ps = ((ps + 511) // 512) * 512
+            total_parts = (file_size + ps - 1) // ps
+        return ps, total_parts
+
+    @staticmethod
+    def _upload_worker_count(file_size: int) -> int:
+        """Mirrors ferogram upload_worker_count(). Hard ceiling: 4."""
+        if file_size < 10 * 1024 * 1024:
+            return 1
+        if file_size < 100 * 1024 * 1024:
+            return 2
+        if file_size < 500 * 1024 * 1024:
+            return 3
+        return 4
+
+    @staticmethod
+    def _download_chunk_size(file_size: int) -> int:
+        """Mirrors ferogram download_chunk_size()."""
+        if file_size < 50 * 1024 * 1024:
+            return 256 * 1024
+        if file_size < 500 * 1024 * 1024:
+            return 512 * 1024
+        return 1024 * 1024
+
+    @staticmethod
+    def _download_worker_count(file_size: int) -> int:
+        """Mirrors ferogram download_worker_count(). Hard ceiling: 4."""
+        if file_size < 10 * 1024 * 1024:
+            return 1
+        if file_size < 50 * 1024 * 1024:
+            return 2
+        if file_size < 300 * 1024 * 1024:
+            return 3
+        return 4
+
+    @staticmethod
+    def _detect_mime(path: str) -> str:
+        """Detect MIME from magic bytes (first 64 bytes) then fall back to extension."""
+        import mimetypes
+        header = b""
+        try:
+            with open(path, "rb") as fh:
+                header = fh.read(64)
+        except OSError:
+            pass
+        # Magic byte detection for common types
+        sigs: list[tuple[bytes, str]] = [
+            (b"\x89PNG",           "image/png"),
+            (b"\xff\xd8\xff",      "image/jpeg"),
+            (b"GIF8",              "image/gif"),
+            (b"RIFF",              "video/webm"),    # may also be WAV; refined below
+            (b"\x1aE\xdf\xa3",    "video/webm"),
+            (b"ftyp",              "video/mp4"),     # at offset 4
+            (b"\x00\x00\x00\x18ftyp", "video/mp4"),
+            (b"\x00\x00\x00\x1cftyp", "video/mp4"),
+            (b"OggS",              "video/ogg"),
+            (b"ID3",               "audio/mpeg"),
+            (b"\xff\xfb",         "audio/mpeg"),
+            (b"\xff\xf3",         "audio/mpeg"),
+            (b"OggS",              "audio/ogg"),
+            (b"fLaC",             "audio/flac"),
+            (b"WAVE",              "audio/wav"),     # RIFF....WAVE
+            (b"%PDF",              "application/pdf"),
+            (b"PK\x03\x04",       "application/zip"),
+            (b"\x1f\x8b",         "application/gzip"),
+            (b"BZh",               "application/x-bzip2"),
+            (b"\xfd7zXZ",         "application/x-xz"),
+            (b"7z\xbc\xaf'\x1c", "application/x-7z-compressed"),
+            (b"Rar!",              "application/x-rar-compressed"),
+            (b"\x89PNG",          "image/png"),
+            (b"WEBP",              "image/webp"),    # RIFF....WEBP at offset 8
+        ]
+        for sig, mime in sigs:
+            if header.startswith(sig):
+                # Distinguish RIFF WAV vs WebM/WebP
+                if sig == b"RIFF" and len(header) >= 12:
+                    sub = header[8:12]
+                    if sub == b"WEBP":
+                        return "image/webp"
+                    if sub == b"WAVE":
+                        return "audio/wav"
+                return mime
+            if sig == b"ftyp" and len(header) >= 8 and header[4:8] == b"ftyp":
+                return "video/mp4"
+        # RIFF with unknown sub-type - check extension
+        if header[8:12] == b"WAVE":
+            return "audio/wav"
+        # Extension fallback
+        guessed, _ = mimetypes.guess_type(path)
+        return guessed or "application/octet-stream"
+
+    async def upload_file(self, path: str, *, handle: "TransferHandle | None" = None) -> dict:
+        """Upload a file using independent parallel worker connections.
+
+        Each worker opens its own authorized DcConnection (see
+        `_open_worker_conn`) so concurrent parts genuinely pipeline on
+        separate sockets instead of all contending for one connection's
+        internal lock the way a single shared connection would. Part sizes
+        and worker counts match ferogram's Rust core. Supports pause,
+        resume, and cancel via a TransferHandle. Small files (<10 MB) use a
+        single worker; large files use up to 4 concurrent workers.
+
+        Note: unlike ferogram's Rust `upload_file_concurrent`, a FILE_MIGRATE
+        mid-upload is not handled here -- it would require redirecting every
+        worker to the new DC in lockstep, which adds real complexity for an
+        edge case that's rare on `upload.saveFilePart`/`saveBigFilePart`. If
+        you hit it in practice, open an issue and we can add it.
+
+        Returns an inputFile or inputFileBig dict ready to pass to sendMedia.
+        """
         BIG_THRESHOLD = 10 * 1024 * 1024
-        file_id   = random.randint(-(2**63), 2**63 - 1)
+
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"No such file: {path!r}")
+
         file_name = os.path.basename(path)
         file_size = os.path.getsize(path)
         is_big    = file_size >= BIG_THRESHOLD
-        parts     = (file_size + PART_SIZE - 1) // PART_SIZE
-        md5       = hashlib.md5()
+        part_size, total_parts = self._upload_part_size(file_size)
+        n_workers  = max(1, min(self._upload_worker_count(file_size), total_parts))
+        file_id    = random.randint(-(2**63), 2**63 - 1)
+        md5        = hashlib.md5() if not is_big else None
+
+        if handle is not None:
+            handle._set_total(file_size)
+            handle._reset_start()
+
+        # Read all chunks up front into a slot list so workers can index directly.
+        # For very large files this would be memory-heavy; in that case the Rust
+        # side streams from disk. Here we chunk lazily but hold references so
+        # parallel workers can re-read on retry without reopening the file.
+        chunks: list[bytes] = []
         with open(path, "rb") as fh:
-            for part_idx in range(parts):
-                chunk = fh.read(PART_SIZE)
-                if is_big:
-                    req = {"_": "upload.saveBigFilePart", "file_id": file_id,
-                           "file_part": part_idx, "file_total_parts": parts, "bytes": chunk}
-                else:
+            while True:
+                chunk = fh.read(part_size)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                if md5 is not None:
                     md5.update(chunk)
-                    req = {"_": "upload.saveFilePart", "file_id": file_id,
-                           "file_part": part_idx, "bytes": chunk}
-                ok = await self._rpc(req)
-                if not ok:
-                    raise RuntimeError(f"upload_file: part {part_idx} rejected")
+
+        # Open independent worker connections (sequentially -- see
+        # _open_worker_conn for why). Falls back to the home connection
+        # alone if no extra workers could be opened at all.
+        conns: list[DcConnection] = []
+        for _ in range(n_workers):
+            try:
+                conns.append(await self._open_worker_conn(self._dc_id))
+            except Exception as e:
+                _log.warning(
+                    "upload_file: worker connection failed, continuing with %d worker(s): %s",
+                    max(len(conns), 1), e,
+                )
+                break
+        if not conns:
+            conns = [self._require_conn()]
+
+        next_part = 0
+        next_part_lock = asyncio.Lock()
+
+        async def upload_part_on(conn: "DcConnection", part_idx: int, chunk: bytes) -> None:
+            MAX_ATTEMPTS = 5
+            delay = 1.0
+            for attempt in range(MAX_ATTEMPTS):
+                if handle is not None:
+                    await handle._poll_pause_cancel()
+                try:
+                    if is_big:
+                        req = {
+                            "_": "upload.saveBigFilePart",
+                            "file_id": file_id,
+                            "file_part": part_idx,
+                            "file_total_parts": total_parts,
+                            "bytes": chunk,
+                        }
+                    else:
+                        req = {
+                            "_": "upload.saveFilePart",
+                            "file_id": file_id,
+                            "file_part": part_idx,
+                            "bytes": chunk,
+                        }
+                    req_bytes  = _tl.serialize(req, _SCHEMA)
+                    resp_bytes = await conn.rpc_call(req_bytes)
+                    ok = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+                    if not ok:
+                        raise RuntimeError(f"upload_file: part {part_idx} rejected by server")
+                    if handle is not None:
+                        handle._add_bytes(len(chunk))
+                    return
+                except Exception as e:
+                    if attempt == MAX_ATTEMPTS - 1:
+                        raise
+                    _log.warning(
+                        "upload_file: part %d failed (attempt %d/%d): %s — retrying in %.1fs",
+                        part_idx, attempt + 1, MAX_ATTEMPTS, e, delay,
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, 30.0)
+
+        async def worker(conn: "DcConnection") -> None:
+            nonlocal next_part
+            while True:
+                async with next_part_lock:
+                    if next_part >= total_parts:
+                        return
+                    idx = next_part
+                    next_part += 1
+                await upload_part_on(conn, idx, chunks[idx])
+
+        await asyncio.gather(*[worker(c) for c in conns])
+
         if is_big:
-            return {"_": "inputFileBig", "id": file_id, "parts": parts, "name": file_name}
-        return {"_": "inputFile", "id": file_id, "parts": parts, "name": file_name, "md5_checksum": md5.hexdigest()}
+            return {"_": "inputFileBig", "id": file_id, "parts": total_parts, "name": file_name}
+        return {
+            "_": "inputFile",
+            "id": file_id,
+            "parts": total_parts,
+            "name": file_name,
+            "md5_checksum": md5.hexdigest() if md5 else "",  # type: ignore[union-attr]
+        }
 
     async def upload_media(self, peer: str, path: str) -> int | None:
         result = await self.send_document(peer, path)
         msg = result.get("updates", [{}])[0] if isinstance(result.get("updates"), list) else {}
         return msg.get("id")
 
-    async def download_media(self, peer: str, msg_id: int, path: str) -> str:
+    async def download_media(self, peer: str, msg_id: int, path: str, *,
+                             handle: "TransferHandle | None" = None) -> str:
+        """Download media from a message to a local file.
+
+        Uses independent parallel worker connections opened directly on the
+        DC the media actually lives on (its `dc_id` field, which is often
+        not the home DC) and adaptive chunk sizes matching ferogram's Rust
+        download implementation. Supports pause, resume, and cancel via
+        handle.
+        """
         msg = await self.get_message(peer, msg_id)
         if not msg:
             raise ValueError(f"Message {msg_id} not found")
         media = msg.get("media", {})
-        return await self._download_media_object(media, path)
+        return await self._download_media_object(media, path, handle=handle)
 
-    async def _download_media_object(self, media: dict, path: str) -> str:
+    async def _download_media_object(self, media: dict, path: str, *,
+                                      handle: "TransferHandle | None" = None) -> str:
         if not isinstance(media, dict):
             raise ValueError("No media in message")
         t = media.get("_", "")
+        file_size = 0
+        media_dc_id = self._dc_id
+
         if t == "messageMediaPhoto":
             photo = media.get("photo", {})
             sizes = photo.get("sizes", [])
             if not sizes:
                 raise ValueError("Photo has no sizes")
-            size = max(sizes, key=lambda s: s.get("size", 0) if isinstance(s, dict) else 0)
+            best = max(
+                (s for s in sizes if isinstance(s, dict)),
+                key=lambda s: s.get("size", 0),
+                default=None,
+            )
+            if best is None:
+                raise ValueError("Photo has no valid size entry")
+            file_size = best.get("size", 0)
+            media_dc_id = photo.get("dc_id") or self._dc_id
             location = {
                 "_": "inputPhotoFileLocation",
                 "id": photo.get("id", 0),
                 "access_hash": photo.get("access_hash", 0),
                 "file_reference": photo.get("file_reference", b""),
-                "thumb_size": size.get("type", "s") if isinstance(size, dict) else "s",
+                "thumb_size": best.get("type", "s"),
             }
+
         elif t == "messageMediaDocument":
             doc = media.get("document", {})
+            file_size = doc.get("size", 0)
+            media_dc_id = doc.get("dc_id") or self._dc_id
             location = {
                 "_": "inputDocumentFileLocation",
                 "id": doc.get("id", 0),
@@ -1548,35 +2035,216 @@ class Client:
                 "file_reference": doc.get("file_reference", b""),
                 "thumb_size": "",
             }
+
         else:
-            raise ValueError(f"Unsupported media type: {t}")
-        offset = 0
-        chunk_size = 1024 * 1024
-        with open(path, "wb") as fh:
-            while True:
-                result = await self._rpc({
-                    "_": "upload.getFile",
-                    "location": location,
-                    "offset": offset,
-                    "limit": chunk_size,
-                })
-                data = result.get("bytes", b"") if isinstance(result, dict) else b""
-                if not data:
+            raise ValueError(f"Unsupported media type: {t!r}")
+
+        chunk_size = self._download_chunk_size(file_size)
+        n_workers  = self._download_worker_count(file_size)
+        total_parts = max(1, (file_size + chunk_size - 1) // chunk_size) if file_size > 0 else None
+
+        if handle is not None:
+            handle._set_total(file_size)
+            handle._reset_start()
+
+        async def open_conn_for(dc_id: int) -> "DcConnection":
+            if dc_id == self._dc_id:
+                return self._require_conn()
+            return await self._open_worker_conn(dc_id)
+
+        if total_parts is not None and total_parts > 1 and n_workers > 1:
+            n_workers = min(n_workers, total_parts)
+
+            # Open independent worker connections directly on the DC the
+            # media lives on (sequentially -- see _open_worker_conn).
+            conns: list[DcConnection] = []
+            for _ in range(n_workers):
+                try:
+                    conns.append(await self._open_worker_conn(media_dc_id))
+                except Exception as e:
+                    _log.warning(
+                        "download: worker connection to DC%d failed, continuing with %d worker(s): %s",
+                        media_dc_id, max(len(conns), 1), e,
+                    )
                     break
-                fh.write(data)
-                offset += len(data)
-                if len(data) < chunk_size:
-                    break
+            if not conns:
+                conns = [await open_conn_for(media_dc_id)]
+
+            parts_buf: list[bytes | None] = [None] * total_parts
+            next_part = 0
+            next_part_lock = asyncio.Lock()
+
+            async def fetch_part_on(conn: "DcConnection", part_idx: int) -> "DcConnection":
+                offset = part_idx * chunk_size
+                MAX_ATTEMPTS = 5
+                delay = 1.0
+                attempt = 0
+                while True:
+                    if handle is not None:
+                        await handle._poll_pause_cancel()
+                    try:
+                        req_bytes = _tl.serialize({
+                            "_": "upload.getFile",
+                            "location": location,
+                            "offset": offset,
+                            "limit": chunk_size,
+                        }, _SCHEMA)
+                        resp_bytes = await conn.rpc_call(req_bytes)
+                        result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+                        data = result.get("bytes", b"") if isinstance(result, dict) else b""
+                        parts_buf[part_idx] = data
+                        if handle is not None:
+                            handle._add_bytes(len(data))
+                        return conn
+                    except Exception as e:
+                        new_dc = _parse_migrate(str(e)) if isinstance(e, RuntimeError) else None
+                        if new_dc is not None:
+                            _log.info(
+                                "download: FILE_MIGRATE_%d for part %d, reopening worker on new DC",
+                                new_dc, part_idx,
+                            )
+                            conn = await self._open_worker_conn(new_dc)
+                            continue  # migrate redirects don't consume a retry attempt
+                        attempt += 1
+                        if attempt >= MAX_ATTEMPTS:
+                            raise
+                        _log.warning(
+                            "download: part %d failed (attempt %d/%d): %s — retrying in %.1fs",
+                            part_idx, attempt, MAX_ATTEMPTS, e, delay,
+                        )
+                        await asyncio.sleep(delay)
+                        delay = min(delay * 2, 30.0)
+
+            async def worker(conn: "DcConnection") -> None:
+                nonlocal next_part
+                cur_conn = conn
+                while True:
+                    async with next_part_lock:
+                        if next_part >= total_parts:
+                            return
+                        idx = next_part
+                        next_part += 1
+                    cur_conn = await fetch_part_on(cur_conn, idx)
+
+            await asyncio.gather(*[worker(c) for c in conns])
+
+            with open(path, "wb") as fh:
+                for part in parts_buf:
+                    if part:
+                        fh.write(part)
+        else:
+            # Sequential path: unknown size or single worker. Still uses the
+            # media's actual DC, not blindly the home connection.
+            conn = await open_conn_for(media_dc_id)
+            offset = 0
+            with open(path, "wb") as fh:
+                while True:
+                    if handle is not None:
+                        await handle._poll_pause_cancel()
+                    req_bytes = _tl.serialize({
+                        "_": "upload.getFile",
+                        "location": location,
+                        "offset": offset,
+                        "limit": chunk_size,
+                    }, _SCHEMA)
+                    try:
+                        resp_bytes = await conn.rpc_call(req_bytes)
+                    except RuntimeError as e:
+                        new_dc = _parse_migrate(str(e))
+                        if new_dc is not None:
+                            conn = await self._open_worker_conn(new_dc)
+                            continue
+                        raise
+                    result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+                    data = result.get("bytes", b"") if isinstance(result, dict) else b""
+                    if not data:
+                        break
+                    fh.write(data)
+                    if handle is not None:
+                        handle._add_bytes(len(data))
+                    offset += len(data)
+                    if len(data) < chunk_size:
+                        break
+
         return path
 
-    async def download_with_progress(self, peer: str, msg_id: int, path: str,
-                                      on_progress: "Callable[[int, int], None] | None" = None) -> str:
-        return await self.download_media(peer, msg_id, path)
+    async def download_with_progress(
+        self,
+        peer: str,
+        msg_id: int,
+        path: str,
+        on_progress: "Callable[[int, int], None] | None" = None,
+        *,
+        handle: "TransferHandle | None" = None,
+    ) -> str:
+        """Download media with an optional per-second progress callback.
 
-    async def upload_with_progress(self, path: str,
-                                    on_progress: "Callable[[int, int], None] | None" = None) -> str:
-        result = await self.upload_file(path)
-        return str(result.get("id", ""))
+        on_progress(bytes_done, total_bytes) is called once per second while
+        downloading. Pass a TransferHandle to pause, resume, or cancel.
+        """
+        if handle is None:
+            handle = TransferHandle()
+        stop_ticker = asyncio.Event()
+
+        async def _ticker() -> None:
+            while not stop_ticker.is_set():
+                await asyncio.sleep(1)
+                if on_progress is not None and not stop_ticker.is_set():
+                    p = handle.progress()
+                    on_progress(p["done"], p["total"])
+
+        ticker_task = asyncio.ensure_future(_ticker())
+        try:
+            result = await self.download_media(peer, msg_id, path, handle=handle)
+        finally:
+            stop_ticker.set()
+            ticker_task.cancel()
+            try:
+                await ticker_task
+            except asyncio.CancelledError:
+                pass
+        if on_progress is not None:
+            p = handle.progress()
+            on_progress(p["done"], p["total"])
+        return result
+
+    async def upload_with_progress(
+        self,
+        path: str,
+        on_progress: "Callable[[int, int], None] | None" = None,
+        *,
+        handle: "TransferHandle | None" = None,
+    ) -> dict:
+        """Upload a file with an optional per-second progress callback.
+
+        on_progress(bytes_done, total_bytes) is called once per second while
+        uploading. Pass a TransferHandle to pause, resume, or cancel.
+        Returns the inputFile dict (same as upload_file).
+        """
+        if handle is None:
+            handle = TransferHandle()
+        stop_ticker = asyncio.Event()
+
+        async def _ticker() -> None:
+            while not stop_ticker.is_set():
+                await asyncio.sleep(1)
+                if on_progress is not None and not stop_ticker.is_set():
+                    p = handle.progress()
+                    on_progress(p["done"], p["total"])
+
+        ticker_task = asyncio.ensure_future(_ticker())
+        try:
+            result = await self.upload_file(path, handle=handle)
+        finally:
+            stop_ticker.set()
+            ticker_task.cancel()
+            try:
+                await ticker_task
+            except asyncio.CancelledError:
+                pass
+        if on_progress is not None:
+            p = handle.progress()
+            on_progress(p["done"], p["total"])
 
     async def edit_chat_photo(self, peer: str, path: str) -> None:
         input_peer = await self._resolve_peer(peer)
@@ -1967,7 +2635,17 @@ class Client:
         await self._rpc(req)
 
     async def signal_network_restored(self) -> None:
-        pass
+        """Reconnect after a network outage.
+
+        Drops the current connection (if any) and re-establishes it.
+        The Rust layer has no explicit reconnect signal; dropping and
+        reconnecting is equivalent and safe since sessions are persisted.
+        Does nothing if the client was never started.
+        """
+        if self._conn is None:
+            return
+        self._conn = None
+        await self.start()
 
 
     async def invite_links(self, peer: str, *, primary_only: bool = False, revoked: bool = False, limit: int = 100):
