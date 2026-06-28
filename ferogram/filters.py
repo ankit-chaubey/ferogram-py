@@ -41,7 +41,7 @@ def _get_from_id(m: Any) -> int | None:
     return getattr(_get_msg(m), "sender_id", None)
 
 
-all       = _make(lambda _: True)
+all_updates = _make(lambda _: True)
 private   = _make(lambda m: _get_chat_id(m) is not None and _get_chat_id(m) > 0)
 group     = _make(lambda m: (_get_chat_id(m) or 0) < 0)
 channel   = _make(lambda m: (_get_chat_id(m) or 0) < 0 and not _get_from_id(m))

@@ -1459,6 +1459,7 @@ class Client(_RichMixin):
     async def kick_participant(self, peer: str, user: str) -> None:
         channel = await self._resolve_peer(peer)
         user_peer = await self._resolve_peer(user)
+        # Kick = temporary ban then immediate unban so the user can rejoin.
         await self._rpc({
             "_": "channels.editBanned",
             "channel": channel,
@@ -1469,9 +1470,26 @@ class Client(_RichMixin):
                 "view_messages": True,
             },
         })
+        await self._rpc({
+            "_": "channels.editBanned",
+            "channel": channel,
+            "participant": user_peer,
+            "banned_rights": {"_": "chatBannedRights", "until_date": 0},
+        })
 
     async def ban_participant(self, peer: str, user: str) -> None:
-        await self.kick_participant(peer, user)
+        channel = await self._resolve_peer(peer)
+        user_peer = await self._resolve_peer(user)
+        await self._rpc({
+            "_": "channels.editBanned",
+            "channel": channel,
+            "participant": user_peer,
+            "banned_rights": {
+                "_": "chatBannedRights",
+                "until_date": 0,
+                "view_messages": True,
+            },
+        })
 
     async def ban_participant_until(self, peer: str, user: str, until_date: int) -> None:
         channel = await self._resolve_peer(peer)
@@ -2245,15 +2263,24 @@ class Client(_RichMixin):
         if on_progress is not None:
             p = handle.progress()
             on_progress(p["done"], p["total"])
+        return result
 
     async def edit_chat_photo(self, peer: str, path: str) -> None:
         input_peer = await self._resolve_peer(peer)
         file_input = await self.upload_file(path)
-        await self._rpc({
-            "_": "messages.editChatPhoto",
-            "chat_id": input_peer.get("chat_id") or input_peer.get("channel_id") or 0,
-            "photo": {"_": "inputChatUploadedPhoto", "file": file_input},
-        })
+        t = input_peer.get("_", "")
+        if "Channel" in t:
+            await self._rpc({
+                "_": "channels.editPhoto",
+                "channel": input_peer,
+                "photo": {"_": "inputChatUploadedPhoto", "file": file_input},
+            })
+        else:
+            await self._rpc({
+                "_": "messages.editChatPhoto",
+                "chat_id": input_peer.get("chat_id", 0),
+                "photo": {"_": "inputChatUploadedPhoto", "file": file_input},
+            })
 
     async def delete_profile_photos(self) -> None:
         result = await self._rpc({"_": "photos.getUserPhotos", "user_id": {"_": "inputUserSelf"}, "offset": 0, "max_id": 0, "limit": 100})
