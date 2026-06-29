@@ -1,16 +1,22 @@
 # ferogram-py
 
-Python bindings for [ferogram](https://github.com/ankit-chaubey/ferogram), a Telegram MTProto client written in Rust.
+A Python MTProto library powered by the Rust-based [ferogram](https://github.com/ankit-chaubey/ferogram) engine, delivering near-native performance with minimal Python overhead.
 
 Built with [PyO3](https://pyo3.rs) and [maturin](https://maturin.rs). Works on Linux, macOS, Windows, and Android (Termux).
 
-## What is ferogram-py?
+---
 
-ferogram-py is a Python interface for the ferogram MTProto client. It uses a Rust core for networking, encryption, session handling, and low-level MTProto, while the high-level API lives in Python.
+## Why ferogram-py?
 
-You can use it to build userbots, bots, or automation tools with access to both high-level methods and raw Telegram APIs.
+ferogram-py combines Python's simplicity with the speed and efficiency of a native Rust implementation.
 
-> Full API reference: [FEATURES.md](./FEATURES.md)
+Performance-critical components such as networking, encryption, session management, and MTProto internals run natively in Rust, reducing Python overhead while exposing a clean and Pythonic API.
+
+Whether you're building userbots, bots, or automation tools, ferogram-py provides both high-level abstractions and direct access to raw Telegram APIs when needed.
+
+> Quick API reference: [FEATURES.md](./FEATURES.md)
+
+---
 
 ## Install
 
@@ -20,11 +26,13 @@ pip install ferogram
 
 Pre-built wheels are available for Linux (x86_64, aarch64), macOS (x86_64, arm64), Windows (x86_64), and Android/Termux (aarch64, x86_64).
 
-On Termux, `pip install ferogram` picks the correct wheel automatically.
+`pip install ferogram` picks the correct wheel automatically.
+
+---
 
 ### Build from source
 
-Clone the repo, then use make:
+Clone the repository, then run:
 
 ```bash
 make dev      # editable install into .venv (builds Rust extension)
@@ -67,43 +75,33 @@ fero_log.setup(level=10)   # DEBUG
 
 ![architecture](assets/architecture.svg)
 
-The compiled extension (`_ferogram.so`) is intentionally thin. It exposes only `DcConnection`, six session backends, and `srp_calculate`. All high-level logic lives in Python and can be updated without recompiling.
-
-```
-          your code
-              │
-    ┌─────────▼──────────────────────────────┐
-    │        ferogram-py  (Python)           │
-    │                                        │
-    │  client · filters · types · updates    │
-    │  keyboards · rich · raw/               │
-    └─────────┬──────────────────────────────┘
-              │  FFI (PyO3)
-    ┌─────────▼──────────────────────────────┐
-    │       _ferogram.so  (Rust)             │
-    │                                        │
-    │  DcConnection ──► ferogram_mtsender    │
-    │                   ferogram_connect     │
-    │                   ferogram_crypto      │
-    │                                        │
-    │  *Session     ──► ferogram_session     │
-    │  srp_calculate──► ferogram_crypto      │
-    └─────────┬──────────────────────────────┘
-              │  TCP / TLS
-              ▼
-        Telegram MTProto
-```
+The compiled extension (`_ferogram.so`) is intentionally minimal. Networking, encryption, session management, and MTProto internals are implemented in Rust, while the high-level API remains entirely in Python and can be updated without recompiling rust core.
+    
+---
 
 ## License
 
-This project is dual-licensed under MIT or Apache 2.0. You may choose either.
+This project is dual-licensed under:
+
+- MIT License
+- Apache License 2.0
+
+You may choose either license.
 
 You are free to use, modify, and distribute this software, including for commercial use, provided the original license and copyright notice are included.
 
 See `LICENSE-MIT` and `LICENSE-APACHE` for full details.
 
-Developed by [Ankit Chaubey](https://github.com/ankit-chaubey)
-
 ---
 
-⭐ Star this repo if you find it useful
+## Developer
+
+Developed by [Ankit Chaubey](https://github.com/ankit-chaubey)
+
+Don't forget to explore the Rust engine powering ferogram-py: [ferogram](https://github.com/ankit-chaubey/ferogram). Thanks for being part of the journey.
+
+Join the ferogram community! Questions, discussions, and feedback are always welcome. As the project grows, we'll eventually split Python and Rust discussions into dedicated spaces.
+
+ - Channel (releases & announcements):  [@Ferogram](https://t.me/Ferogram)
+
+ - (questions & discussion): [@FerogramChat](https://t.me/FerogramChat)
