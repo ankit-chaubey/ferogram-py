@@ -85,6 +85,7 @@ class CallbackQuery:
     data: bytes
     game_short_name: str
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "CallbackQuery":
@@ -99,6 +100,14 @@ class CallbackQuery:
             _raw=d,
         )
 
+    async def answer(self, text: str | None = None, *, alert: bool = False) -> None:
+        if self._client is None:
+            raise RuntimeError(
+                "This CallbackQuery isn't bound to a client. "
+                "answer() only works on queries received from a dispatcher handler."
+            )
+        await self._client.answer_callback_query(self.query_id, text=text, alert=alert)
+
     def __repr__(self) -> str:
         return f"CallbackQuery(id={self.query_id}, data={self.data!r})"
 
@@ -112,6 +121,7 @@ class InlineQuery:
     peer_type: dict | None
     geo: dict | None
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "InlineQuery":
@@ -123,6 +133,19 @@ class InlineQuery:
             peer_type=d.get("peer_type"),
             geo=d.get("geo"),
             _raw=d,
+        )
+
+    async def answer(self, results: list, *, cache_time: int = 300,
+                      is_personal: bool = False, next_offset: str | None = None,
+                      switch_pm: "tuple[str, str] | None" = None) -> None:
+        if self._client is None:
+            raise RuntimeError(
+                "This InlineQuery isn't bound to a client. "
+                "answer() only works on queries received from a dispatcher handler."
+            )
+        await self._client.answer_inline_query(
+            self.query_id, results, cache_time=cache_time,
+            is_personal=is_personal, next_offset=next_offset, switch_pm=switch_pm,
         )
 
     def __repr__(self) -> str:

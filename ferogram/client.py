@@ -35,7 +35,7 @@ from .raw.proxy import RawProxy, PeerCache, resolve_peer as _resolve_peer_fn
 from .types import (
     ChatAction, PrivacyKey, PrivacyRule,
     InlineMessageId, InlineArticle, InlinePhoto, InlineDocument,
-    _inline_result_to_tuple,
+    Message, _inline_result_to_tuple,
 )
 from .updates import wrap_update
 from .keyboards import InlineKeyboard, ReplyKeyboard, RemoveKeyboard, ForceReply
@@ -645,7 +645,14 @@ class Client(_RichMixin):
                     event_type, event = routed
                     _log.debug("dispatching %s", event_type)
                     wrapped = wrap_update(event_type, event)
-                    await self._update_queue.put((event_type, wrapped))
+                    if event_type in ("message", "edited_message"):
+                        # NewMessage/EditedMessage are thin TL wrappers; handlers
+                        # and filters both expect the inner Message directly.
+                        entity = wrapped.message
+                    else:
+                        entity = wrapped
+                    entity._client = self
+                    await self._update_queue.put((event_type, entity))
 
         except (asyncio.CancelledError, KeyboardInterrupt):
             pass
@@ -768,6 +775,47 @@ class Client(_RichMixin):
 
     async def _resolve_peer(self, peer: Any) -> dict:
         return await _resolve_peer_fn(self, peer)
+
+    def _extract_sent_message(self, resp: dict, *, text: str = "",
+                               peer_id: dict | None = None) -> Message:
+        """Build a bound Message from a sendMessage/sendMedia RPC response.
+
+        Telegram replies to these calls with either an Updates container
+        (carrying the full message) or a slimmer updateShortSentMessage
+        (id/date/media only, no echoed text/peer). Either way the caller
+        gets back a real Message with .id, .reply(), etc. instead of a
+        bare dict.
+        """
+        t = resp.get("_", "")
+        if t in ("updates", "updatesCombined"):
+            self._populate_cache(resp)
+            for u in resp.get("updates") or []:
+                if u.get("_") in ("updateNewMessage", "updateNewChannelMessage",
+                                   "updateNewScheduledMessage"):
+                    msg = Message.from_tl(u.get("message") or {})
+                    msg._client = self
+                    return msg
+        if t == "updateShortSentMessage":
+            msg = Message(
+                id=resp.get("id", 0), text=text, sender_id=None,
+                peer_id=peer_id or {}, date=resp.get("date", 0), edit_date=None,
+                reply_to_msg_id=None, forward_from_id=None, media=resp.get("media"),
+                entities=resp.get("entities") or [], views=None, via_bot_id=None,
+                grouped_id=None, out=bool(resp.get("out", True)), mentioned=False,
+                silent=False, pinned=False, _raw=resp,
+            )
+            msg._client = self
+            return msg
+        # last resort: still hand back something with a working .id / .reply()
+        msg = Message(
+            id=resp.get("id", 0), text=text, sender_id=None, peer_id=peer_id or {},
+            date=resp.get("date", 0), edit_date=None, reply_to_msg_id=None,
+            forward_from_id=None, media=None, entities=[], views=None,
+            via_bot_id=None, grouped_id=None, out=True, mentioned=False,
+            silent=False, pinned=False, _raw=resp,
+        )
+        msg._client = self
+        return msg
 
     def _populate_cache(self, obj: Any) -> None:
         if not isinstance(obj, dict):
@@ -976,7 +1024,7 @@ class Client(_RichMixin):
 
     async def send_message(self, peer: str, text: str, *,
                            parse_mode: str | None = None,
-                           reply_markup=None) -> dict:
+                           reply_markup=None) -> Message:
         pm = self._resolve_pm(parse_mode)
         if pm in ("markdown", "md"):
             plain, entities = _tl.parse_markdown(text)
@@ -995,7 +1043,8 @@ class Client(_RichMixin):
         }
         if reply_markup is not None:
             req["reply_markup"] = _markup_to_dict(reply_markup)
-        return await self._rpc(req)
+        resp = await self._rpc(req)
+        return self._extract_sent_message(resp, text=plain, peer_id=input_peer)
 
     async def send_to_self(self, text: str) -> None:
         await self.send_message("me", text)
@@ -1674,7 +1723,7 @@ class Client(_RichMixin):
 
 
     async def send_photo(self, peer: str, path: str, caption: str = "", *,
-                         parse_mode: str | None = None) -> dict:
+                         parse_mode: str | None = None) -> Message:
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         pm = self._resolve_pm(parse_mode)
@@ -1695,14 +1744,15 @@ class Client(_RichMixin):
         }
         if cap_entities:
             req["entities"] = cap_entities
-        return await self._rpc(req)
+        resp = await self._rpc(req)
+        return self._extract_sent_message(resp, text=plain_cap, peer_id=input_peer)
 
     async def send_file(self, peer: str, path: str, caption: str = "", mime_type: str | None = None, *,
                         parse_mode: str | None = None) -> dict:
         return await self.send_document(peer, path, caption, mime_type, parse_mode=parse_mode)
 
     async def send_document(self, peer: str, path: str, caption: str = "", mime_type: str | None = None, *,
-                             parse_mode: str | None = None) -> dict:
+                             parse_mode: str | None = None) -> Message:
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         pm = self._resolve_pm(parse_mode)
@@ -1730,7 +1780,8 @@ class Client(_RichMixin):
         }
         if cap_entities:
             req["entities"] = cap_entities
-        return await self._rpc(req)
+        resp = await self._rpc(req)
+        return self._extract_sent_message(resp, text=plain_cap, peer_id=input_peer)
 
     async def send_audio(self, peer: str, path: str, caption: str = "") -> dict:
         if not os.path.isfile(path):

@@ -281,6 +281,7 @@ class Message:
     silent: bool
     pinned: bool
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "Message":
@@ -310,6 +311,34 @@ class Message:
     @property
     def chat_id(self) -> int:
         return _peer_to_id(self.peer_id) or 0
+
+    def _require_client(self) -> Any:
+        if self._client is None:
+            raise RuntimeError(
+                "This Message isn't bound to a client. "
+                "reply()/react()/delete()/edit() only work on messages "
+                "received from a dispatcher handler."
+            )
+        return self._client
+
+    async def reply(self, text: str, *, parse_mode: str | None = None,
+                     reply_markup: Any = None) -> "Message":
+        client = self._require_client()
+        return await client.send_message(
+            self.chat_id, text, parse_mode=parse_mode, reply_markup=reply_markup,
+        )
+
+    async def react(self, emoji: str) -> None:
+        client = self._require_client()
+        await client.send_reaction(self.chat_id, self.id, emoji)
+
+    async def delete(self, revoke: bool = True) -> None:
+        client = self._require_client()
+        await client.delete_message(self.id, revoke=revoke)
+
+    async def edit(self, new_text: str, *, parse_mode: str | None = None) -> None:
+        client = self._require_client()
+        await client.edit_message(self.chat_id, self.id, new_text, parse_mode=parse_mode)
 
     def __repr__(self) -> str:
         return f"Message(id={self.id}, text={self.text[:40]!r})"

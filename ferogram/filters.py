@@ -109,17 +109,25 @@ def chat(*chat_ids: int) -> Filter:
 
 
 
+def _get_data_str(q: Any) -> str:
+    """CallbackQuery.data is raw bytes off the wire; decode for string filters."""
+    d = getattr(q, "data", None)
+    if isinstance(d, bytes):
+        return d.decode("utf-8", errors="replace")
+    return d or ""
+
+
 def data(value: str) -> Filter:
-    return _make(lambda q: getattr(q, "data", None) == value)
+    return _make(lambda q: _get_data_str(q) == value)
 
 
 def data_regex(pattern: str | re.Pattern, flags: int = 0) -> Filter:
     compiled = re.compile(pattern, flags) if isinstance(pattern, str) else pattern
-    return _make(lambda q: bool(compiled.search(getattr(q, "data", "") or "")))
+    return _make(lambda q: bool(compiled.search(_get_data_str(q))))
 
 
 def data_startswith(prefix: str) -> Filter:
-    return _make(lambda q: (getattr(q, "data", "") or "").startswith(prefix))
+    return _make(lambda q: _get_data_str(q).startswith(prefix))
 
 
 

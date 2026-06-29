@@ -1,8 +1,8 @@
 [package]
 name        = "ferogram-py"
-version     = "0.5.0"
+version     = "0.5.1"
 edition     = "2024"
-description = "Python bindings for ferogram (Rust MTProto)"
+description = "Python MTProto client based on ferogram (Rust MTProto)"
 build       = "build.rs"
 license     = "MIT OR Apache-2.0"
 
