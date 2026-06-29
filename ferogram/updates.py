@@ -100,13 +100,48 @@ class CallbackQuery:
             _raw=d,
         )
 
-    async def answer(self, text: str | None = None, *, alert: bool = False) -> None:
+    def _require_client(self) -> Any:
         if self._client is None:
             raise RuntimeError(
                 "This CallbackQuery isn't bound to a client. "
-                "answer() only works on queries received from a dispatcher handler."
+                "Methods only work on queries received from a dispatcher handler."
             )
-        await self._client.answer_callback_query(self.query_id, text=text, alert=alert)
+        return self._client
+
+    @property
+    def chat_id(self) -> int:
+        return _peer_to_id(self.peer) or self.sender_id
+
+    async def answer(self, text: str | None = None, *, alert: bool = False) -> None:
+        await self._require_client().answer_callback_query(self.query_id, text=text, alert=alert)
+
+    async def respond(self, text: str, *, parse_mode: str | None = None,
+                      reply_markup: Any = None) -> Message:
+        """Send a new message to the chat this button came from."""
+        return await self._require_client().send_message(
+            self.chat_id, text, parse_mode=parse_mode, reply_markup=reply_markup,
+        )
+
+    async def reply(self, text: str, *, parse_mode: str | None = None,
+                    reply_markup: Any = None) -> Message:
+        """Send a message quoting the original button message."""
+        return await self._require_client().send_message(
+            self.chat_id, text, reply_to=self.message_id,
+            parse_mode=parse_mode, reply_markup=reply_markup,
+        )
+
+    async def edit_message_text(self, new_text: str, *,
+                                parse_mode: str | None = None,
+                                reply_markup: Any = None) -> None:
+        """Edit the message that contained the inline button."""
+        client = self._require_client()
+        await client.edit_message(
+            self.chat_id, self.message_id, new_text,
+            parse_mode=parse_mode, reply_markup=reply_markup,
+        )
+
+    async def get_sender(self) -> Any:
+        return await self._require_client().get_user(self.sender_id)
 
     def __repr__(self) -> str:
         return f"CallbackQuery(id={self.query_id}, data={self.data!r})"
@@ -135,18 +170,24 @@ class InlineQuery:
             _raw=d,
         )
 
-    async def answer(self, results: list, *, cache_time: int = 300,
-                      is_personal: bool = False, next_offset: str | None = None,
-                      switch_pm: "tuple[str, str] | None" = None) -> None:
+    def _require_client(self) -> Any:
         if self._client is None:
             raise RuntimeError(
                 "This InlineQuery isn't bound to a client. "
-                "answer() only works on queries received from a dispatcher handler."
+                "Methods only work on queries received from a dispatcher handler."
             )
-        await self._client.answer_inline_query(
+        return self._client
+
+    async def answer(self, results: list, *, cache_time: int = 300,
+                     is_personal: bool = False, next_offset: str | None = None,
+                     switch_pm: "tuple[str, str] | None" = None) -> None:
+        await self._require_client().answer_inline_query(
             self.query_id, results, cache_time=cache_time,
             is_personal=is_personal, next_offset=next_offset, switch_pm=switch_pm,
         )
+
+    async def get_sender(self) -> Any:
+        return await self._require_client().get_user(self.sender_id)
 
     def __repr__(self) -> str:
         return f"InlineQuery(id={self.query_id}, query={self.query!r})"
@@ -159,6 +200,7 @@ class InlineSend:
     result_id: str
     inline_message_id: dict | None
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "InlineSend":
@@ -170,12 +212,24 @@ class InlineSend:
             _raw=d,
         )
 
+    def _require_client(self) -> Any:
+        if self._client is None:
+            raise RuntimeError(
+                "This InlineSend isn't bound to a client. "
+                "Methods only work on events received from a dispatcher handler."
+            )
+        return self._client
+
+    async def get_sender(self) -> Any:
+        return await self._require_client().get_user(self.sender_id)
+
 
 @dataclass
 class UserStatus:
     user_id: int
     status: dict
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "UserStatus":
@@ -184,6 +238,11 @@ class UserStatus:
     @property
     def online(self) -> bool:
         return (self.status.get("_") or "") == "userStatusOnline"
+
+    async def get_sender(self) -> Any:
+        if self._client is None:
+            raise RuntimeError("UserStatus isn't bound to a client.")
+        return await self._client.get_user(self.user_id)
 
     def __repr__(self) -> str:
         return f"UserStatus(user_id={self.user_id}, online={self.online})"
@@ -195,6 +254,7 @@ class ChatAction:
     from_id: int | None
     action: dict
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "ChatAction":
@@ -204,6 +264,13 @@ class ChatAction:
             action=d.get("action") or {},
             _raw=d,
         )
+
+    async def get_sender(self) -> Any:
+        if self._client is None:
+            raise RuntimeError("ChatAction isn't bound to a client.")
+        if self.from_id is None:
+            return None
+        return await self._client.get_user(self.from_id)
 
     def __repr__(self) -> str:
         return f"ChatAction(action={self.action.get('_')})"
@@ -220,6 +287,7 @@ class ParticipantUpdate:
     invite: dict | None
     via_chatlist: bool
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "ParticipantUpdate":
@@ -235,6 +303,16 @@ class ParticipantUpdate:
             _raw=d,
         )
 
+    async def get_user(self) -> Any:
+        if self._client is None:
+            raise RuntimeError("ParticipantUpdate isn't bound to a client.")
+        return await self._client.get_user(self.user_id)
+
+    async def get_actor(self) -> Any:
+        if self._client is None:
+            raise RuntimeError("ParticipantUpdate isn't bound to a client.")
+        return await self._client.get_user(self.actor_id)
+
     def __repr__(self) -> str:
         return f"ParticipantUpdate(channel={self.channel_id}, user={self.user_id})"
 
@@ -245,6 +323,7 @@ class JoinRequest:
     user_id: int
     date: int
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "JoinRequest":
@@ -254,6 +333,11 @@ class JoinRequest:
             date=_int(d, "date"),
             _raw=d,
         )
+
+    async def get_sender(self) -> Any:
+        if self._client is None:
+            raise RuntimeError("JoinRequest isn't bound to a client.")
+        return await self._client.get_user(self.user_id)
 
     def __repr__(self) -> str:
         return f"JoinRequest(channel={self.channel_id}, user={self.user_id})"
@@ -265,6 +349,7 @@ class MessageReaction:
     msg_id: int
     reactions: dict
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "MessageReaction":
@@ -274,6 +359,20 @@ class MessageReaction:
             reactions=d.get("reactions") or {},
             _raw=d,
         )
+
+    @property
+    def chat_id(self) -> int:
+        return _peer_to_id(self.peer) or 0
+
+    async def get_message(self) -> Message | None:
+        if self._client is None:
+            raise RuntimeError("MessageReaction isn't bound to a client.")
+        raw = await self._client.get_message(self.chat_id, self.msg_id)
+        if raw is None:
+            return None
+        msg = Message.from_tl(raw)
+        msg._client = self._client
+        return msg
 
     def __repr__(self) -> str:
         return f"MessageReaction(msg_id={self.msg_id})"
@@ -285,13 +384,14 @@ class PollVote:
     peer: dict | None
     options: list[bytes]
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "PollVote":
         return cls(
             poll_id=_int(d, "poll_id"),
             peer=d.get("peer"),
-            options=[],  # options not separately stored in updateMessagePoll
+            options=[],
             _raw=d,
         )
 
@@ -305,10 +405,16 @@ class BotStopped:
     date: int
     stopped: bool
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "BotStopped":
         return cls(user_id=_int(d, "user_id"), date=_int(d, "date"), stopped=_bool(d, "stopped"), _raw=d)
+
+    async def get_sender(self) -> Any:
+        if self._client is None:
+            raise RuntimeError("BotStopped isn't bound to a client.")
+        return await self._client.get_user(self.user_id)
 
     def __repr__(self) -> str:
         return f"BotStopped(user_id={self.user_id}, stopped={self.stopped})"
@@ -321,6 +427,7 @@ class ShippingQuery:
     payload: bytes
     shipping_address: dict
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "ShippingQuery":
@@ -331,6 +438,11 @@ class ShippingQuery:
             shipping_address=d.get("shipping_address") or {},
             _raw=d,
         )
+
+    async def get_sender(self) -> Any:
+        if self._client is None:
+            raise RuntimeError("ShippingQuery isn't bound to a client.")
+        return await self._client.get_user(self.user_id)
 
     def __repr__(self) -> str:
         return f"ShippingQuery(id={self.query_id})"
@@ -344,6 +456,7 @@ class PreCheckoutQuery:
     total_amount: int
     payload: bytes
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "PreCheckoutQuery":
@@ -356,6 +469,11 @@ class PreCheckoutQuery:
             _raw=d,
         )
 
+    async def get_sender(self) -> Any:
+        if self._client is None:
+            raise RuntimeError("PreCheckoutQuery isn't bound to a client.")
+        return await self._client.get_user(self.user_id)
+
     def __repr__(self) -> str:
         return f"PreCheckoutQuery(id={self.query_id}, amount={self.total_amount})"
 
@@ -365,10 +483,15 @@ class ChatBoost:
     peer: dict
     boost: dict
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "ChatBoost":
         return cls(peer=d.get("peer") or {}, boost=d.get("boost") or {}, _raw=d)
+
+    @property
+    def chat_id(self) -> int:
+        return _peer_to_id(self.peer) or 0
 
     def __repr__(self) -> str:
         return f"ChatBoost(peer={self.peer})"
@@ -378,6 +501,7 @@ class ChatBoost:
 class RawUpdate:
     type: str
     _raw: dict = field(default_factory=dict, repr=False)
+    _client: Any = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_tl(cls, d: dict) -> "RawUpdate":
@@ -388,23 +512,23 @@ class RawUpdate:
 
 
 _UPDATE_FACTORIES: dict[str, type] = {
-    "message":          NewMessage,
-    "edited_message":   EditedMessage,
-    "message_deleted":  MessageDeletion,
-    "callback_query":   CallbackQuery,
-    "inline_query":     InlineQuery,
-    "inline_send":      InlineSend,
-    "user_status":      UserStatus,
-    "chat_action":      ChatAction,
-    "participant_update": ParticipantUpdate,
-    "join_request":     JoinRequest,
-    "message_reaction": MessageReaction,
-    "poll_vote":        PollVote,
-    "bot_stopped":      BotStopped,
-    "shipping_query":   ShippingQuery,
-    "pre_checkout_query": PreCheckoutQuery,
-    "chat_boost":       ChatBoost,
-    "raw_update":       RawUpdate,
+    "message":              NewMessage,
+    "edited_message":       EditedMessage,
+    "message_deleted":      MessageDeletion,
+    "callback_query":       CallbackQuery,
+    "inline_query":         InlineQuery,
+    "inline_send":          InlineSend,
+    "user_status":          UserStatus,
+    "chat_action":          ChatAction,
+    "participant_update":   ParticipantUpdate,
+    "join_request":         JoinRequest,
+    "message_reaction":     MessageReaction,
+    "poll_vote":            PollVote,
+    "bot_stopped":          BotStopped,
+    "shipping_query":       ShippingQuery,
+    "pre_checkout_query":   PreCheckoutQuery,
+    "chat_boost":           ChatBoost,
+    "raw_update":           RawUpdate,
 }
 
 

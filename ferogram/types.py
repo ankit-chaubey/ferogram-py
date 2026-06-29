@@ -19,10 +19,8 @@ from enum import Enum
 from typing import Any
 
 __all__ = [
-    # enums / value types
     "ChatAction", "PrivacyKey", "PrivacyRule",
     "InlineMessageId", "InlineArticle", "InlinePhoto", "InlineDocument",
-    # entity types
     "User", "UserFull", "Chat", "Message", "Dialog", "ChatMember",
     "Authorization", "ForumTopic", "BotInfo",
     "InviteLinkMember", "ReadParticipant", "AdminLogEvent", "StickerSetInfo",
@@ -316,16 +314,25 @@ class Message:
         if self._client is None:
             raise RuntimeError(
                 "This Message isn't bound to a client. "
-                "reply()/react()/delete()/edit() only work on messages "
-                "received from a dispatcher handler."
+                "Methods only work on messages received from a dispatcher handler."
             )
         return self._client
 
-    async def reply(self, text: str, *, parse_mode: str | None = None,
-                     reply_markup: Any = None) -> "Message":
+    async def respond(self, text: str, *, parse_mode: str | None = None,
+                      reply_markup: Any = None) -> "Message":
+        """Send a new message to the same chat, without quoting."""
         client = self._require_client()
         return await client.send_message(
             self.chat_id, text, parse_mode=parse_mode, reply_markup=reply_markup,
+        )
+
+    async def reply(self, text: str, *, parse_mode: str | None = None,
+                    reply_markup: Any = None) -> "Message":
+        """Send a message that quotes this message."""
+        client = self._require_client()
+        return await client.send_message(
+            self.chat_id, text, reply_to=self.id,
+            parse_mode=parse_mode, reply_markup=reply_markup,
         )
 
     async def react(self, emoji: str) -> None:
@@ -334,11 +341,55 @@ class Message:
 
     async def delete(self, revoke: bool = True) -> None:
         client = self._require_client()
-        await client.delete_message(self.id, revoke=revoke)
+        await client.delete_messages_in(self.chat_id, [self.id], revoke=revoke)
 
     async def edit(self, new_text: str, *, parse_mode: str | None = None) -> None:
         client = self._require_client()
         await client.edit_message(self.chat_id, self.id, new_text, parse_mode=parse_mode)
+
+    async def pin(self, notify: bool = False) -> None:
+        client = self._require_client()
+        await client.pin_message(self.chat_id, self.id, notify=notify)
+
+    async def forward_to(self, peer: Any) -> None:
+        client = self._require_client()
+        await client.forward_messages(peer, self.chat_id, [self.id])
+
+    async def get_sender(self) -> "User | None":
+        client = self._require_client()
+        if self.sender_id is None:
+            return None
+        return await client.get_user(self.sender_id)
+
+    async def get_chat(self) -> "Chat | None":
+        client = self._require_client()
+        return await client.get_chat(self.chat_id)
+
+    async def get_reply_message(self) -> "Message | None":
+        client = self._require_client()
+        if self.reply_to_msg_id is None:
+            return None
+        raw = await client.get_message(self.chat_id, self.reply_to_msg_id)
+        if raw is None:
+            return None
+        msg = Message.from_tl(raw)
+        msg._client = client
+        return msg
+
+    async def reply_photo(self, path: str, caption: str = "", *,
+                          parse_mode: str | None = None) -> "Message":
+        client = self._require_client()
+        return await client.send_photo(
+            self.chat_id, path, caption, parse_mode=parse_mode, reply_to=self.id,
+        )
+
+    async def reply_document(self, path: str, caption: str = "",
+                              mime_type: str | None = None, *,
+                              parse_mode: str | None = None) -> "Message":
+        client = self._require_client()
+        return await client.send_document(
+            self.chat_id, path, caption, mime_type, parse_mode=parse_mode, reply_to=self.id,
+        )
 
     def __repr__(self) -> str:
         return f"Message(id={self.id}, text={self.text[:40]!r})"

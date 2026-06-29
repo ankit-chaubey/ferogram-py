@@ -35,7 +35,7 @@ from .raw.proxy import RawProxy, PeerCache, resolve_peer as _resolve_peer_fn
 from .types import (
     ChatAction, PrivacyKey, PrivacyRule,
     InlineMessageId, InlineArticle, InlinePhoto, InlineDocument,
-    Message, _inline_result_to_tuple,
+    Message, Chat, User, _inline_result_to_tuple,
 )
 from .updates import wrap_update
 from .keyboards import InlineKeyboard, ReplyKeyboard, RemoveKeyboard, ForceReply
@@ -646,12 +646,11 @@ class Client(_RichMixin):
                     _log.debug("dispatching %s", event_type)
                     wrapped = wrap_update(event_type, event)
                     if event_type in ("message", "edited_message"):
-                        # NewMessage/EditedMessage are thin TL wrappers; handlers
-                        # and filters both expect the inner Message directly.
                         entity = wrapped.message
                     else:
                         entity = wrapped
-                    entity._client = self
+                    if hasattr(entity, "_client"):
+                        entity._client = self
                     await self._update_queue.put((event_type, entity))
 
         except (asyncio.CancelledError, KeyboardInterrupt):
@@ -806,12 +805,12 @@ class Client(_RichMixin):
             )
             msg._client = self
             return msg
-        # last resort: still hand back something with a working .id / .reply()
+        _log.warning("_extract_sent_message: unrecognised response type %r, constructing minimal Message", t)
         msg = Message(
             id=resp.get("id", 0), text=text, sender_id=None, peer_id=peer_id or {},
             date=resp.get("date", 0), edit_date=None, reply_to_msg_id=None,
-            forward_from_id=None, media=None, entities=[], views=None,
-            via_bot_id=None, grouped_id=None, out=True, mentioned=False,
+            forward_from_id=None, media=resp.get("media"), entities=resp.get("entities") or [],
+            views=None, via_bot_id=None, grouped_id=None, out=True, mentioned=False,
             silent=False, pinned=False, _raw=resp,
         )
         msg._client = self
@@ -1017,13 +1016,59 @@ class Client(_RichMixin):
         peer = await self._resolve_peer(user_id)
         return await self._rpc({"_": "users.getFullUser", "id": peer})
 
+    async def get_user(self, user_id: int) -> "User | None":
+        from .types import User as _User
+        peers = await self.get_users_by_id([user_id])
+        raw = peers[0] if peers else None
+        if not raw:
+            return None
+        return _User.from_tl(raw)
+
+    async def get_chat(self, peer: Any) -> "Chat | None":
+        from .types import Chat as _Chat
+        input_peer = await self._resolve_peer(peer)
+        t = input_peer.get("_", "")
+        if t == "inputPeerChat":
+            result = await self._rpc({
+                "_": "messages.getChats",
+                "id": [input_peer["chat_id"]],
+            })
+            chats = result.get("chats") or [] if isinstance(result, dict) else []
+            return _Chat.from_tl(chats[0]) if chats else None
+        if t == "inputPeerChannel":
+            result = await self._rpc({
+                "_": "channels.getChannels",
+                "id": [{
+                    "_": "inputChannel",
+                    "channel_id": input_peer["channel_id"],
+                    "access_hash": input_peer.get("access_hash", 0),
+                }],
+            })
+            chats = result.get("chats") or [] if isinstance(result, dict) else []
+            return _Chat.from_tl(chats[0]) if chats else None
+        if t == "inputPeerUser":
+            users = await self.get_users_by_id([input_peer["user_id"]])
+            raw = users[0] if users else None
+            if not raw:
+                return None
+            return _Chat(
+                id=raw.get("id", 0),
+                title=((raw.get("first_name") or "") + " " + (raw.get("last_name") or "")).strip(),
+                username=raw.get("username"),
+                is_channel=False, is_megagroup=False, is_gigagroup=False,
+                is_broadcast=False, members_count=None,
+                access_hash=raw.get("access_hash", 0), _raw=raw,
+            )
+        return None
+
     async def get_contacts(self) -> list[dict]:
         result = await self._rpc({"_": "contacts.getContacts", "hash": 0})
         return result.get("users", []) if isinstance(result, dict) else []
 
 
-    async def send_message(self, peer: str, text: str, *,
+    async def send_message(self, peer: Any, text: str, *,
                            parse_mode: str | None = None,
+                           reply_to: int | None = None,
                            reply_markup=None) -> Message:
         pm = self._resolve_pm(parse_mode)
         if pm in ("markdown", "md"):
@@ -1041,6 +1086,8 @@ class Client(_RichMixin):
             "no_webpage": True,
             "entities": entities,
         }
+        if reply_to is not None:
+            req["reply_to"] = {"_": "inputReplyToMessage", "reply_to_msg_id": reply_to}
         if reply_markup is not None:
             req["reply_markup"] = _markup_to_dict(reply_markup)
         resp = await self._rpc(req)
@@ -1049,8 +1096,9 @@ class Client(_RichMixin):
     async def send_to_self(self, text: str) -> None:
         await self.send_message("me", text)
 
-    async def edit_message(self, peer: str, message_id: int, new_text: str, *,
-                           parse_mode: str | None = None) -> None:
+    async def edit_message(self, peer: Any, message_id: int, new_text: str, *,
+                           parse_mode: str | None = None,
+                           reply_markup=None) -> None:
         pm = self._resolve_pm(parse_mode)
         if pm in ("markdown", "md"):
             plain, entities = _tl.parse_markdown(new_text)
@@ -1068,6 +1116,8 @@ class Client(_RichMixin):
         }
         if entities:
             req["entities"] = entities
+        if reply_markup is not None:
+            req["reply_markup"] = _markup_to_dict(reply_markup)
         await self._rpc(req)
 
     async def delete_message(self, message_id: int, revoke: bool = True) -> None:
@@ -1080,6 +1130,27 @@ class Client(_RichMixin):
             "revoke": revoke,
         })
 
+    async def delete_messages_in(self, peer: Any, message_ids: list[int], revoke: bool = True) -> None:
+        """Delete messages in a specific chat, using channels.deleteMessages for channels/supergroups."""
+        input_peer = await self._resolve_peer(peer)
+        t = input_peer.get("_", "")
+        if t == "inputPeerChannel":
+            await self._rpc({
+                "_": "channels.deleteMessages",
+                "channel": {
+                    "_": "inputChannel",
+                    "channel_id": input_peer["channel_id"],
+                    "access_hash": input_peer.get("access_hash", 0),
+                },
+                "id": message_ids,
+            })
+        else:
+            await self._rpc({
+                "_": "messages.deleteMessages",
+                "id": message_ids,
+                "revoke": revoke,
+            })
+
     async def forward_messages(self, destination: str, source: str, message_ids: list[int]) -> None:
         from_peer = await self._resolve_peer(source)
         to_peer   = await self._resolve_peer(destination)
@@ -1091,12 +1162,13 @@ class Client(_RichMixin):
             "random_id": [random.randint(-(2**63), 2**63 - 1) for _ in message_ids],
         })
 
-    async def pin_message(self, peer: str, message_id: int) -> None:
+    async def pin_message(self, peer: Any, message_id: int, *, notify: bool = False) -> None:
         input_peer = await self._resolve_peer(peer)
         await self._rpc({
             "_": "messages.updatePinnedMessage",
             "peer": input_peer,
             "id": message_id,
+            "silent": not notify,
         })
 
     async def unpin_message(self, peer: str, message_id: int) -> None:
@@ -1722,8 +1794,9 @@ class Client(_RichMixin):
         await self._rpc({"_": "channels.deleteTopicHistory", "channel": input_peer, "top_msg_id": top_msg_id})
 
 
-    async def send_photo(self, peer: str, path: str, caption: str = "", *,
-                         parse_mode: str | None = None) -> Message:
+    async def send_photo(self, peer: Any, path: str, caption: str = "", *,
+                         parse_mode: str | None = None,
+                         reply_to: int | None = None) -> Message:
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         pm = self._resolve_pm(parse_mode)
@@ -1744,6 +1817,8 @@ class Client(_RichMixin):
         }
         if cap_entities:
             req["entities"] = cap_entities
+        if reply_to is not None:
+            req["reply_to"] = {"_": "inputReplyToMessage", "reply_to_msg_id": reply_to}
         resp = await self._rpc(req)
         return self._extract_sent_message(resp, text=plain_cap, peer_id=input_peer)
 
@@ -1751,8 +1826,9 @@ class Client(_RichMixin):
                         parse_mode: str | None = None) -> dict:
         return await self.send_document(peer, path, caption, mime_type, parse_mode=parse_mode)
 
-    async def send_document(self, peer: str, path: str, caption: str = "", mime_type: str | None = None, *,
-                             parse_mode: str | None = None) -> Message:
+    async def send_document(self, peer: Any, path: str, caption: str = "", mime_type: str | None = None, *,
+                             parse_mode: str | None = None,
+                             reply_to: int | None = None) -> Message:
         if not os.path.isfile(path):
             raise FileNotFoundError(f"No such file: {path!r}")
         pm = self._resolve_pm(parse_mode)
@@ -1780,6 +1856,8 @@ class Client(_RichMixin):
         }
         if cap_entities:
             req["entities"] = cap_entities
+        if reply_to is not None:
+            req["reply_to"] = {"_": "inputReplyToMessage", "reply_to_msg_id": reply_to}
         resp = await self._rpc(req)
         return self._extract_sent_message(resp, text=plain_cap, peer_id=input_peer)
 

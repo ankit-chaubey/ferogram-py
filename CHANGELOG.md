@@ -1,3 +1,53 @@
+## 0.5.1 (2026-06-29)
+
+## What's Changed
+
+### Message API Improvements
+
+- `Message.reply()` now creates a proper quoted reply using `reply_to=self.id`.
+- Added `Message.respond()` for sending messages to the same chat without replying.
+- Added `pin()`, `forward_to()`, `get_sender()`, `get_chat()`, and `get_reply_message()` helpers.
+- Added `reply_photo()` and `reply_document()` convenience methods.
+- Improved `delete()` to correctly handle channels and supergroups.
+
+### Client Enhancements
+
+- Added `reply_to` support to `send_message()`, `send_photo()`, and `send_document()`.
+- Added `Client.get_user()` and `Client.get_chat()` helpers.
+- `edit_message()` now accepts `reply_markup`.
+- `pin_message()` now supports a `notify` parameter.
+- Improved `delete_messages_in()` for channel-aware message deletion.
+- Improved sent message extraction fallback behavior with warning logging and preserved context.
+
+### Update Improvements
+
+- Added convenience methods to `CallbackQuery`:
+  - `respond()`
+  - `reply()`
+  - `edit_message_text()`
+  - `get_sender()`
+
+- Added convenience methods to `InlineQuery`:
+  - `answer()`
+  - `get_sender()`
+
+- Added sender/entity helpers for additional update types, including:
+  - `InlineSend`
+  - `UserStatus`
+  - `ChatAction`
+  - `JoinRequest`
+  - `ParticipantUpdate`
+  - `MessageReaction`
+  - `ChatBoost`
+  - `ShippingQuery`
+  - `PreCheckoutQuery`
+
+### Dispatch Improvements
+
+- `_dispatch()` now binds `_client` for all update types.
+- Added `_client` support to remaining update wrappers, including `RawUpdate`.
+- Improved sent message extraction fallback handling.
+
 ## 0.5.0 (2026-06-28)
 
 ### Architecture
