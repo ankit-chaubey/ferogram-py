@@ -15,7 +15,7 @@ import asyncio
 import os
 from ferogram import Client
 
-app = Client("ferogram", api_id=3606715, api_hash="69d49bbc9978fcb385b6ddcfb246f2e9")
+app = Client("fero", api_id=, api_hash="")
 
 
 async def main():
