@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
 # ferogram is a high-performance Telegram MTProto framework written in Rust.
-# ferogram-py provides Python bindings built on top of the Rust core for
-# building Telegram clients, bots, and applications with a simple API.
+# ferogram-py is a Python MTProto library powered by ferogram, delivering
+# native Rust performance through a clean and Pythonic API for building
+# Telegram clients, bots, and applications.
 #
-# Rust core: https://github.com/ankit-chaubey/ferogram
-# Python bindings: https://github.com/ankit-chaubey/ferogram-py
+# Rust: https://github.com/ankit-chaubey/ferogram
+# Python: https://github.com/ankit-chaubey/ferogram-py
 #
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
@@ -15,7 +16,9 @@ import asyncio
 import os
 from ferogram import Client
 
-app = Client("fero", api_id=, api_hash="")
+app = Client("fero", api_id=12345, api_hash="0123456789abcdef0123456789abcdef")
+# replace api_id / api_hash with your own values from https://my.telegram.org
+# (or unset them here and set API_ID / API_HASH env vars instead)
 
 
 async def main():
