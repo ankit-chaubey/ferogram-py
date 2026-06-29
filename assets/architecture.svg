@@ -1,0 +1,130 @@
+<svg width="100%" viewBox="0 0 680 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>ferogram-py architecture</title>
+  <desc>Flow from user code through the Python layer, FFI boundary, and five Rust crates to Telegram MTProto</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace; }
+      .th  { font-size: 14px; font-weight: 600; fill: #2C2C2A; }
+      .ts  { font-size: 12px; font-weight: 400; fill: #444441; }
+      .arr { stroke: #888780; stroke-width: 1.5; fill: none; }
+
+      /* gray */
+      .c-gray rect  { fill: #F1EFE8; stroke: #5F5E5A; }
+      .c-gray .th   { fill: #2C2C2A; }
+
+      /* purple */
+      .c-purple rect { fill: #EEEDFE; stroke: #534AB7; }
+      .c-purple .th  { fill: #26215C; }
+      .c-purple .ts  { fill: #3C3489; }
+
+      /* teal */
+      .c-teal rect { fill: #E1F5EE; stroke: #0F6E56; }
+      .c-teal .th  { fill: #04342C; }
+      .c-teal .ts  { fill: #085041; }
+
+      /* blue */
+      .c-blue rect { fill: #E6F1FB; stroke: #185FA5; }
+      .c-blue .th  { fill: #042C53; }
+
+      @media (prefers-color-scheme: dark) {
+        .th  { fill: #D3D1C7; }
+        .ts  { fill: #B4B2A9; }
+        .arr { stroke: #5F5E5A; }
+
+        .c-gray rect  { fill: #444441; stroke: #B4B2A9; }
+        .c-gray .th   { fill: #F1EFE8; }
+
+        .c-purple rect { fill: #3C3489; stroke: #AFA9EC; }
+        .c-purple .th  { fill: #EEEDFE; }
+        .c-purple .ts  { fill: #CECBF6; }
+
+        .c-teal rect { fill: #085041; stroke: #5DCAA5; }
+        .c-teal .th  { fill: #E1F5EE; }
+        .c-teal .ts  { fill: #9FE1CB; }
+
+        .c-blue rect { fill: #0C447C; stroke: #85B7EB; }
+        .c-blue .th  { fill: #E6F1FB; }
+      }
+    </style>
+  </defs>
+
+  <!-- your code -->
+  <g class="c-gray">
+    <rect x="230" y="24" width="220" height="44" rx="8" stroke-width="0.5"/>
+    <text class="th" x="340" y="46" text-anchor="middle" dominant-baseline="central">your code</text>
+  </g>
+
+  <line x1="340" y1="68" x2="340" y2="92" class="arr" marker-end="url(#arrow)"/>
+
+  <!-- Python layer -->
+  <g class="c-purple">
+    <rect x="50" y="92" width="580" height="172" rx="12" stroke-width="0.5"/>
+    <text class="th" x="340" y="116" text-anchor="middle" dominant-baseline="central">ferogram-py  (Python)</text>
+  </g>
+  <g class="c-purple">
+    <rect x="70" y="134" width="118" height="48" rx="6" stroke-width="0.5"/>
+    <text class="ts" x="129" y="152" text-anchor="middle" dominant-baseline="central">client</text>
+    <text class="ts" x="129" y="168" text-anchor="middle" dominant-baseline="central">filters</text>
+  </g>
+  <g class="c-purple">
+    <rect x="204" y="134" width="118" height="48" rx="6" stroke-width="0.5"/>
+    <text class="ts" x="263" y="152" text-anchor="middle" dominant-baseline="central">types</text>
+    <text class="ts" x="263" y="168" text-anchor="middle" dominant-baseline="central">updates</text>
+  </g>
+  <g class="c-purple">
+    <rect x="338" y="134" width="118" height="48" rx="6" stroke-width="0.5"/>
+    <text class="ts" x="397" y="152" text-anchor="middle" dominant-baseline="central">keyboards</text>
+    <text class="ts" x="397" y="168" text-anchor="middle" dominant-baseline="central">rich</text>
+  </g>
+  <g class="c-purple">
+    <rect x="472" y="134" width="138" height="48" rx="6" stroke-width="0.5"/>
+    <text class="ts" x="541" y="152" text-anchor="middle" dominant-baseline="central">raw/</text>
+    <text class="ts" x="541" y="168" text-anchor="middle" dominant-baseline="central">TL codegen</text>
+  </g>
+
+  <!-- FFI arrow -->
+  <line x1="340" y1="264" x2="340" y2="296" class="arr" marker-end="url(#arrow)"/>
+  <text class="ts" x="356" y="280" dominant-baseline="central">FFI  (PyO3)</text>
+
+  <!-- Rust extension box -->
+  <g class="c-teal">
+    <rect x="50" y="296" width="580" height="188" rx="12" stroke-width="0.5"/>
+    <text class="th" x="340" y="320" text-anchor="middle" dominant-baseline="central">_ferogram.so  (Rust)</text>
+  </g>
+  <g class="c-teal">
+    <rect x="70" y="338" width="148" height="40" rx="6" stroke-width="0.5"/>
+    <text class="ts" x="144" y="358" text-anchor="middle" dominant-baseline="central">DcConnection</text>
+  </g>
+  <line x1="218" y1="358" x2="256" y2="358" class="arr" marker-end="url(#arrow)" stroke="#0F6E56"/>
+  <g class="c-teal">
+    <rect x="256" y="330" width="174" height="56" rx="6" stroke-width="0.5"/>
+    <text class="ts" x="343" y="348" text-anchor="middle" dominant-baseline="central">ferogram_mtsender</text>
+    <text class="ts" x="343" y="364" text-anchor="middle" dominant-baseline="central">ferogram_connect</text>
+    <text class="ts" x="343" y="380" text-anchor="middle" dominant-baseline="central">ferogram_crypto</text>
+  </g>
+  <g class="c-teal">
+    <rect x="70" y="396" width="148" height="52" rx="6" stroke-width="0.5"/>
+    <text class="ts" x="144" y="416" text-anchor="middle" dominant-baseline="central">*Session</text>
+    <text class="ts" x="144" y="432" text-anchor="middle" dominant-baseline="central">srp_calculate</text>
+  </g>
+  <line x1="218" y1="422" x2="448" y2="390" class="arr" marker-end="url(#arrow)" stroke="#0F6E56"/>
+  <g class="c-teal">
+    <rect x="448" y="338" width="162" height="72" rx="6" stroke-width="0.5"/>
+    <text class="ts" x="529" y="358" text-anchor="middle" dominant-baseline="central">ferogram_session</text>
+    <text class="ts" x="529" y="376" text-anchor="middle" dominant-baseline="central">ferogram_tl_types</text>
+    <text class="ts" x="529" y="394" text-anchor="middle" dominant-baseline="central">ferogram_crypto</text>
+  </g>
+
+  <!-- TCP arrow -->
+  <line x1="340" y1="484" x2="340" y2="512" class="arr" marker-end="url(#arrow)"/>
+  <text class="ts" x="356" y="498" dominant-baseline="central">TCP / TLS</text>
+
+  <!-- Telegram -->
+  <g class="c-blue">
+    <rect x="230" y="512" width="220" height="44" rx="8" stroke-width="0.5"/>
+    <text class="th" x="340" y="534" text-anchor="middle" dominant-baseline="central">Telegram MTProto</text>
+  </g>
+</svg>

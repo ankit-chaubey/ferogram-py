@@ -1,3 +1,54 @@
+## 0.5.0 (2026-06-28)
+
+### Architecture
+
+The Rust dependency has changed from the monolithic `ferogram` crate to five focused crates from the ferogram core:
+
+- `ferogram-mtsender` - MTProto sender, message framing, and acknowledgement
+- `ferogram-session` - session storage (file, sqlite, libsql, memory, string)
+- `ferogram-connect` - TCP/TLS transport and DC routing
+- `ferogram-tl-types` - generated TL type definitions
+- `ferogram-crypto` - AES-IGE, Diffie-Hellman, and SHA helpers
+
+These five crates form the battle-tested lower layer of ferogram. They change rarely and are stable across minor versions. All high-level logic (message parsing, update dispatch, peer resolution, serialization, deserialization) now lives in Python. This split means the compiled extension is smaller and faster to build, and Python-side behaviour can be updated without recompiling the Rust extension.
+
+The compiled extension now uses `abi3-py39` (was `abi3-py313`), so a single wheel runs on Python 3.9 and later.
+
+### Added
+
+- **`TransferHandle`** - pause, resume, and cancel any upload or download in flight. Create a `TransferHandle`, pass it to `upload_with_progress` or `download_with_progress`, then call `.pause()`, `.resume()`, or `.cancel()` from any coroutine. `.progress()` returns a dict with `done`, `total`, `elapsed_ms`, `percent`, `speed_bps`, `eta_secs`, `speed_human`, and `bytes_human`.
+- **`TransferCancelled` exception** - raised when a `TransferHandle` is cancelled mid-transfer.
+- **`keyboards` module** - `InlineKeyboard`, `InlineButton`, `ReplyKeyboard`, `ReplyButton`, `RemoveKeyboard`, and `ForceReply` are now pure Python and importable from `ferogram` directly.
+- **`types` module** - all entity types (`User`, `Message`, `Chat`, `Dialog`, `ChatMember`, `UserFull`, `Authorization`, `ForumTopic`, `BotInfo`, `InviteLinkMember`, `ReadParticipant`, `AdminLogEvent`, `StickerSetInfo`, `BroadcastStats`, `MegagroupStats`, `NotifySettings`) moved from Rust to Python dataclasses. The public API is identical.
+- **`updates` module** - update wrapper types (`NewMessage`, `EditedMessage`, `MessageDeletion`, `CallbackQuery`, `InlineQuery`, `InlineSend`, `UserStatus`, `ParticipantUpdate`, `JoinRequest`, `MessageReaction`, `PollVote`, `BotStopped`, `ShippingQuery`, `PreCheckoutQuery`, `ChatBoost`, `RawUpdate`) moved from Rust to Python dataclasses.
+- **`rich` module** - `send_rich_message`, `edit_rich_message`, `send_rich_message_draft`, and `get_rich_message` via a `_RichMixin`. Supports Telegram rich text blocks including headers, tables, collages, task lists, footnotes, math, time stamps, and custom emoji via Markdown or HTML input.
+- **Automatic TL codegen at build time** - `build.rs` now runs `ferogram/raw/codegen.py` during `maturin develop` / `pip install .`. Set `FEROGRAM_SKIP_CODEGEN=1` to skip if you only changed Rust. The codegen uses the same Python interpreter maturin selected.
+- **`DcConnection` and `srp_calculate`** exposed from the Rust extension for use by the pure-Python `Client` class.
+- **`LAYER` constant** exported from `ferogram.raw.generated._tl_schema` and used automatically in `invokeWithLayer` wrappers.
+- **`all_updates` filter** - replaces the old `all` filter (which shadowed the built-in).
+- **`filters` improvements** - all filters now unwrap `NewMessage` / `EditedMessage` wrapper objects before inspecting the inner `Message`. Previously filters broke when the dispatcher passed wrapper objects instead of bare messages.
+
+### Changed
+
+- `Message`, `User`, `Chat`, and all entity types are now Python dataclasses instead of PyO3 structs. They serialize to / from the TL dict representation in Python. No change to the public API.
+- `CallbackQuery`, `InlineQuery`, and all update types are now Python dataclasses.
+- `InlineKeyboard`, `ReplyKeyboard`, and related keyboard builders are now pure Python (`ferogram/keyboards.py`). Previously they were Rust structs.
+- Filters rewritten to correctly unwrap update wrapper objects. `reply` filter now checks `reply_to_msg_id`; `forwarded` checks `forward_from_id`; `media` checks the `media` field directly.
+- `codegen.py` doubled in size (321 to 691 lines): now generates specialized `to_bytes()` methods using `struct.pack` inline and a CID-dispatch `from_bytes()` router, producing faster serialization and deserialization than the previous schema-dict approach.
+- `ferogram-py` version bump to 0.5.0. Core crates pinned to `ferogram-*` 0.6.3.
+
+### Removed
+
+- Direct dependency on the monolithic `ferogram` crate. The five focused crates replace it.
+- `hex` crate dependency (was `0.4`, now unused).
+- `all` filter removed and replaced with `all_updates` to avoid shadowing Python's built-in `all`.
+
+
+## 0.4.1 (2026-06-03)
+
+Patch release. No API changes. Identical to 0.4.0 except for dependency pins and minor internal fixes.
+
+
 ## 0.4.0 (2026-06-01)
 
 ### Added
@@ -20,7 +71,7 @@
 - **`flood_sleep_threshold` kwarg on `Client`** - maps to the `AutoSleep` retry policy in the Rust core. Flood waits under this value are slept through automatically; waits above it are raised as exceptions.
 - **`download_with_progress(peer, msg_id, path, on_progress)`** - download media with a progress callback `on_progress(done, total)`.
 - **`upload_with_progress(path, on_progress)`** - upload a file with a progress callback. Returns a handle string accepted by `send_file`.
-- **`ferogram` 0.6.0 as core dependency** - includes `Client.channel_kind_of(channel_id)` which backs the new `Message` methods above.
+- **ferogram 0.6.0 as core dependency** - includes `Client.channel_kind_of(channel_id)` which backs the new `Message` methods above.
 
 ### Changed
 
@@ -62,9 +113,6 @@ the votes graph as a JSON string. The old `get_poll_results(peer, msg_id, poll_h
 is kept for backward compat but is deprecated; the `poll_hash` parameter is ignored
 because ferogram 0.5.0 dropped the underlying API call it relied on.
 
----
-
-# Changelog
 
 ## 0.2.3 (2026-05-14)
 
@@ -124,7 +172,6 @@ Ten new methods for managing group and channel members.
 
 `get_poll_results(peer, msg_id, poll_hash)` was in Rust but had no Python wrapper. Now exposed. Fetches and caches the latest poll results from Telegram.
 
----
 
 ## 0.2.2
 

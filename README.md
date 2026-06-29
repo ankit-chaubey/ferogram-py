@@ -2,15 +2,15 @@
 
 Python bindings for [ferogram](https://github.com/ankit-chaubey/ferogram), a Telegram MTProto client written in Rust.
 
-ferogram-py keeps the Telegram-specific work in a Rust core and exposes a small async Python layer on top. That gives you a Python-friendly API for bots, userbots, and automation, while the heavy lifting stays in Rust.
+Built with [PyO3](https://pyo3.rs) and [maturin](https://maturin.rs). Works on Linux, macOS, Windows, and Android (Termux).
 
-## Highlights
+## What is ferogram-py?
 
-- Rust-powered MTProto transport, encryption, sessions, and update handling
-- Async Python API with decorators and raw TL access
-- Session backends for files, SQLite, memory, StringSession, libSQL, and custom stores
-- High-level helpers for messages, media, chats, polls, inline bots, privacy, and bot management
-- Prebuilt wheels for Linux, macOS, Windows, and Android/Termux
+ferogram-py is a Python interface for the ferogram MTProto client. It uses a Rust core for networking, encryption, session handling, and low-level MTProto, while the high-level API lives in Python.
+
+You can use it to build userbots, bots, or automation tools with access to both high-level methods and raw Telegram APIs.
+
+> Full API reference: [FEATURES.md](./FEATURES.md)
 
 ## Install
 
@@ -18,27 +18,25 @@ ferogram-py keeps the Telegram-specific work in a Rust core and exposes a small 
 pip install ferogram
 ```
 
-Prebuilt wheels are available for:
+Pre-built wheels are available for Linux (x86_64, aarch64), macOS (x86_64, arm64), Windows (x86_64), and Android/Termux (aarch64, x86_64).
 
-| Platform | Arch |
-|---|---|
-| Linux (manylinux) | x86_64, aarch64 |
-| macOS | x86_64, arm64 |
-| Windows | x86_64 |
-| Android / Termux | aarch64, x86_64 |
+On Termux, `pip install ferogram` picks the correct wheel automatically.
 
-If you need a local build:
+### Build from source
+
+Clone the repo, then use make:
 
 ```bash
-pip install ferogram --no-binary ferogram
+make dev      # editable install into .venv (builds Rust extension)
+make build    # release wheel for this machine
+make codegen  # regen TL generated code without a Rust build
+make test     # run tests
+make clean    # remove .venv, target, dist, generated/
 ```
 
-On Termux:
+Termux prerequisites: `pkg install rust clang python`
 
-```bash
-pkg install rust clang python
-pip install ferogram --no-binary ferogram
-```
+To skip TL codegen on a Rust-only change: `FEROGRAM_SKIP_CODEGEN=1 maturin develop`
 
 ## Quick start
 
@@ -49,79 +47,63 @@ app = Client("mybot", api_id=0, api_hash="", bot_token="123:TOKEN")
 
 @app.on_message(filters.command("start"))
 async def start(client, message):
-    await client.send_message(message.chat_id, "Hello!")
+    await message.reply("Hello!")
 
 app.run()
 ```
 
-Credentials can also come from environment variables:
+Credentials can also come from env vars: `API_ID`, `API_HASH`, `BOT_TOKEN`.
 
-- `API_ID`
-- `API_HASH`
-- `BOT_TOKEN`
-
-## Client setup
+## Logging
 
 ```python
-from ferogram import Client
+import ferogram.logging as fero_log
 
-app = Client(
-    session="mybot",       # session file name, or a session object
-    api_id=123456,
-    api_hash="abc...",
-    bot_token="123:TOKEN", # omit for userbot
-)
-
-app.run()
-# or
-await app.start()
-await app.run_until_disconnected()
-# or
-async with app as client:
-    ...
-```
-
-## Raw API
-
-Use `client.raw` when you want a convenient proxy for TL methods.
-
-```python
-result = await client.raw.messages.GetHistory(peer="@durov", limit=5)
-result = await client.raw.messages.SendMessage(peer="@user", message="hi")
-```
-
-For explicit control, import generated classes directly:
-
-```python
-from ferogram.raw.generated.functions.messages import GetHistory
-
-result = await client.invoke(GetHistory(
-    peer=await client.resolve_peer("@durov"),
-    offset_id=0,
-    offset_date=0,
-    add_offset=0,
-    limit=5,
-    max_id=0,
-    min_id=0,
-    hash=0,
-))
+fero_log.setup()           # INFO to stderr
+fero_log.setup(level=10)   # DEBUG
 ```
 
 ## Architecture
 
-```text
-Python caller
-   ↓ await
-ferogram-py (PyO3 extension)
-   ↓ FFI
-ferogram (Rust / tokio)
-   ↓ TCP / TLS
-Telegram MTProto
+![architecture](assets/architecture.svg)
+
+The compiled extension (`_ferogram.so`) is intentionally thin. It exposes only `DcConnection`, six session backends, and `srp_calculate`. All high-level logic lives in Python and can be updated without recompiling.
+
+```
+          your code
+              │
+    ┌─────────▼──────────────────────────────┐
+    │        ferogram-py  (Python)           │
+    │                                        │
+    │  client · filters · types · updates    │
+    │  keyboards · rich · raw/               │
+    └─────────┬──────────────────────────────┘
+              │  FFI (PyO3)
+    ┌─────────▼──────────────────────────────┐
+    │       _ferogram.so  (Rust)             │
+    │                                        │
+    │  DcConnection ──► ferogram_mtsender    │
+    │                   ferogram_connect     │
+    │                   ferogram_crypto      │
+    │                                        │
+    │  *Session     ──► ferogram_session     │
+    │  srp_calculate──► ferogram_crypto      │
+    └─────────┬──────────────────────────────┘
+              │  TCP / TLS
+              ▼
+        Telegram MTProto
 ```
 
 ## License
 
-Dual-licensed under MIT or Apache 2.0.
+This project is dual-licensed under MIT or Apache 2.0. You may choose either.
+
+You are free to use, modify, and distribute this software, including for commercial use, provided the original license and copyright notice are included.
+
+See `LICENSE-MIT` and `LICENSE-APACHE` for full details.
 
 Developed by [Ankit Chaubey](https://github.com/ankit-chaubey)
 
+---
+
+⭐ Star this repo if you find it useful
