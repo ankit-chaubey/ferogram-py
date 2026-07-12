@@ -96,7 +96,7 @@ fero_log.setup(level=10)   # DEBUG
 
 ## Architecture
 
-![architecture](assets/architecture.svg)
+![architecture](https://github.com/ankit-chaubey/ferogram-py/blob/main/assets/architecture.svg)
 
 The compiled extension (`_ferogram.so`) stays deliberately small: networking, encryption, session storage, and MTProto internals live in Rust. Everything you touch day to day, the client, handlers, filters, is plain Python and can change without a recompile.
 
