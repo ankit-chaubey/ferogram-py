@@ -1,30 +1,30 @@
-<p align="center">
-  <img src="assets/logo.png" width="120" alt="ferogram logo">
-</p>
-
+<div align="center">
+  
 # ferogram-py
 
-**Elegant, modern and asynchronous Telegram MTProto API framework in Python, for users and bots.**
+![PyPI](https://img.shields.io/pypi/v/ferogram?style=flat-square&logo=pypi&logoColor=white&color=7C3AED)
+![Python](https://img.shields.io/pypi/pyversions/ferogram?style=flat-square&logo=python&logoColor=FFD43B&color=3B82F6)
+![Downloads](https://img.shields.io/pepy/dt/ferogram?style=flat-square&color=14B8A6)
+![License](https://img.shields.io/badge/License-MIT%20%7C%20Apache--2.0-64748B?style=flat-square)
+![Telegram](https://img.shields.io/badge/Telegram-FerogramChat-06B6D4?style=flat-square&logo=telegram&logoColor=white)
 
-Powered by a Rust core that handles the heavy parts, networking, encryption, session state, so Python stays out of the way and just gets to be Python.
+**A modern, elegant, asynchronous MTProto framework for building Telegram user clients and bots in Python.**
 
-[![PyPI](https://img.shields.io/pypi/v/ferogram?color=blue)](https://pypi.org/project/ferogram/)
-[![Python](https://img.shields.io/pypi/pyversions/ferogram)](https://pypi.org/project/ferogram/)
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-informational)](#license)
-[![TL Layer](https://img.shields.io/badge/TL%20layer-228-brightgreen)](./FEATURES.md)
-[![Telegram](https://img.shields.io/badge/chat-@FerogramChat-26A5E4?logo=telegram&logoColor=white)](https://t.me/FerogramChat)
+</div>
+
+Powered by a high-performance [Rust core](https://github.com/ankit-chaubey/ferogram) that takes care of networking, encryption, TL parsing, and session management so you can focus on writing clean, idiomatic Python.
 
 ---
 
 ## Why ferogram-py?
 
-Most of what makes an MTProto client slow has nothing to do with your bot logic. It's parsing, encrypting, and pushing bytes over a socket fast enough to keep up with updates. ferogram-py hands all of that to Rust and keeps the surface you actually write against, handlers, filters, keyboards, in plain, readable Python.
+Most of the heavy lifting in an MTProto client happens behind the scenes; networking, encryption, TL parsing, and keeping up with updates. ferogram-py lets a Rust core handle all of that, while exposing a clean, Pythonic API.
 
-The result is a client that feels light to write and doesn't fall over under load. You get async/await everywhere, a proper FSM for conversation flows, raw API access when you need to drop down a level, and a session layer that won't block your event loop doing disk I/O.
+For most applications, the high-level API is all you'll need. But if you want to use a brand-new Telegram feature or need something more advanced, you can always drop down to the raw MTProto API and invoke requests directly.
 
-It's still young. But the core is solid, actively maintained, and built by someone who uses it every day, not a weekend project left to rot.
+The goal is to stay out of your way: simple things should be simple, and advanced things should still be possible.
 
-> Full API reference: [FEATURES.md](./FEATURES.md)
+> Quick API reference: [FEATURES.md](./FEATURES.md)
 
 ---
 
@@ -33,8 +33,6 @@ It's still young. But the core is solid, actively maintained, and built by someo
 ```bash
 pip install ferogram
 ```
-
-Wheels ship prebuilt for Linux (x86_64, aarch64), macOS (x86_64, arm64), Windows (x86_64), and Android/Termux (aarch64, x86_64). `pip install ferogram` grabs the right one on its own.
 
 <details>
 <summary>Building from source</summary>
@@ -70,7 +68,7 @@ async def start(client, message):
 app.run()
 ```
 
-**Userbot:**
+**User:**
 
 ```python
 import asyncio
@@ -102,6 +100,13 @@ fero_log.setup(level=10)   # DEBUG
 
 The compiled extension (`_ferogram.so`) stays deliberately small: networking, encryption, session storage, and MTProto internals live in Rust. Everything you touch day to day, the client, handlers, filters, is plain Python and can change without a recompile.
 
+<details>
+<summary>Prebuilt Wheels for your platform</summary>
+
+Wheels ship prebuilt for Linux (x86_64, aarch64), macOS (x86_64, arm64), Windows (x86_64), and Android/Termux (aarch64, x86_64). `pip install ferogram` grabs the right one on its own.
+
+</details>
+
 ---
 
 ## License
@@ -115,7 +120,7 @@ You may choose either license.
 
 You are free to use, modify, and distribute this software, including for commercial use, provided the original license and copyright notice are included.
 
-See `LICENSE-MIT` and `LICENSE-APACHE` for full details.
+See [`LICENSE-MIT`](https://github.com/ankit-chaubey/ferogram-py/blob/main/LICENSE-MIT) and [`LICENSE-APACHE`](https://github.com/ankit-chaubey/ferogram-py/blob/main/LICENSE-APACHE) for full details.
 
 ---
 
@@ -123,9 +128,9 @@ See `LICENSE-MIT` and `LICENSE-APACHE` for full details.
 
 Developed by [Ankit Chaubey](https://github.com/ankit-chaubey)
 
-Don't forget to explore the Rust engine powering ferogram-py: [ferogram](https://github.com/ankit-chaubey/ferogram). Thanks for being part of the journey.
+Don't forget to explore the Rust engine powering ferogram-py: [`ferogram`](https://github.com/ankit-chaubey/ferogram). Thanks for being part of the journey.
 
-Join the ferogram community! Questions, discussions, and feedback are always welcome. As the project grows, we'll eventually split Python and Rust discussions into dedicated spaces.
+Join the ferogram community! Questions, discussions, bugs report and feedback are always welcome. As the project grows, we'll eventually split Python and Rust discussions into dedicated spaces.
 
  - Channel (releases & announcements):  [@Ferogram](https://t.me/Ferogram)
 
