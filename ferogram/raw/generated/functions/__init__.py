@@ -25,7 +25,9 @@ from .auth import *  # noqa: F401,F403
 from .bots import *  # noqa: F401,F403
 from .channels import *  # noqa: F401,F403
 from .chatlists import *  # noqa: F401,F403
+from .communities import *  # noqa: F401,F403
 from .contacts import *  # noqa: F401,F403
+from .ephemeral import *  # noqa: F401,F403
 from .folders import *  # noqa: F401,F403
 from .fragment import *  # noqa: F401,F403
 from .help import *  # noqa: F401,F403
@@ -50,7 +52,9 @@ from . import auth  # noqa: F401
 from . import bots  # noqa: F401
 from . import channels  # noqa: F401
 from . import chatlists  # noqa: F401
+from . import communities  # noqa: F401
 from . import contacts  # noqa: F401
+from . import ephemeral  # noqa: F401
 from . import folders  # noqa: F401
 from . import fragment  # noqa: F401
 from . import help  # noqa: F401

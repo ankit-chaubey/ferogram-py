@@ -2360,7 +2360,7 @@ class UserEmpty:
         return f"UserEmpty(id={self.id!r})"
 
 class User:
-    _CID = 0x31774388
+    _CID = 0xb1b8cc83
 
     def __init__(
         self,
@@ -2414,6 +2414,7 @@ class User:
         bot_active_users: int | None = None,
         bot_verification_icon: int | None = None,
         send_paid_messages_stars: int | None = None,
+        linked_community_id: int | None = None,
     ) -> None:
         self.self_ = self_
         self.contact = contact
@@ -2465,6 +2466,7 @@ class User:
         self.bot_active_users = bot_active_users
         self.bot_verification_icon = bot_verification_icon
         self.send_paid_messages_stars = send_paid_messages_stars
+        self.linked_community_id = linked_community_id
 
     def to_dict(self) -> dict:
         return {"_": "user", **{
@@ -2518,12 +2520,13 @@ class User:
             "bot_active_users": _tl._resolve(self.bot_active_users),
             "bot_verification_icon": _tl._resolve(self.bot_verification_icon),
             "send_paid_messages_stars": _tl._resolve(self.send_paid_messages_stars),
+            "linked_community_id": _tl._resolve(self.linked_community_id),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\x88Cw1'
+        out = b'\x83\xcc\xb8\xb1'
         _flags_word = (0 if self.self_ is None else (1 << 10)) | (0 if self.contact is None else (1 << 11)) | (0 if self.mutual_contact is None else (1 << 12)) | (0 if self.deleted is None else (1 << 13)) | (0 if self.bot is None else (1 << 14)) | (0 if self.bot_chat_history is None else (1 << 15)) | (0 if self.bot_nochats is None else (1 << 16)) | (0 if self.verified is None else (1 << 17)) | (0 if self.restricted is None else (1 << 18)) | (0 if self.min is None else (1 << 20)) | (0 if self.bot_inline_geo is None else (1 << 21)) | (0 if self.support is None else (1 << 23)) | (0 if self.scam is None else (1 << 24)) | (0 if self.apply_min_photo is None else (1 << 25)) | (0 if self.fake is None else (1 << 26)) | (0 if self.bot_attach_menu is None else (1 << 27)) | (0 if self.premium is None else (1 << 28)) | (0 if self.attach_menu_enabled is None else (1 << 29)) | (0 if self.access_hash is None else (1 << 0)) | (0 if self.first_name is None else (1 << 1)) | (0 if self.last_name is None else (1 << 2)) | (0 if self.username is None else (1 << 3)) | (0 if self.phone is None else (1 << 4)) | (0 if self.photo is None else (1 << 5)) | (0 if self.status is None else (1 << 6)) | (0 if self.bot_info_version is None else (1 << 14)) | (0 if self.restriction_reason is None else (1 << 18)) | (0 if self.bot_inline_placeholder is None else (1 << 19)) | (0 if self.lang_code is None else (1 << 22)) | (0 if self.emoji_status is None else (1 << 30))
-        _flags2_word = (0 if self.bot_can_edit is None else (1 << 1)) | (0 if self.close_friend is None else (1 << 2)) | (0 if self.stories_hidden is None else (1 << 3)) | (0 if self.stories_unavailable is None else (1 << 4)) | (0 if self.contact_require_premium is None else (1 << 10)) | (0 if self.bot_business is None else (1 << 11)) | (0 if self.bot_has_main_app is None else (1 << 13)) | (0 if self.bot_forum_view is None else (1 << 16)) | (0 if self.bot_forum_can_manage_topics is None else (1 << 17)) | (0 if self.bot_can_manage_bots is None else (1 << 18)) | (0 if self.bot_guestchat is None else (1 << 19)) | (0 if self.bot_guard is None else (1 << 20)) | (0 if self.usernames is None else (1 << 0)) | (0 if self.stories_max_id is None else (1 << 5)) | (0 if self.color is None else (1 << 8)) | (0 if self.profile_color is None else (1 << 9)) | (0 if self.bot_active_users is None else (1 << 12)) | (0 if self.bot_verification_icon is None else (1 << 14)) | (0 if self.send_paid_messages_stars is None else (1 << 15))
+        _flags2_word = (0 if self.bot_can_edit is None else (1 << 1)) | (0 if self.close_friend is None else (1 << 2)) | (0 if self.stories_hidden is None else (1 << 3)) | (0 if self.stories_unavailable is None else (1 << 4)) | (0 if self.contact_require_premium is None else (1 << 10)) | (0 if self.bot_business is None else (1 << 11)) | (0 if self.bot_has_main_app is None else (1 << 13)) | (0 if self.bot_forum_view is None else (1 << 16)) | (0 if self.bot_forum_can_manage_topics is None else (1 << 17)) | (0 if self.bot_can_manage_bots is None else (1 << 18)) | (0 if self.bot_guestchat is None else (1 << 19)) | (0 if self.bot_guard is None else (1 << 20)) | (0 if self.usernames is None else (1 << 0)) | (0 if self.stories_max_id is None else (1 << 5)) | (0 if self.color is None else (1 << 8)) | (0 if self.profile_color is None else (1 << 9)) | (0 if self.bot_active_users is None else (1 << 12)) | (0 if self.bot_verification_icon is None else (1 << 14)) | (0 if self.send_paid_messages_stars is None else (1 << 15)) | (0 if self.linked_community_id is None else (1 << 21))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<I', _flags2_word)
         out += _struct.pack('<q', self.id)
@@ -2565,6 +2568,8 @@ class User:
             out += _struct.pack('<q', self.bot_verification_icon)
         if _flags2_word & (1 << 15):
             out += _struct.pack('<q', self.send_paid_messages_stars)
+        if _flags2_word & (1 << 21):
+            out += _struct.pack('<q', self.linked_community_id)
         return out
 
     @classmethod
@@ -2678,6 +2683,9 @@ class User:
             pos = pos + 8
         if _flags2_word & (1 << 15):
             obj["send_paid_messages_stars"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags2_word & (1 << 21):
+            obj["linked_community_id"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         return obj, pos
 
@@ -3108,7 +3116,7 @@ class ChatForbidden:
         return f"ChatForbidden(id={self.id!r}, title={self.title!r})"
 
 class Channel:
-    _CID = 0x1c32b11c
+    _CID = 0xd49f34c6
 
     def __init__(
         self,
@@ -3161,6 +3169,7 @@ class Channel:
         bot_verification_icon: int | None = None,
         send_paid_messages_stars: int | None = None,
         linked_monoforum_id: int | None = None,
+        linked_community_id: int | None = None,
     ) -> None:
         self.creator = creator
         self.left = left
@@ -3211,6 +3220,7 @@ class Channel:
         self.bot_verification_icon = bot_verification_icon
         self.send_paid_messages_stars = send_paid_messages_stars
         self.linked_monoforum_id = linked_monoforum_id
+        self.linked_community_id = linked_community_id
 
     def to_dict(self) -> dict:
         return {"_": "channel", **{
@@ -3263,12 +3273,13 @@ class Channel:
             "bot_verification_icon": _tl._resolve(self.bot_verification_icon),
             "send_paid_messages_stars": _tl._resolve(self.send_paid_messages_stars),
             "linked_monoforum_id": _tl._resolve(self.linked_monoforum_id),
+            "linked_community_id": _tl._resolve(self.linked_community_id),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\x1c\xb12\x1c'
+        out = b'\xc64\x9f\xd4'
         _flags_word = (0 if self.creator is None else (1 << 0)) | (0 if self.left is None else (1 << 2)) | (0 if self.broadcast is None else (1 << 5)) | (0 if self.verified is None else (1 << 7)) | (0 if self.megagroup is None else (1 << 8)) | (0 if self.restricted is None else (1 << 9)) | (0 if self.signatures is None else (1 << 11)) | (0 if self.min is None else (1 << 12)) | (0 if self.scam is None else (1 << 19)) | (0 if self.has_link is None else (1 << 20)) | (0 if self.has_geo is None else (1 << 21)) | (0 if self.slowmode_enabled is None else (1 << 22)) | (0 if self.call_active is None else (1 << 23)) | (0 if self.call_not_empty is None else (1 << 24)) | (0 if self.fake is None else (1 << 25)) | (0 if self.gigagroup is None else (1 << 26)) | (0 if self.noforwards is None else (1 << 27)) | (0 if self.join_to_send is None else (1 << 28)) | (0 if self.join_request is None else (1 << 29)) | (0 if self.forum is None else (1 << 30)) | (0 if self.access_hash is None else (1 << 13)) | (0 if self.username is None else (1 << 6)) | (0 if self.restriction_reason is None else (1 << 9)) | (0 if self.admin_rights is None else (1 << 14)) | (0 if self.banned_rights is None else (1 << 15)) | (0 if self.default_banned_rights is None else (1 << 18)) | (0 if self.participants_count is None else (1 << 17))
-        _flags2_word = (0 if self.stories_hidden is None else (1 << 1)) | (0 if self.stories_hidden_min is None else (1 << 2)) | (0 if self.stories_unavailable is None else (1 << 3)) | (0 if self.signature_profiles is None else (1 << 12)) | (0 if self.autotranslation is None else (1 << 15)) | (0 if self.broadcast_messages_allowed is None else (1 << 16)) | (0 if self.monoforum is None else (1 << 17)) | (0 if self.forum_tabs is None else (1 << 19)) | (0 if self.usernames is None else (1 << 0)) | (0 if self.stories_max_id is None else (1 << 4)) | (0 if self.color is None else (1 << 7)) | (0 if self.profile_color is None else (1 << 8)) | (0 if self.emoji_status is None else (1 << 9)) | (0 if self.level is None else (1 << 10)) | (0 if self.subscription_until_date is None else (1 << 11)) | (0 if self.bot_verification_icon is None else (1 << 13)) | (0 if self.send_paid_messages_stars is None else (1 << 14)) | (0 if self.linked_monoforum_id is None else (1 << 18))
+        _flags2_word = (0 if self.stories_hidden is None else (1 << 1)) | (0 if self.stories_hidden_min is None else (1 << 2)) | (0 if self.stories_unavailable is None else (1 << 3)) | (0 if self.signature_profiles is None else (1 << 12)) | (0 if self.autotranslation is None else (1 << 15)) | (0 if self.broadcast_messages_allowed is None else (1 << 16)) | (0 if self.monoforum is None else (1 << 17)) | (0 if self.forum_tabs is None else (1 << 19)) | (0 if self.usernames is None else (1 << 0)) | (0 if self.stories_max_id is None else (1 << 4)) | (0 if self.color is None else (1 << 7)) | (0 if self.profile_color is None else (1 << 8)) | (0 if self.emoji_status is None else (1 << 9)) | (0 if self.level is None else (1 << 10)) | (0 if self.subscription_until_date is None else (1 << 11)) | (0 if self.bot_verification_icon is None else (1 << 13)) | (0 if self.send_paid_messages_stars is None else (1 << 14)) | (0 if self.linked_monoforum_id is None else (1 << 18)) | (0 if self.linked_community_id is None else (1 << 20))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<I', _flags2_word)
         out += _struct.pack('<q', self.id)
@@ -3309,6 +3320,8 @@ class Channel:
             out += _struct.pack('<q', self.send_paid_messages_stars)
         if _flags2_word & (1 << 18):
             out += _struct.pack('<q', self.linked_monoforum_id)
+        if _flags2_word & (1 << 20):
+            out += _struct.pack('<q', self.linked_community_id)
         return out
 
     @classmethod
@@ -3421,6 +3434,9 @@ class Channel:
         if _flags2_word & (1 << 18):
             obj["linked_monoforum_id"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
+        if _flags2_word & (1 << 20):
+            obj["linked_community_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3489,6 +3505,147 @@ class ChannelForbidden:
 
     def __repr__(self) -> str:
         return f"ChannelForbidden(broadcast={self.broadcast!r}, megagroup={self.megagroup!r}, monoforum={self.monoforum!r}, id={self.id!r})"
+
+class CommunityForbidden:
+    _CID = 0xfd3cdab8
+
+    def __init__(
+        self,
+        id: int,
+        title: str,
+        access_hash: int | None = None,
+    ) -> None:
+        self.id = id
+        self.access_hash = access_hash
+        self.title = title
+
+    def to_dict(self) -> dict:
+        return {"_": "communityForbidden", **{
+            "id": _tl._resolve(self.id),
+            "access_hash": _tl._resolve(self.access_hash),
+            "title": _tl._resolve(self.title),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xb8\xda<\xfd'
+        _flags_word = (0 if self.access_hash is None else (1 << 13))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.id)
+        if _flags_word & (1 << 13):
+            out += _struct.pack('<q', self.access_hash)
+        out += _tl._pack_string(self.title)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "communityForbidden"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 13):
+            obj["access_hash"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"CommunityForbidden(id={self.id!r}, access_hash={self.access_hash!r}, title={self.title!r})"
+
+class Community:
+    _CID = 0x65efe954
+
+    def __init__(
+        self,
+        id: int,
+        title: str,
+        photo: Any,
+        date: int,
+        creator: bool | None = None,
+        left: bool | None = None,
+        min: bool | None = None,
+        collapsed_in_dialogs: bool | None = None,
+        access_hash: int | None = None,
+        admin_rights: Any | None = None,
+        default_banned_rights: Any | None = None,
+    ) -> None:
+        self.creator = creator
+        self.left = left
+        self.min = min
+        self.collapsed_in_dialogs = collapsed_in_dialogs
+        self.id = id
+        self.access_hash = access_hash
+        self.title = title
+        self.photo = photo
+        self.date = date
+        self.admin_rights = admin_rights
+        self.default_banned_rights = default_banned_rights
+
+    def to_dict(self) -> dict:
+        return {"_": "community", **{
+            "creator": _tl._resolve(self.creator),
+            "left": _tl._resolve(self.left),
+            "min": _tl._resolve(self.min),
+            "collapsed_in_dialogs": _tl._resolve(self.collapsed_in_dialogs),
+            "id": _tl._resolve(self.id),
+            "access_hash": _tl._resolve(self.access_hash),
+            "title": _tl._resolve(self.title),
+            "photo": _tl._resolve(self.photo),
+            "date": _tl._resolve(self.date),
+            "admin_rights": _tl._resolve(self.admin_rights),
+            "default_banned_rights": _tl._resolve(self.default_banned_rights),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'T\xe9\xefe'
+        _flags_word = (0 if self.creator is None else (1 << 0)) | (0 if self.left is None else (1 << 2)) | (0 if self.min is None else (1 << 12)) | (0 if self.access_hash is None else (1 << 13)) | (0 if self.admin_rights is None else (1 << 14)) | (0 if self.default_banned_rights is None else (1 << 18))
+        _flags2_word = (0 if self.collapsed_in_dialogs is None else (1 << 20))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<I', _flags2_word)
+        out += _struct.pack('<q', self.id)
+        if _flags_word & (1 << 13):
+            out += _struct.pack('<q', self.access_hash)
+        out += _tl._pack_string(self.title)
+        out += _tl.serialize(_tl._resolve(self.photo), _SCHEMA)
+        out += _struct.pack('<i', self.date)
+        if _flags_word & (1 << 14):
+            out += _tl.serialize(_tl._resolve(self.admin_rights), _SCHEMA)
+        if _flags_word & (1 << 18):
+            out += _tl.serialize(_tl._resolve(self.default_banned_rights), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "community"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["creator"] = True
+        if _flags_word & (1 << 2):
+            obj["left"] = True
+        if _flags_word & (1 << 12):
+            obj["min"] = True
+        _flags2_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags2_word & (1 << 20):
+            obj["collapsed_in_dialogs"] = True
+        obj["id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 13):
+            obj["access_hash"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["photo"], pos = _tl._read_typed(data, pos, "ChatPhoto", _SCHEMA_BY_CID)
+        obj["date"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        if _flags_word & (1 << 14):
+            obj["admin_rights"], pos = _tl._read_typed(data, pos, "ChatAdminRights", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 18):
+            obj["default_banned_rights"], pos = _tl._read_typed(data, pos, "ChatBannedRights", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"Community(creator={self.creator!r}, left={self.left!r}, min={self.min!r}, collapsed_in_dialogs={self.collapsed_in_dialogs!r})"
 
 class ChatFull:
     _CID = 0x2633421b
@@ -4109,6 +4266,78 @@ class ChannelFull:
 
     def __repr__(self) -> str:
         return f"ChannelFull(can_view_participants={self.can_view_participants!r}, can_set_username={self.can_set_username!r}, can_set_stickers={self.can_set_stickers!r}, hidden_prehistory={self.hidden_prehistory!r})"
+
+class CommunityFull:
+    _CID = 0xcbb7a507
+
+    def __init__(
+        self,
+        id: int,
+        about: str,
+        chat_photo: Any,
+        linked_peers: list[Any],
+        admins_count: int | None = None,
+        kicked_count: int | None = None,
+        peer_link_requests_pending: int | None = None,
+    ) -> None:
+        self.id = id
+        self.about = about
+        self.chat_photo = chat_photo
+        self.linked_peers = linked_peers
+        self.admins_count = admins_count
+        self.kicked_count = kicked_count
+        self.peer_link_requests_pending = peer_link_requests_pending
+
+    def to_dict(self) -> dict:
+        return {"_": "communityFull", **{
+            "id": _tl._resolve(self.id),
+            "about": _tl._resolve(self.about),
+            "chat_photo": _tl._resolve(self.chat_photo),
+            "linked_peers": _tl._resolve(self.linked_peers),
+            "admins_count": _tl._resolve(self.admins_count),
+            "kicked_count": _tl._resolve(self.kicked_count),
+            "peer_link_requests_pending": _tl._resolve(self.peer_link_requests_pending),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x07\xa5\xb7\xcb'
+        _flags_word = (0 if self.admins_count is None else (1 << 1)) | (0 if self.kicked_count is None else (1 << 2)) | (0 if self.peer_link_requests_pending is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.id)
+        out += _tl._pack_string(self.about)
+        out += _tl.serialize(_tl._resolve(self.chat_photo), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.linked_peers), _SCHEMA)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.admins_count)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<i', self.kicked_count)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.peer_link_requests_pending)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "communityFull"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["about"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["chat_photo"], pos = _tl._read_typed(data, pos, "Photo", _SCHEMA_BY_CID)
+        obj["linked_peers"], pos = _tl._read_typed(data, pos, "Vector<CommunityPeer>", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["admins_count"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 2):
+            obj["kicked_count"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["peer_link_requests_pending"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"CommunityFull(id={self.id!r}, about={self.about!r}, chat_photo={self.chat_photo!r}, linked_peers={self.linked_peers!r})"
 
 class ChatParticipant:
     _CID = 0x38e79fde
@@ -8637,6 +8866,41 @@ class MessageActionManagedBotCreated:
     def __repr__(self) -> str:
         return f"MessageActionManagedBotCreated(bot_id={self.bot_id!r})"
 
+class MessageActionChangeCommunity:
+    _CID = 0x5d20bae8
+
+    def __init__(
+        self,
+        community_id: int | None = None,
+    ) -> None:
+        self.community_id = community_id
+
+    def to_dict(self) -> dict:
+        return {"_": "messageActionChangeCommunity", **{
+            "community_id": _tl._resolve(self.community_id),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xe8\xba ]'
+        _flags_word = (0 if self.community_id is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.community_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messageActionChangeCommunity"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["community_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"MessageActionChangeCommunity(community_id={self.community_id!r})"
+
 class Dialog:
     _CID = 0xfc89f7f3
 
@@ -8803,6 +9067,49 @@ class DialogFolder:
 
     def __repr__(self) -> str:
         return f"DialogFolder(pinned={self.pinned!r}, folder={self.folder!r}, peer={self.peer!r}, top_message={self.top_message!r})"
+
+class DialogCommunity:
+    _CID = 0xf78a0973
+
+    def __init__(
+        self,
+        community_id: int,
+        notify_settings: Any,
+        pinned: bool | None = None,
+    ) -> None:
+        self.pinned = pinned
+        self.community_id = community_id
+        self.notify_settings = notify_settings
+
+    def to_dict(self) -> dict:
+        return {"_": "dialogCommunity", **{
+            "pinned": _tl._resolve(self.pinned),
+            "community_id": _tl._resolve(self.community_id),
+            "notify_settings": _tl._resolve(self.notify_settings),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b's\t\x8a\xf7'
+        _flags_word = (0 if self.pinned is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.community_id)
+        out += _tl.serialize(_tl._resolve(self.notify_settings), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "dialogCommunity"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 2):
+            obj["pinned"] = True
+        obj["community_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["notify_settings"], pos = _tl._read_typed(data, pos, "PeerNotifySettings", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"DialogCommunity(pinned={self.pinned!r}, community_id={self.community_id!r}, notify_settings={self.notify_settings!r})"
 
 class PhotoEmpty:
     _CID = 0x2331b22d
@@ -9317,6 +9624,34 @@ class InputNotifyForumTopic:
 
     def __repr__(self) -> str:
         return f"InputNotifyForumTopic(peer={self.peer!r}, top_msg_id={self.top_msg_id!r})"
+
+class InputNotifyCommunity:
+    _CID = 0x27bb1adc
+
+    def __init__(
+        self,
+        community: Any,
+    ) -> None:
+        self.community = community
+
+    def to_dict(self) -> dict:
+        return {"_": "inputNotifyCommunity", **{
+            "community": _tl._resolve(self.community),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b"\xdc\x1a\xbb'"
+        out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "inputNotifyCommunity"}
+        obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InputNotifyCommunity(community={self.community!r})"
 
 class InputPeerNotifySettings:
     _CID = 0xcacb6ae2
@@ -17038,6 +17373,154 @@ class UpdateWebBrowserException:
     def __repr__(self) -> str:
         return f"UpdateWebBrowserException(delete={self.delete!r}, open_external_browser={self.open_external_browser!r}, exception={self.exception!r})"
 
+class UpdateNewEphemeralMessage:
+    _CID = 0x20bcbba1
+
+    def __init__(
+        self,
+        message: Any,
+    ) -> None:
+        self.message = message
+
+    def to_dict(self) -> dict:
+        return {"_": "updateNewEphemeralMessage", **{
+            "message": _tl._resolve(self.message),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xa1\xbb\xbc '
+        out += _tl.serialize(_tl._resolve(self.message), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateNewEphemeralMessage"}
+        obj["message"], pos = _tl._read_typed(data, pos, "EphemeralMessage", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateNewEphemeralMessage(message={self.message!r})"
+
+class UpdateDeleteEphemeralMessages:
+    _CID = 0x56dbfcf8
+
+    def __init__(
+        self,
+        peer: Any,
+        ids: list[int],
+    ) -> None:
+        self.peer = peer
+        self.ids = ids
+
+    def to_dict(self) -> dict:
+        return {"_": "updateDeleteEphemeralMessages", **{
+            "peer": _tl._resolve(self.peer),
+            "ids": _tl._resolve(self.ids),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xf8\xfc\xdbV'
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.ids), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateDeleteEphemeralMessages"}
+        obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+        obj["ids"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateDeleteEphemeralMessages(peer={self.peer!r}, ids={self.ids!r})"
+
+class UpdateEditEphemeralMessage:
+    _CID = 0x4bbb8f01
+
+    def __init__(
+        self,
+        message: Any,
+    ) -> None:
+        self.message = message
+
+    def to_dict(self) -> dict:
+        return {"_": "updateEditEphemeralMessage", **{
+            "message": _tl._resolve(self.message),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x01\x8f\xbbK'
+        out += _tl.serialize(_tl._resolve(self.message), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateEditEphemeralMessage"}
+        obj["message"], pos = _tl._read_typed(data, pos, "EphemeralMessage", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateEditEphemeralMessage(message={self.message!r})"
+
+class UpdateBotStarsSubscription:
+    _CID = 0x6c0d8e23
+
+    def __init__(
+        self,
+        user_id: int,
+        payload: bytes,
+        qts: int,
+        canceled: bool | None = None,
+        payment_failed: bool | None = None,
+        restored: bool | None = None,
+    ) -> None:
+        self.canceled = canceled
+        self.payment_failed = payment_failed
+        self.restored = restored
+        self.user_id = user_id
+        self.payload = payload
+        self.qts = qts
+
+    def to_dict(self) -> dict:
+        return {"_": "updateBotStarsSubscription", **{
+            "canceled": _tl._resolve(self.canceled),
+            "payment_failed": _tl._resolve(self.payment_failed),
+            "restored": _tl._resolve(self.restored),
+            "user_id": _tl._resolve(self.user_id),
+            "payload": _tl._resolve(self.payload),
+            "qts": _tl._resolve(self.qts),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'#\x8e\rl'
+        _flags_word = (0 if self.canceled is None else (1 << 0)) | (0 if self.payment_failed is None else (1 << 1)) | (0 if self.restored is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.user_id)
+        out += _tl._pack_bytes(self.payload)
+        out += _struct.pack('<i', self.qts)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateBotStarsSubscription"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["canceled"] = True
+        if _flags_word & (1 << 1):
+            obj["payment_failed"] = True
+        if _flags_word & (1 << 2):
+            obj["restored"] = True
+        obj["user_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["payload"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["qts"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateBotStarsSubscription(canceled={self.canceled!r}, payment_failed={self.payment_failed!r}, restored={self.restored!r}, user_id={self.user_id!r})"
+
 class UpdatesTooLong:
     _CID = 0xe317af7e
 
@@ -18677,6 +19160,35 @@ class NotifyForumTopic:
 
     def __repr__(self) -> str:
         return f"NotifyForumTopic(peer={self.peer!r}, top_msg_id={self.top_msg_id!r})"
+
+class NotifyCommunity:
+    _CID = 0xbe376999
+
+    def __init__(
+        self,
+        community_id: int,
+    ) -> None:
+        self.community_id = community_id
+
+    def to_dict(self) -> dict:
+        return {"_": "notifyCommunity", **{
+            "community_id": _tl._resolve(self.community_id),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x99i7\xbe'
+        out += _struct.pack('<q', self.community_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "notifyCommunity"}
+        obj["community_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"NotifyCommunity(community_id={self.community_id!r})"
 
 class SendMessageTypingAction:
     _CID = 0x16bf744e
@@ -22010,24 +22522,29 @@ class StickerSet:
         return f"StickerSet(archived={self.archived!r}, official={self.official!r}, masks={self.masks!r}, emojis={self.emojis!r})"
 
 class BotCommand:
-    _CID = 0xc27ac8c7
+    _CID = 0x9852d6d2
 
     def __init__(
         self,
         command: str,
         description: str,
+        ephemeral: bool | None = None,
     ) -> None:
+        self.ephemeral = ephemeral
         self.command = command
         self.description = description
 
     def to_dict(self) -> dict:
         return {"_": "botCommand", **{
+            "ephemeral": _tl._resolve(self.ephemeral),
             "command": _tl._resolve(self.command),
             "description": _tl._resolve(self.description),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\xc7\xc8z\xc2'
+        out = b'\xd2\xd6R\x98'
+        _flags_word = (0 if self.ephemeral is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.command)
         out += _tl._pack_string(self.description)
         return out
@@ -22035,12 +22552,16 @@ class BotCommand:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "botCommand"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["ephemeral"] = True
         obj["command"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
         obj["description"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"BotCommand(command={self.command!r}, description={self.description!r})"
+        return f"BotCommand(ephemeral={self.ephemeral!r}, command={self.command!r}, description={self.description!r})"
 
 class BotInfo:
     _CID = 0x4d8a0299
@@ -28075,6 +28596,39 @@ class TextDate:
     def __repr__(self) -> str:
         return f"TextDate(relative={self.relative!r}, short_time={self.short_time!r}, long_time={self.long_time!r}, short_date={self.short_date!r})"
 
+class TextDiff:
+    _CID = 0x9686cb50
+
+    def __init__(
+        self,
+        text: Any,
+        old_text: Any,
+    ) -> None:
+        self.text = text
+        self.old_text = old_text
+
+    def to_dict(self) -> dict:
+        return {"_": "textDiff", **{
+            "text": _tl._resolve(self.text),
+            "old_text": _tl._resolve(self.old_text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'P\xcb\x86\x96'
+        out += _tl.serialize(_tl._resolve(self.text), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.old_text), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "textDiff"}
+        obj["text"], pos = _tl._read_typed(data, pos, "RichText", _SCHEMA_BY_CID)
+        obj["old_text"], pos = _tl._read_typed(data, pos, "RichText", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"TextDiff(text={self.text!r}, old_text={self.old_text!r})"
+
 class PageBlockUnsupported:
     _CID = 0x13567e8a
 
@@ -33518,6 +34072,34 @@ class InputDialogPeerFolder:
     def __repr__(self) -> str:
         return f"InputDialogPeerFolder(folder_id={self.folder_id!r})"
 
+class InputDialogPeerCommunity:
+    _CID = 0x69ef72c4
+
+    def __init__(
+        self,
+        community: Any,
+    ) -> None:
+        self.community = community
+
+    def to_dict(self) -> dict:
+        return {"_": "inputDialogPeerCommunity", **{
+            "community": _tl._resolve(self.community),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xc4r\xefi'
+        out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "inputDialogPeerCommunity"}
+        obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InputDialogPeerCommunity(community={self.community!r})"
+
 class DialogPeer:
     _CID = 0xe56dbf05
 
@@ -33574,6 +34156,35 @@ class DialogPeerFolder:
 
     def __repr__(self) -> str:
         return f"DialogPeerFolder(folder_id={self.folder_id!r})"
+
+class DialogPeerCommunity:
+    _CID = 0x2f65c8e4
+
+    def __init__(
+        self,
+        community_id: int,
+    ) -> None:
+        self.community_id = community_id
+
+    def to_dict(self) -> dict:
+        return {"_": "dialogPeerCommunity", **{
+            "community_id": _tl._resolve(self.community_id),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xe4\xc8e/'
+        out += _struct.pack('<q', self.community_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "dialogPeerCommunity"}
+        obj["community_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"DialogPeerCommunity(community_id={self.community_id!r})"
 
 class FileHash:
     _CID = 0xf39b035c
@@ -36301,6 +36912,7 @@ class ChatAdminRights:
         delete_stories: bool | None = None,
         manage_direct_messages: bool | None = None,
         manage_ranks: bool | None = None,
+        manage_linked_peers: bool | None = None,
     ) -> None:
         self.change_info = change_info
         self.post_messages = post_messages
@@ -36319,6 +36931,7 @@ class ChatAdminRights:
         self.delete_stories = delete_stories
         self.manage_direct_messages = manage_direct_messages
         self.manage_ranks = manage_ranks
+        self.manage_linked_peers = manage_linked_peers
 
     def to_dict(self) -> dict:
         return {"_": "chatAdminRights", **{
@@ -36339,11 +36952,12 @@ class ChatAdminRights:
             "delete_stories": _tl._resolve(self.delete_stories),
             "manage_direct_messages": _tl._resolve(self.manage_direct_messages),
             "manage_ranks": _tl._resolve(self.manage_ranks),
+            "manage_linked_peers": _tl._resolve(self.manage_linked_peers),
         }}
 
     def to_bytes(self) -> bytes:
         out = b'\xd5$\xb2_'
-        _flags_word = (0 if self.change_info is None else (1 << 0)) | (0 if self.post_messages is None else (1 << 1)) | (0 if self.edit_messages is None else (1 << 2)) | (0 if self.delete_messages is None else (1 << 3)) | (0 if self.ban_users is None else (1 << 4)) | (0 if self.invite_users is None else (1 << 5)) | (0 if self.pin_messages is None else (1 << 7)) | (0 if self.add_admins is None else (1 << 9)) | (0 if self.anonymous is None else (1 << 10)) | (0 if self.manage_call is None else (1 << 11)) | (0 if self.other is None else (1 << 12)) | (0 if self.manage_topics is None else (1 << 13)) | (0 if self.post_stories is None else (1 << 14)) | (0 if self.edit_stories is None else (1 << 15)) | (0 if self.delete_stories is None else (1 << 16)) | (0 if self.manage_direct_messages is None else (1 << 17)) | (0 if self.manage_ranks is None else (1 << 18))
+        _flags_word = (0 if self.change_info is None else (1 << 0)) | (0 if self.post_messages is None else (1 << 1)) | (0 if self.edit_messages is None else (1 << 2)) | (0 if self.delete_messages is None else (1 << 3)) | (0 if self.ban_users is None else (1 << 4)) | (0 if self.invite_users is None else (1 << 5)) | (0 if self.pin_messages is None else (1 << 7)) | (0 if self.add_admins is None else (1 << 9)) | (0 if self.anonymous is None else (1 << 10)) | (0 if self.manage_call is None else (1 << 11)) | (0 if self.other is None else (1 << 12)) | (0 if self.manage_topics is None else (1 << 13)) | (0 if self.post_stories is None else (1 << 14)) | (0 if self.edit_stories is None else (1 << 15)) | (0 if self.delete_stories is None else (1 << 16)) | (0 if self.manage_direct_messages is None else (1 << 17)) | (0 if self.manage_ranks is None else (1 << 18)) | (0 if self.manage_linked_peers is None else (1 << 19))
         out += _struct.pack('<I', _flags_word)
         return out
 
@@ -36386,6 +37000,8 @@ class ChatAdminRights:
             obj["manage_direct_messages"] = True
         if _flags_word & (1 << 18):
             obj["manage_ranks"] = True
+        if _flags_word & (1 << 19):
+            obj["manage_linked_peers"] = True
         return obj, pos
 
     def __repr__(self) -> str:
@@ -36419,6 +37035,7 @@ class ChatBannedRights:
         send_plain: bool | None = None,
         edit_rank: bool | None = None,
         send_reactions: bool | None = None,
+        manage_linked_peers: bool | None = None,
     ) -> None:
         self.view_messages = view_messages
         self.send_messages = send_messages
@@ -36442,6 +37059,7 @@ class ChatBannedRights:
         self.send_plain = send_plain
         self.edit_rank = edit_rank
         self.send_reactions = send_reactions
+        self.manage_linked_peers = manage_linked_peers
         self.until_date = until_date
 
     def to_dict(self) -> dict:
@@ -36468,12 +37086,13 @@ class ChatBannedRights:
             "send_plain": _tl._resolve(self.send_plain),
             "edit_rank": _tl._resolve(self.edit_rank),
             "send_reactions": _tl._resolve(self.send_reactions),
+            "manage_linked_peers": _tl._resolve(self.manage_linked_peers),
             "until_date": _tl._resolve(self.until_date),
         }}
 
     def to_bytes(self) -> bytes:
         out = b'\x18\x04\x12\x9f'
-        _flags_word = (0 if self.view_messages is None else (1 << 0)) | (0 if self.send_messages is None else (1 << 1)) | (0 if self.send_media is None else (1 << 2)) | (0 if self.send_stickers is None else (1 << 3)) | (0 if self.send_gifs is None else (1 << 4)) | (0 if self.send_games is None else (1 << 5)) | (0 if self.send_inline is None else (1 << 6)) | (0 if self.embed_links is None else (1 << 7)) | (0 if self.send_polls is None else (1 << 8)) | (0 if self.change_info is None else (1 << 10)) | (0 if self.invite_users is None else (1 << 15)) | (0 if self.pin_messages is None else (1 << 17)) | (0 if self.manage_topics is None else (1 << 18)) | (0 if self.send_photos is None else (1 << 19)) | (0 if self.send_videos is None else (1 << 20)) | (0 if self.send_roundvideos is None else (1 << 21)) | (0 if self.send_audios is None else (1 << 22)) | (0 if self.send_voices is None else (1 << 23)) | (0 if self.send_docs is None else (1 << 24)) | (0 if self.send_plain is None else (1 << 25)) | (0 if self.edit_rank is None else (1 << 26)) | (0 if self.send_reactions is None else (1 << 27))
+        _flags_word = (0 if self.view_messages is None else (1 << 0)) | (0 if self.send_messages is None else (1 << 1)) | (0 if self.send_media is None else (1 << 2)) | (0 if self.send_stickers is None else (1 << 3)) | (0 if self.send_gifs is None else (1 << 4)) | (0 if self.send_games is None else (1 << 5)) | (0 if self.send_inline is None else (1 << 6)) | (0 if self.embed_links is None else (1 << 7)) | (0 if self.send_polls is None else (1 << 8)) | (0 if self.change_info is None else (1 << 10)) | (0 if self.invite_users is None else (1 << 15)) | (0 if self.pin_messages is None else (1 << 17)) | (0 if self.manage_topics is None else (1 << 18)) | (0 if self.send_photos is None else (1 << 19)) | (0 if self.send_videos is None else (1 << 20)) | (0 if self.send_roundvideos is None else (1 << 21)) | (0 if self.send_audios is None else (1 << 22)) | (0 if self.send_voices is None else (1 << 23)) | (0 if self.send_docs is None else (1 << 24)) | (0 if self.send_plain is None else (1 << 25)) | (0 if self.edit_rank is None else (1 << 26)) | (0 if self.send_reactions is None else (1 << 27)) | (0 if self.manage_linked_peers is None else (1 << 28))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.until_date)
         return out
@@ -36527,6 +37146,8 @@ class ChatBannedRights:
             obj["edit_rank"] = True
         if _flags_word & (1 << 27):
             obj["send_reactions"] = True
+        if _flags_word & (1 << 28):
+            obj["manage_linked_peers"] = True
         obj["until_date"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -44854,6 +45475,35 @@ class InputReplyToMonoForum:
     def __repr__(self) -> str:
         return f"InputReplyToMonoForum(monoforum_peer_id={self.monoforum_peer_id!r})"
 
+class InputReplyToEphemeralMessage:
+    _CID = 0x4119b95e
+
+    def __init__(
+        self,
+        id: int,
+    ) -> None:
+        self.id = id
+
+    def to_dict(self) -> dict:
+        return {"_": "inputReplyToEphemeralMessage", **{
+            "id": _tl._resolve(self.id),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'^\xb9\x19A'
+        out += _struct.pack('<i', self.id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "inputReplyToEphemeralMessage"}
+        obj["id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InputReplyToEphemeralMessage(id={self.id!r})"
+
 class ExportedStoryLink:
     _CID = 0x3fc9053b
 
@@ -52743,6 +53393,34 @@ class InputAiComposeToneSlug:
     def __repr__(self) -> str:
         return f"InputAiComposeToneSlug(slug={self.slug!r})"
 
+class InputAiComposeToneSingleUse:
+    _CID = 0x0e0c35af
+
+    def __init__(
+        self,
+        custom_prompt: str,
+    ) -> None:
+        self.custom_prompt = custom_prompt
+
+    def to_dict(self) -> dict:
+        return {"_": "inputAiComposeToneSingleUse", **{
+            "custom_prompt": _tl._resolve(self.custom_prompt),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xaf5\x0c\x0e'
+        out += _tl._pack_string(self.custom_prompt)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "inputAiComposeToneSingleUse"}
+        obj["custom_prompt"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InputAiComposeToneSingleUse(custom_prompt={self.custom_prompt!r})"
+
 class AiComposeTone:
     _CID = 0xcff63ea9
 
@@ -53326,3 +54004,194 @@ class RichMessage:
 
     def __repr__(self) -> str:
         return f"RichMessage(rtl={self.rtl!r}, part={self.part!r}, blocks={self.blocks!r}, photos={self.photos!r})"
+
+class CommunityPeer:
+    _CID = 0x76141ebd
+
+    def __init__(
+        self,
+        peer: Any,
+        can_view_history: bool | None = None,
+        visible: bool | None = None,
+    ) -> None:
+        self.can_view_history = can_view_history
+        self.visible = visible
+        self.peer = peer
+
+    def to_dict(self) -> dict:
+        return {"_": "communityPeer", **{
+            "can_view_history": _tl._resolve(self.can_view_history),
+            "visible": _tl._resolve(self.visible),
+            "peer": _tl._resolve(self.peer),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xbd\x1e\x14v'
+        _flags_word = (0 if self.can_view_history is None else (1 << 2)) | (0 if self.visible is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_bool(self.visible)
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "communityPeer"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 2):
+            obj["can_view_history"] = True
+        if _flags_word & (1 << 0):
+            obj["visible"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"CommunityPeer(can_view_history={self.can_view_history!r}, visible={self.visible!r}, peer={self.peer!r})"
+
+class CommunityPeerRequest:
+    _CID = 0x7beafa85
+
+    def __init__(
+        self,
+        peer: Any,
+        requested_by: int,
+        date: int,
+        visible: bool | None = None,
+    ) -> None:
+        self.visible = visible
+        self.peer = peer
+        self.requested_by = requested_by
+        self.date = date
+
+    def to_dict(self) -> dict:
+        return {"_": "communityPeerRequest", **{
+            "visible": _tl._resolve(self.visible),
+            "peer": _tl._resolve(self.peer),
+            "requested_by": _tl._resolve(self.requested_by),
+            "date": _tl._resolve(self.date),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x85\xfa\xea{'
+        _flags_word = (0 if self.visible is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<qi', self.requested_by, self.date)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "communityPeerRequest"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["visible"] = True
+        obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+        obj["requested_by"], obj["date"], = _struct.unpack_from('<qi', data, pos)
+        pos += 12
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"CommunityPeerRequest(visible={self.visible!r}, peer={self.peer!r}, requested_by={self.requested_by!r}, date={self.date!r})"
+
+class EphemeralMessage:
+    _CID = 0xd9c6dc1a
+
+    def __init__(
+        self,
+        id: int,
+        from_id: Any,
+        peer_id: Any,
+        receiver_id: int,
+        date: int,
+        message: str,
+        out: bool | None = None,
+        top_msg_id: int | None = None,
+        entities: list[Any] | None = None,
+        media: Any | None = None,
+        reply_markup: Any | None = None,
+        reply_to: Any | None = None,
+    ) -> None:
+        self.out = out
+        self.id = id
+        self.from_id = from_id
+        self.peer_id = peer_id
+        self.receiver_id = receiver_id
+        self.top_msg_id = top_msg_id
+        self.date = date
+        self.message = message
+        self.entities = entities
+        self.media = media
+        self.reply_markup = reply_markup
+        self.reply_to = reply_to
+
+    def to_dict(self) -> dict:
+        return {"_": "ephemeralMessage", **{
+            "out": _tl._resolve(self.out),
+            "id": _tl._resolve(self.id),
+            "from_id": _tl._resolve(self.from_id),
+            "peer_id": _tl._resolve(self.peer_id),
+            "receiver_id": _tl._resolve(self.receiver_id),
+            "top_msg_id": _tl._resolve(self.top_msg_id),
+            "date": _tl._resolve(self.date),
+            "message": _tl._resolve(self.message),
+            "entities": _tl._resolve(self.entities),
+            "media": _tl._resolve(self.media),
+            "reply_markup": _tl._resolve(self.reply_markup),
+            "reply_to": _tl._resolve(self.reply_to),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x1a\xdc\xc6\xd9'
+        _flags_word = (0 if self.out is None else (1 << 0)) | (0 if self.top_msg_id is None else (1 << 1)) | (0 if self.entities is None else (1 << 2)) | (0 if self.media is None else (1 << 3)) | (0 if self.reply_markup is None else (1 << 4)) | (0 if self.reply_to is None else (1 << 6))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<i', self.id)
+        out += _tl.serialize(_tl._resolve(self.from_id), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.peer_id), _SCHEMA)
+        out += _struct.pack('<q', self.receiver_id)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.top_msg_id)
+        out += _struct.pack('<i', self.date)
+        out += _tl._pack_string(self.message)
+        if _flags_word & (1 << 2):
+            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+        if _flags_word & (1 << 3):
+            out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+        if _flags_word & (1 << 4):
+            out += _tl.serialize(_tl._resolve(self.reply_markup), _SCHEMA)
+        if _flags_word & (1 << 6):
+            out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "ephemeralMessage"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["out"] = True
+        obj["id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["from_id"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+        obj["peer_id"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+        obj["receiver_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 1):
+            obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        obj["date"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["media"], pos = _tl._read_typed(data, pos, "MessageMedia", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 4):
+            obj["reply_markup"], pos = _tl._read_typed(data, pos, "ReplyMarkup", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 6):
+            obj["reply_to"], pos = _tl._read_typed(data, pos, "MessageReplyHeader", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"EphemeralMessage(out={self.out!r}, id={self.id!r}, from_id={self.from_id!r}, peer_id={self.peer_id!r})"

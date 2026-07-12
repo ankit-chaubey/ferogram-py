@@ -768,21 +768,24 @@ class GetAdminedPublicChannels:
         by_location: bool | None = None,
         check_limit: bool | None = None,
         for_personal: bool | None = None,
+        for_community_peer: bool | None = None,
     ) -> None:
         self.by_location = by_location
         self.check_limit = check_limit
         self.for_personal = for_personal
+        self.for_community_peer = for_community_peer
 
     def to_dict(self) -> dict:
         return {"_": "channels.getAdminedPublicChannels", **{
             "by_location": _tl._resolve(self.by_location),
             "check_limit": _tl._resolve(self.check_limit),
             "for_personal": _tl._resolve(self.for_personal),
+            "for_community_peer": _tl._resolve(self.for_community_peer),
         }}
 
     def to_bytes(self) -> bytes:
         out = b'\xaf6\xb0\xf8'
-        _flags_word = (0 if self.by_location is None else (1 << 0)) | (0 if self.check_limit is None else (1 << 1)) | (0 if self.for_personal is None else (1 << 2))
+        _flags_word = (0 if self.by_location is None else (1 << 0)) | (0 if self.check_limit is None else (1 << 1)) | (0 if self.for_personal is None else (1 << 2)) | (0 if self.for_community_peer is None else (1 << 3))
         out += _struct.pack('<I', _flags_word)
         return out
 
@@ -797,10 +800,12 @@ class GetAdminedPublicChannels:
             obj["check_limit"] = True
         if _flags_word & (1 << 2):
             obj["for_personal"] = True
+        if _flags_word & (1 << 3):
+            obj["for_community_peer"] = True
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"GetAdminedPublicChannels(by_location={self.by_location!r}, check_limit={self.check_limit!r}, for_personal={self.for_personal!r})"
+        return f"GetAdminedPublicChannels(by_location={self.by_location!r}, check_limit={self.check_limit!r}, for_personal={self.for_personal!r}, for_community_peer={self.for_community_peer!r})"
 
 class EditBanned:
     _CID = 0x96e6cd81

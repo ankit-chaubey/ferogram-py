@@ -3548,40 +3548,94 @@ class ChatInviteJoinResultOk:
         return f"ChatInviteJoinResultOk(updates={self.updates!r})"
 
 class ChatInviteJoinResultWebView:
-    _CID = 0x2f51c337
+    _CID = 0x61ca29d3
 
     def __init__(
         self,
         bot_id: int,
-        webview: Any,
+        query_id: int,
         users: list[Any],
     ) -> None:
         self.bot_id = bot_id
-        self.webview = webview
+        self.query_id = query_id
         self.users = users
 
     def to_dict(self) -> dict:
         return {"_": "messages.chatInviteJoinResultWebView", **{
             "bot_id": _tl._resolve(self.bot_id),
-            "webview": _tl._resolve(self.webview),
+            "query_id": _tl._resolve(self.query_id),
             "users": _tl._resolve(self.users),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'7\xc3Q/'
-        out += _struct.pack('<q', self.bot_id)
-        out += _tl.serialize(_tl._resolve(self.webview), _SCHEMA)
+        out = b'\xd3)\xcaa'
+        out += _struct.pack('<qq', self.bot_id, self.query_id)
         out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.chatInviteJoinResultWebView"}
-        obj["bot_id"] = _struct.unpack_from('<q', data, pos)[0]
-        pos = pos + 8
-        obj["webview"], pos = _tl._read_typed(data, pos, "WebViewResult", _SCHEMA_BY_CID)
+        obj["bot_id"], obj["query_id"], = _struct.unpack_from('<qq', data, pos)
+        pos += 16
         obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"ChatInviteJoinResultWebView(bot_id={self.bot_id!r}, webview={self.webview!r}, users={self.users!r})"
+        return f"ChatInviteJoinResultWebView(bot_id={self.bot_id!r}, query_id={self.query_id!r}, users={self.users!r})"
+
+class TranslatedRichMessage:
+    _CID = 0x4203998f
+
+    def __init__(
+        self,
+        result: list[Any],
+    ) -> None:
+        self.result = result
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.translatedRichMessage", **{
+            "result": _tl._resolve(self.result),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x8f\x99\x03B'
+        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.translatedRichMessage"}
+        obj["result"], pos = _tl._read_typed(data, pos, "Vector<RichMessage>", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"TranslatedRichMessage(result={self.result!r})"
+
+class ComposedRichMessageWithAI:
+    _CID = 0x4c4537c8
+
+    def __init__(
+        self,
+        result: Any,
+    ) -> None:
+        self.result = result
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.composedRichMessageWithAI", **{
+            "result": _tl._resolve(self.result),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xc87EL'
+        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.composedRichMessageWithAI"}
+        obj["result"], pos = _tl._read_typed(data, pos, "RichMessage", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"ComposedRichMessageWithAI(result={self.result!r})"

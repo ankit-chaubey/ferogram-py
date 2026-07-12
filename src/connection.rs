@@ -93,7 +93,17 @@ impl DcConnection {
         let backend = resolve_session(py, &session)?;
         let transport_kind = parse_transport(transport.as_deref(), proxy_secret.as_deref())?;
         future_into_py(py, async move {
-            let persisted = backend.load().map_err(py_err)?.unwrap_or_default();
+            // SessionBackend::load/save are synchronous, blocking calls
+            // (SQLite, file I/O, ...). Running them straight on this task
+            // would stall a tokio worker thread for the duration of the
+            // disk I/O, same bug the Rust core fixed in Client::save_session.
+            // Every backend call in this file goes through spawn_blocking.
+            let load_backend = Arc::clone(&backend);
+            let persisted = tokio::task::spawn_blocking(move || load_backend.load())
+                .await
+                .map_err(py_err)?
+                .map_err(py_err)?
+                .unwrap_or_default();
 
             let dc_id: i16 = if dc_id == 0 {
                 if persisted.home_dc_id != 0 {
@@ -195,7 +205,12 @@ impl DcConnection {
             if updated.home_dc_id == 0 {
                 updated.home_dc_id = dc_id as i32;
             }
-            backend.save(&updated).map_err(py_err)?;
+            let save_backend = Arc::clone(&backend);
+            let to_save = updated.clone();
+            tokio::task::spawn_blocking(move || save_backend.save(&to_save))
+                .await
+                .map_err(py_err)?
+                .map_err(py_err)?;
 
             Ok(DcConnection {
                 inner: Arc::new(Mutex::new(Some(conn))),
@@ -251,8 +266,11 @@ impl DcConnection {
         let session = Arc::clone(&self.session);
         let persisted = Arc::clone(&self.persisted);
         future_into_py(py, async move {
-            let p = persisted.lock().await;
-            session.save(&p).map_err(py_err)
+            let p = persisted.lock().await.clone();
+            tokio::task::spawn_blocking(move || session.save(&p))
+                .await
+                .map_err(py_err)?
+                .map_err(py_err)
         })
     }
 
@@ -297,7 +315,12 @@ impl DcConnection {
                     flags: Default::default(),
                 });
             }
-            session.save(&*p).map_err(py_err)?;
+            let to_save = p.clone();
+            drop(p);
+            tokio::task::spawn_blocking(move || session.save(&to_save))
+                .await
+                .map_err(py_err)?
+                .map_err(py_err)?;
             Ok(())
         })
     }
@@ -313,7 +336,12 @@ impl DcConnection {
             let mut p = persisted.lock().await;
             if p.home_dc_id != dc_id {
                 p.home_dc_id = dc_id;
-                session.save(&*p).map_err(py_err)?;
+                let to_save = p.clone();
+                drop(p);
+                tokio::task::spawn_blocking(move || session.save(&to_save))
+                    .await
+                    .map_err(py_err)?
+                    .map_err(py_err)?;
             }
             Ok(())
         })
@@ -344,7 +372,12 @@ impl DcConnection {
         future_into_py(py, async move {
             let mut p = persisted.lock().await;
             p.future_auth_token = token;
-            session.save(&*p).map_err(py_err)?;
+            let to_save = p.clone();
+            drop(p);
+            tokio::task::spawn_blocking(move || session.save(&to_save))
+                .await
+                .map_err(py_err)?
+                .map_err(py_err)?;
             Ok(())
         })
     }

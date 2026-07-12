@@ -11,16 +11,11 @@ name       = "_ferogram"
 crate-type = ["cdylib"]
 
 [dependencies]
-# Pointed at the local checkout for now so the PipelinedSender/spawn_pipelined
-# additions are visible before ferogram-mtsender 0.6.4+ is published to
-# crates.io. Assumes a sibling checkout layout: ../ferogram-py/ (this repo)
-# and ../ferogram/ (the ferogram-main repo). Switch back to version-only once
-# published.
-ferogram-mtsender   = { path = "../ferogram/ferogram-mtsender", version = "0.6.3" }
-ferogram-session    = { path = "../ferogram/ferogram-session", version = "0.6.3", features = ["sqlite-session", "libsql-session"] }
-ferogram-connect    = { path = "../ferogram/ferogram-connect", version = "0.6.3" }
-ferogram-tl-types   = { path = "../ferogram/ferogram-tl-types", version = "0.6.3" }
-ferogram-crypto     = { path = "../ferogram/ferogram-crypto", version = "0.6.3" }
+ferogram-mtsender   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "e173765ecc4066f88a4a87ae5f393462a7757b91" }
+ferogram-session    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "e173765ecc4066f88a4a87ae5f393462a7757b91", features = ["sqlite-session", "libsql-session"] }
+ferogram-connect    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "e173765ecc4066f88a4a87ae5f393462a7757b91" }
+ferogram-tl-types   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "e173765ecc4066f88a4a87ae5f393462a7757b91" }
+ferogram-crypto     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "e173765ecc4066f88a4a87ae5f393462a7757b91" }
 getrandom           = "0.2"
 base64              = "0.22"
 pyo3                = { version = "0.24", features = ["extension-module", "abi3-py39"] }

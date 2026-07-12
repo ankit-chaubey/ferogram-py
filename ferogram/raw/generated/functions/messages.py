@@ -2218,7 +2218,7 @@ class MigrateChat:
         return f"MigrateChat(chat_id={self.chat_id!r})"
 
 class SearchGlobal:
-    _CID = 0x4bc6589a
+    _CID = 0x6126a43c
 
     def __init__(
         self,
@@ -2234,11 +2234,13 @@ class SearchGlobal:
         groups_only: bool | None = None,
         users_only: bool | None = None,
         folder_id: int | None = None,
+        community: Any | None = None,
     ) -> None:
         self.broadcasts_only = broadcasts_only
         self.groups_only = groups_only
         self.users_only = users_only
         self.folder_id = folder_id
+        self.community = community
         self.q = q
         self.filter = filter
         self.min_date = min_date
@@ -2254,6 +2256,7 @@ class SearchGlobal:
             "groups_only": _tl._resolve(self.groups_only),
             "users_only": _tl._resolve(self.users_only),
             "folder_id": _tl._resolve(self.folder_id),
+            "community": _tl._resolve(self.community),
             "q": _tl._resolve(self.q),
             "filter": _tl._resolve(self.filter),
             "min_date": _tl._resolve(self.min_date),
@@ -2265,11 +2268,13 @@ class SearchGlobal:
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\x9aX\xc6K'
-        _flags_word = (0 if self.broadcasts_only is None else (1 << 1)) | (0 if self.groups_only is None else (1 << 2)) | (0 if self.users_only is None else (1 << 3)) | (0 if self.folder_id is None else (1 << 0))
+        out = b'<\xa4&a'
+        _flags_word = (0 if self.broadcasts_only is None else (1 << 1)) | (0 if self.groups_only is None else (1 << 2)) | (0 if self.users_only is None else (1 << 3)) | (0 if self.folder_id is None else (1 << 0)) | (0 if self.community is None else (1 << 4))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.folder_id)
+        if _flags_word & (1 << 4):
+            out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
         out += _tl._pack_string(self.q)
         out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
         out += _struct.pack('<iii', self.min_date, self.max_date, self.offset_rate)
@@ -2291,6 +2296,8 @@ class SearchGlobal:
         if _flags_word & (1 << 0):
             obj["folder_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
+        if _flags_word & (1 << 4):
+            obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
         obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
         obj["filter"], pos = _tl._read_typed(data, pos, "MessagesFilter", _SCHEMA_BY_CID)
         obj["min_date"], obj["max_date"], obj["offset_rate"], = _struct.unpack_from('<iii', data, pos)
@@ -10907,3 +10914,166 @@ class GetRichMessage:
 
     def __repr__(self) -> str:
         return f"GetRichMessage(peer={self.peer!r}, id={self.id!r})"
+
+class TranslateRichMessage:
+    _CID = 0x1a542004
+
+    def __init__(
+        self,
+        to_lang: str,
+        peer: Any | None = None,
+        id: list[int] | None = None,
+        text: list[Any] | None = None,
+        tone: str | None = None,
+    ) -> None:
+        self.peer = peer
+        self.id = id
+        self.text = text
+        self.to_lang = to_lang
+        self.tone = tone
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.translateRichMessage", **{
+            "peer": _tl._resolve(self.peer),
+            "id": _tl._resolve(self.id),
+            "text": _tl._resolve(self.text),
+            "to_lang": _tl._resolve(self.to_lang),
+            "tone": _tl._resolve(self.tone),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x04 T\x1a'
+        _flags_word = (0 if self.peer is None else (1 << 0)) | (0 if self.id is None else (1 << 0)) | (0 if self.text is None else (1 << 1)) | (0 if self.tone is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.text), _SCHEMA)
+        out += _tl._pack_string(self.to_lang)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_string(self.tone)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.translateRichMessage"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["text"], pos = _tl._read_typed(data, pos, "Vector<InputRichMessage>", _SCHEMA_BY_CID)
+        obj["to_lang"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["tone"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"TranslateRichMessage(peer={self.peer!r}, id={self.id!r}, text={self.text!r}, to_lang={self.to_lang!r})"
+
+class ComposeRichMessageWithAI:
+    _CID = 0x8d7ae6af
+
+    def __init__(
+        self,
+        proofread: bool | None = None,
+        emojify: bool | None = None,
+        text: Any | None = None,
+        translate_to_lang: str | None = None,
+        tone: Any | None = None,
+    ) -> None:
+        self.proofread = proofread
+        self.emojify = emojify
+        self.text = text
+        self.translate_to_lang = translate_to_lang
+        self.tone = tone
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.composeRichMessageWithAI", **{
+            "proofread": _tl._resolve(self.proofread),
+            "emojify": _tl._resolve(self.emojify),
+            "text": _tl._resolve(self.text),
+            "translate_to_lang": _tl._resolve(self.translate_to_lang),
+            "tone": _tl._resolve(self.tone),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xaf\xe6z\x8d'
+        _flags_word = (0 if self.proofread is None else (1 << 0)) | (0 if self.emojify is None else (1 << 3)) | (0 if self.text is None else (1 << 4)) | (0 if self.translate_to_lang is None else (1 << 1)) | (0 if self.tone is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 4):
+            out += _tl.serialize(_tl._resolve(self.text), _SCHEMA)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.translate_to_lang)
+        if _flags_word & (1 << 2):
+            out += _tl.serialize(_tl._resolve(self.tone), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.composeRichMessageWithAI"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["proofread"] = True
+        if _flags_word & (1 << 3):
+            obj["emojify"] = True
+        if _flags_word & (1 << 4):
+            obj["text"], pos = _tl._read_typed(data, pos, "InputRichMessage", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["translate_to_lang"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["tone"], pos = _tl._read_typed(data, pos, "InputAiComposeTone", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"ComposeRichMessageWithAI(proofread={self.proofread!r}, emojify={self.emojify!r}, text={self.text!r}, translate_to_lang={self.translate_to_lang!r})"
+
+class RequestChatJoinWebView:
+    _CID = 0xba9ee679
+
+    def __init__(
+        self,
+        query_id: int,
+        platform: str,
+        theme_params: Any | None = None,
+    ) -> None:
+        self.query_id = query_id
+        self.theme_params = theme_params
+        self.platform = platform
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.requestChatJoinWebView", **{
+            "query_id": _tl._resolve(self.query_id),
+            "theme_params": _tl._resolve(self.theme_params),
+            "platform": _tl._resolve(self.platform),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'y\xe6\x9e\xba'
+        _flags_word = (0 if self.theme_params is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.query_id)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.theme_params), _SCHEMA)
+        out += _tl._pack_string(self.platform)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.requestChatJoinWebView"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 0):
+            obj["theme_params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        obj["platform"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"RequestChatJoinWebView(query_id={self.query_id!r}, theme_params={self.theme_params!r}, platform={self.platform!r})"
