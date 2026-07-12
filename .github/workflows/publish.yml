@@ -146,7 +146,7 @@ jobs:
       - name: Install maturin
         run: pip install maturin
 
-      - name: Fetch Termux libpython3.13 for linking
+      - name: Fetch Termux libpython for linking
         run: |
           TARGET=${{ matrix.target }}
           case "$TARGET" in
@@ -166,21 +166,35 @@ jobs:
           curl -sL "https://packages.termux.dev/apt/termux-main/${DEB_PATH}" -o python.deb
           ar x python.deb
           # data archive may be .tar.xz or .tar.zst depending on Termux version
-          tar xf data.tar.* --wildcards "*/libpython3.13*" 2>/dev/null || true
+          # Don't pin the minor version here - Termux's "python" package always
+          # tracks upstream latest, and older debs fall out of the Packages
+          # index once superseded, so a hardcoded "libpython3.13" wildcard
+          # breaks the moment Termux bumps its default Python.
+          tar xf data.tar.* --wildcards "*/libpython3.*" 2>/dev/null || true
 
           LIB_DIR=/tmp/termux-py/data/data/com.termux/files/usr/lib
-          # Ensure the unversioned name exists for -lpython3.13
-          if [ ! -f "$LIB_DIR/libpython3.13.so" ]; then
-            ln -sf "$(basename $(ls $LIB_DIR/libpython3.13.so* | head -1))" \
-                   "$LIB_DIR/libpython3.13.so"
+          SO_FILE=$(ls "$LIB_DIR"/libpython3.*.so* 2>/dev/null | head -1)
+          if [ -z "$SO_FILE" ]; then
+            echo "::error::No libpython3.*.so found in Termux's python package ($DEB_PATH)"
+            exit 1
           fi
+
+          # Extract "3.14" out of ".../libpython3.14.so"
+          PYVER=$(basename "$SO_FILE" | sed -E 's/^libpython(3\.[0-9]+)\.so.*/\1/')
+          UNVERSIONED="$LIB_DIR/libpython${PYVER}.so"
+          if [ ! -f "$UNVERSIONED" ]; then
+            ln -sf "$(basename "$SO_FILE")" "$UNVERSIONED"
+          fi
+
           echo "TERMUX_LIBDIR=$LIB_DIR" >> $GITHUB_ENV
+          echo "TERMUX_PYVER=$PYVER" >> $GITHUB_ENV
+          echo "Linking against Termux libpython $PYVER ($SO_FILE)"
 
       - name: Build Android wheel
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
           ANDROID_API_LEVEL: ${{ matrix.api }}
-          PYO3_CROSS_PYTHON_VERSION: "3.13"
+          PYO3_CROSS_PYTHON_VERSION: ${{ env.TERMUX_PYVER }}
         run: |
           NDK_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
           TARGET=${{ matrix.target }}
@@ -203,11 +217,13 @@ jobs:
           export AR_${TARGET_LOWER}=$NDK_BIN/llvm-ar
           export CARGO_TARGET_${TARGET_UPPER}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
 
-          # Link against Termux's real libpython3.13.so (not an empty stub).
-          # This embeds DT_NEEDED: libpython3.13.so in the extension, so
-          # bionic resolves all Python symbols explicitly at dlopen time via
-          # Termux's LD_LIBRARY_PATH - instead of relying on global namespace
-          # propagation, which Android's linker does not guarantee.
+          # Link against Termux's real libpython<version>.so (not an empty
+          # stub). This embeds DT_NEEDED: libpython<version>.so in the
+          # extension, so bionic resolves all Python symbols explicitly at
+          # dlopen time via Termux's LD_LIBRARY_PATH - instead of relying on
+          # global namespace propagation, which Android's linker does not
+          # guarantee. The version is whatever Termux's apt repo currently
+          # ships (see the fetch step above), not a fixed constant.
           export RUSTFLAGS="-L native=$TERMUX_LIBDIR"
 
           maturin build \
