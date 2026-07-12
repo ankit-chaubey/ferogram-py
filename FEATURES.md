@@ -387,6 +387,7 @@ await client.upload_with_progress(path, on_progress=None)
 await client.edit_chat_photo(peer, path)
 await client.delete_profile_photos()
 await client.get_profile_photos(peer, limit=100)
+await client.get_chat_photos(peer, limit=100)
 ```
 
 Important current behavior:
@@ -641,6 +642,11 @@ await client.check_qr_login(token)
 await client.get_authorizations()
 await client.terminate_session(hash)
 ```
+
+`sign_out()` captures a `future_auth_token` when Telegram provides one, and
+`request_login_code()` replays it automatically on the next login. When
+that succeeds, Telegram authorizes the session immediately, no code entry
+needed - check for `"_": "auth.sentCodeSuccess"` on the returned dict.
 
 ## Bot management
 

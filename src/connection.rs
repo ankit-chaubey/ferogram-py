@@ -57,7 +57,7 @@ fn parse_transport(name: Option<&str>, proxy_secret: Option<&str>) -> PyResult<T
 
 #[pyclass]
 pub struct DcConnection {
-    inner: Arc<Mutex<RustConn>>,
+    inner: Arc<Mutex<Option<RustConn>>>,
     session: Arc<dyn SessionBackend>,
     persisted: Arc<Mutex<PersistedSession>>,
     #[pyo3(get)]
@@ -198,7 +198,7 @@ impl DcConnection {
             backend.save(&updated).map_err(py_err)?;
 
             Ok(DcConnection {
-                inner: Arc::new(Mutex::new(conn)),
+                inner: Arc::new(Mutex::new(Some(conn))),
                 session: backend,
                 persisted: Arc::new(Mutex::new(updated)),
                 dc_id: dc_id as i32,
@@ -210,12 +210,39 @@ impl DcConnection {
     fn rpc_call<'py>(&self, py: Python<'py>, tl_bytes: Vec<u8>) -> PyResult<Bound<'py, PyAny>> {
         let inner = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let mut conn = inner.lock().await;
+            let mut guard = inner.lock().await;
+            let conn = guard.as_mut().ok_or_else(|| {
+                py_err("connection was consumed by into_pipelined_sender()")
+            })?;
             let result = conn
                 .rpc_call(&crate::raw::RawCall(tl_bytes))
                 .await
                 .map_err(py_err)?;
             Ok(result)
+        })
+    }
+
+    /// Consume this connection and graduate it into a pipelined transfer
+    /// sender: X > 1 chunk requests can be enqueued and in flight on the
+    /// same socket at once, instead of `rpc_call`'s one-at-a-time blocking
+    /// model. Mirrors ferogram's Rust `Client::open_worker_sender`.
+    ///
+    /// After this call, `rpc_call`/`auth_key_bytes` on this `DcConnection`
+    /// will raise  - the socket now belongs to the returned
+    /// `PipelinedSender`. Only call this on a connection you opened
+    /// specifically for a transfer worker (e.g. via `_open_worker_conn`),
+    /// never on the main session connection.
+    fn into_pipelined_sender<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let inner = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            let mut guard = inner.lock().await;
+            let conn = guard
+                .take()
+                .ok_or_else(|| py_err("connection already consumed"))?;
+            drop(guard);
+            let (stream, frame_kind, enc) = conn.into_parts();
+            let sender = ferogram_mtsender::spawn_pipelined(stream, enc, frame_kind, None);
+            Ok(crate::pipelined::PyPipelinedSender::new(sender))
         })
     }
 
@@ -292,11 +319,44 @@ impl DcConnection {
         })
     }
 
+    /// Future auth token captured from a previous `sign_out()`, if any.
+    /// Replay it in `auth.sendCode`'s `logout_tokens` to skip code entry on
+    /// the next login. Persists across restarts (session format v7+).
+    fn get_future_auth_token<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let persisted = Arc::clone(&self.persisted);
+        future_into_py(py, async move {
+            let p = persisted.lock().await;
+            Ok(p.future_auth_token.clone())
+        })
+    }
+
+    /// Store (or clear, with `None`) the future auth token and persist
+    /// immediately. `sign_out()` calls this with the token Telegram returns;
+    /// a successful fast re-auth via `sentCodeSuccess` calls it with `None`
+    /// since a used token shouldn't be replayed again.
+    fn set_future_auth_token<'py>(
+        &self,
+        py: Python<'py>,
+        token: Option<Vec<u8>>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let persisted = Arc::clone(&self.persisted);
+        let session = Arc::clone(&self.session);
+        future_into_py(py, async move {
+            let mut p = persisted.lock().await;
+            p.future_auth_token = token;
+            session.save(&*p).map_err(py_err)?;
+            Ok(())
+        })
+    }
+
     /// Current auth key bytes for this connection (256 bytes).
     fn auth_key_bytes<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let inner = Arc::clone(&self.inner);
         future_into_py(py, async move {
-            let conn = inner.lock().await;
+            let guard = inner.lock().await;
+            let conn = guard.as_ref().ok_or_else(|| {
+                py_err("connection was consumed by into_pipelined_sender()")
+            })?;
             Ok(conn.auth_key_bytes().to_vec())
         })
     }

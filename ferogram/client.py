@@ -21,6 +21,8 @@ import logging
 import os
 import random
 import struct
+from collections import deque
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any, Callable
 
 from ._ferogram import DcConnection, srp_calculate
@@ -40,7 +42,7 @@ from .types import (
 from .updates import wrap_update
 from .keyboards import InlineKeyboard, ReplyKeyboard, RemoveKeyboard, ForceReply
 
-__all__ = ["Client", "StopPropagation", "ContinuePropagation", "TransferHandle"]
+__all__ = ["Client", "StopPropagation", "ContinuePropagation", "TransferHandle", "TransferLimits", "TransferCancelled", "available_qualities"]
 
 _log = logging.getLogger("ferogram")
 
@@ -158,6 +160,84 @@ class TransferHandle:
 class TransferCancelled(Exception):
     """Raised when a TransferHandle is cancelled during upload or download."""
 
+
+class TransferLimits:
+    """Concurrency ceilings for file transfers. Mirrors ferogram's Rust
+    `TransferLimits` (same highway/trucks model, same field names).
+
+    - `download_tcp_connections` / `upload_tcp_connections` (**Y**): how many
+      parallel worker connections a single transfer may open for itself.
+      Small files always use 1 regardless of this value; larger files scale
+      up towards this ceiling. Default: 4.
+    - `max_tcp_connections`: total worker connections allowed across the
+      whole client at once, shared by every upload and download running
+      concurrently. Lower this on memory- or socket-constrained devices
+      (e.g. Termux on older Android hardware). Default: 12.
+    - `download_pipeline_depth` / `upload_pipeline_depth` (**X**): how many
+      chunk requests a single connection keeps in flight at once instead of
+      waiting for each response before sending the next. Enforced for
+      dedicated worker connections (via `DcConnection.into_pipelined_sender()`);
+      the shared home-connection fallback path (used when no extra worker
+      connections could be opened) still goes one request at a time, since
+      that socket can't be handed off to a pipelined sender.
+      Default: 4.
+    - `bypass_tcp_allotments`: skip the size-based lookup tables for **Y**
+      entirely and always use `download_tcp_connections` /
+      `upload_tcp_connections` directly, regardless of file size. This is an
+      override, not just a tuning knob - turning it on means small files
+      open as many connections as large ones would. Default: False.
+
+    Example::
+
+        Client(
+            ...,
+            transfer_limits=TransferLimits(
+                download_tcp_connections=1,
+                upload_tcp_connections=1,
+                max_tcp_connections=12,
+                download_pipeline_depth=16,
+                upload_pipeline_depth=16,
+                bypass_tcp_allotments=False,
+            ),
+        )
+    """
+
+    __slots__ = (
+        "download_tcp_connections",
+        "upload_tcp_connections",
+        "max_tcp_connections",
+        "download_pipeline_depth",
+        "upload_pipeline_depth",
+        "bypass_tcp_allotments",
+    )
+
+    def __init__(
+        self,
+        download_tcp_connections: int = 4,
+        upload_tcp_connections: int = 4,
+        max_tcp_connections: int = 12,
+        download_pipeline_depth: int = 4,
+        upload_pipeline_depth: int = 4,
+        bypass_tcp_allotments: bool = False,
+    ) -> None:
+        self.download_tcp_connections = max(1, download_tcp_connections)
+        self.upload_tcp_connections   = max(1, upload_tcp_connections)
+        self.max_tcp_connections      = max(1, max_tcp_connections)
+        self.download_pipeline_depth  = max(1, download_pipeline_depth)
+        self.upload_pipeline_depth    = max(1, upload_pipeline_depth)
+        self.bypass_tcp_allotments    = bypass_tcp_allotments
+
+    def __repr__(self) -> str:
+        return (
+            "TransferLimits("
+            f"download_tcp_connections={self.download_tcp_connections}, "
+            f"upload_tcp_connections={self.upload_tcp_connections}, "
+            f"max_tcp_connections={self.max_tcp_connections}, "
+            f"download_pipeline_depth={self.download_pipeline_depth}, "
+            f"upload_pipeline_depth={self.upload_pipeline_depth}, "
+            f"bypass_tcp_allotments={self.bypass_tcp_allotments})"
+        )
+
 _Handler = tuple[Callable, list[Callable]]
 
 _DEVICE_MODEL    = "Python"
@@ -235,6 +315,87 @@ def _build_import_authorization(id_: int, bytes_: bytes) -> bytes:
     return _pack_u32(_CID_IMPORT_AUTHORIZATION) + _pack_i64(id_) + _pack_bytes(bytes_)
 
 
+def _quality_candidates(media: dict) -> "list[dict]":
+    """Every Document on `media` that could be a quality variant: the
+    primary document (if any) followed by every entry in `alt_documents`
+    (if any). Order is: primary first, then alternates in the order
+    Telegram sent them - not sorted by resolution. Mirrors ferogram's Rust
+    `quality_candidates`."""
+    if not isinstance(media, dict) or media.get("_") != "messageMediaDocument":
+        return []
+    docs: "list[dict]" = []
+    doc = media.get("document")
+    if isinstance(doc, dict):
+        docs.append(doc)
+    for alt in media.get("alt_documents") or []:
+        if isinstance(alt, dict):
+            docs.append(alt)
+    return docs
+
+
+def _video_resolution(doc: dict) -> int:
+    """Resolution (width * height) of a document, from its
+    documentAttributeVideo if it has one. 0 for documents with no video
+    attribute (audio, plain files) so they sort below anything with a
+    real resolution."""
+    for attr in doc.get("attributes", []) or []:
+        if isinstance(attr, dict) and attr.get("_") == "documentAttributeVideo":
+            return attr.get("w", 0) * attr.get("h", 0)
+    return 0
+
+
+def available_qualities(media: dict) -> "list[dict]":
+    """List every quality variant available for `media` (a raw
+    messageMediaDocument dict), sorted ascending by resolution (primary
+    document included if it has a video attribute). Empty for media with
+    no video attributes at all - photos, audio, and documents Telegram
+    didn't transcode into multiple qualities. Mirrors ferogram's Rust
+    `available_qualities`.
+
+    Each entry is `{"width": int, "height": int, "size": int}`. Use this
+    to build your own quality picker, or just pass `"highest"`/`"lowest"`
+    straight to `download_media` if you don't need the full list.
+    """
+    out: "list[dict]" = []
+    for doc in _quality_candidates(media):
+        for attr in doc.get("attributes", []) or []:
+            if isinstance(attr, dict) and attr.get("_") == "documentAttributeVideo":
+                out.append({
+                    "width": attr.get("w", 0),
+                    "height": attr.get("h", 0),
+                    "size": doc.get("size", 0),
+                })
+                break
+    out.sort(key=lambda q: q["width"] * q["height"])
+    return out
+
+
+def _resolve_quality_document(media: dict, quality: str) -> "dict | None":
+    """Resolve `quality` ("original" | "highest" | "lowest") against
+    `media`, returning the chosen document dict. Falls back to the
+    primary document whenever the requested quality doesn't actually
+    exist for this media (no alternates present, the media isn't a
+    document at all, or "original" was requested outright). Mirrors
+    ferogram's Rust `resolve_quality_document`."""
+    primary = None
+    if isinstance(media, dict) and media.get("_") == "messageMediaDocument":
+        doc = media.get("document")
+        if isinstance(doc, dict):
+            primary = doc
+
+    chosen = None
+    if quality == "highest":
+        candidates = _quality_candidates(media)
+        if candidates:
+            chosen = max(candidates, key=_video_resolution)
+    elif quality == "lowest":
+        candidates = _quality_candidates(media)
+        if candidates:
+            chosen = min(candidates, key=_video_resolution)
+
+    return chosen or primary
+
+
 class StopPropagation(Exception):
     """Raise inside a handler to stop processing all further handlers for this update."""
 
@@ -302,6 +463,7 @@ class Client(_RichMixin):
         parse_mode: str | None = None,
         workers: int = 4,
         flood_sleep_threshold: int = 60,
+        transfer_limits: "TransferLimits | None" = None,
     ) -> None:
         self.session                  = session
         self.api_id                   = api_id or int(os.environ.get("API_ID", 0)) or None
@@ -332,6 +494,11 @@ class Client(_RichMixin):
         self.parse_mode               = parse_mode
         self._workers                 = workers
         self._flood_sleep_threshold   = flood_sleep_threshold
+        self._transfer_limits         = transfer_limits or TransferLimits()
+        # Bounds total worker connections open at once across every
+        # concurrent upload/download this client is running - mirrors the
+        # Rust core's `max_tcp_connections` (the "city-wide speed limit").
+        self._transfer_semaphore      = asyncio.Semaphore(self._transfer_limits.max_tcp_connections)
         self._conn: DcConnection | None = None
         self._dc_id: int = 0
         # DCs we've already bound a worker connection's auth key to via
@@ -772,6 +939,20 @@ class Client(_RichMixin):
             self._auth_imported_dcs.add(target_dc)
             return conn
 
+    @asynccontextmanager
+    async def _worker_slot(self, dc_id: int | None = None):
+        """Open a worker connection, holding one `max_tcp_connections`
+        permit for as long as it's in use.
+
+        Use this instead of calling `_open_worker_conn` directly whenever
+        the connection is part of a parallel transfer's worker pool - it's
+        what actually enforces the global cap across every upload/download
+        running at once, not just within a single transfer.
+        """
+        async with self._transfer_semaphore:
+            conn = await self._open_worker_conn(dc_id)
+            yield conn
+
     async def _resolve_peer(self, peer: Any) -> dict:
         return await _resolve_peer_fn(self, peer)
 
@@ -896,7 +1077,12 @@ class Client(_RichMixin):
             print("\nPlease ensure your usage complies with Telegram's API Terms of Service.")
             return
 
-        sent     = await self.request_login_code(identifier)
+        sent = await self.request_login_code(identifier)
+        if sent.get("_") == "auth.sentCodeSuccess":
+            # Fast re-auth via a stored future_auth_token; no code needed.
+            _log.info("signed in as user (fast re-auth, no code needed)")
+            print("\nPlease ensure your usage complies with Telegram's API Terms of Service.")
+            return
         pw_token = await self.sign_in(sent, input("Code: "))
         if pw_token is not None:
             hint = pw_token.get("hint", "")
@@ -941,14 +1127,37 @@ class Client(_RichMixin):
             return False
 
     async def request_login_code(self, phone: str) -> dict:
+        """Ask Telegram to send a login code.
+
+        If a previous `sign_out()` on this session captured a
+        `future_auth_token`, it's replayed automatically here so Telegram
+        can skip code entry and authorize the session immediately
+        (`auth.sentCodeSuccess`). In that case the returned dict has
+        `"_": "auth.sentCodeSuccess"` and no code needs to be entered -
+        check for that before prompting the user.
+        """
         api_id, api_hash = self._require_creds()
+        code_settings: dict = {"_": "codeSettings"}
+        stored_token = await self._require_conn().get_future_auth_token()
+        if stored_token is not None:
+            code_settings["logout_tokens"] = [stored_token]
+
         result = await self._rpc({
             "_": "auth.sendCode",
             "phone_number": phone,
             "api_id": api_id,
             "api_hash": api_hash,
-            "settings": {"_": "codeSettings"},
+            "settings": code_settings,
         })
+        if result.get("_") == "auth.sentCodeSuccess":
+            # Telegram authorized the session outright; the token was
+            # single-use, so drop it rather than risk replaying a stale one.
+            await self._require_conn().set_future_auth_token(None)
+            authorization = result.get("authorization", {})
+            user = authorization.get("user") if isinstance(authorization, dict) else None
+            if isinstance(user, dict):
+                self._populate_cache({"users": [user]})
+            return result
         # auth.sentCode does not carry phone_number back, so stash it
         # for sign_in()/resend_code() which need it.
         result["phone_number"] = phone
@@ -989,7 +1198,11 @@ class Client(_RichMixin):
 
     async def sign_out(self) -> None:
         try:
-            await self._rpc({"_": "auth.logOut"})
+            result = await self._rpc({"_": "auth.logOut"})
+            if isinstance(result, dict) and result.get("_") == "auth.loggedOut":
+                token = result.get("future_auth_token")
+                if isinstance(token, (bytes, bytearray)):
+                    await self._require_conn().set_future_auth_token(bytes(token))
         except Exception:
             pass
 
@@ -1885,14 +2098,18 @@ class Client(_RichMixin):
 
     @staticmethod
     def _upload_part_size(file_size: int) -> tuple[int, int]:
-        """Choose part size and total parts matching ferogram's upload_part_size()."""
+        """Choose part size and total parts matching ferogram's
+        upload_part_size() (media.rs). Three-tier table:
+
+        | File size    | Part size |
+        |--------------|-----------|
+        | < 1 MB       | 128 KB    |
+        | 1 MB - 50 MB | 256 KB    |
+        | >= 50 MB     | 512 KB    |
+        """
         if file_size < 1024 * 1024:
-            ps = 32 * 1024
-        elif file_size < 32 * 1024 * 1024:
-            ps = 64 * 1024
-        elif file_size < 512 * 1024 * 1024:
             ps = 128 * 1024
-        elif file_size < 1024 * 1024 * 1024:
+        elif file_size < 50 * 1024 * 1024:
             ps = 256 * 1024
         else:
             ps = 512 * 1024
@@ -1903,16 +2120,23 @@ class Client(_RichMixin):
             total_parts = (file_size + ps - 1) // ps
         return ps, total_parts
 
-    @staticmethod
-    def _upload_worker_count(file_size: int) -> int:
-        """Mirrors ferogram upload_worker_count(). Hard ceiling: 4."""
+    def _upload_worker_count(self, file_size: int) -> int:
+        """Mirrors ferogram upload_worker_count(), capped by
+        `TransferLimits.upload_tcp_connections`. With
+        `bypass_tcp_allotments` set, skips the size table entirely and
+        always returns the configured ceiling."""
+        limits = self._transfer_limits
+        if limits.bypass_tcp_allotments:
+            return limits.upload_tcp_connections
         if file_size < 10 * 1024 * 1024:
-            return 1
-        if file_size < 100 * 1024 * 1024:
-            return 2
-        if file_size < 500 * 1024 * 1024:
-            return 3
-        return 4
+            table = 1
+        elif file_size < 100 * 1024 * 1024:
+            table = 2
+        elif file_size < 500 * 1024 * 1024:
+            table = 3
+        else:
+            table = 4
+        return max(1, min(table, limits.upload_tcp_connections))
 
     @staticmethod
     def _download_chunk_size(file_size: int) -> int:
@@ -1923,16 +2147,23 @@ class Client(_RichMixin):
             return 512 * 1024
         return 1024 * 1024
 
-    @staticmethod
-    def _download_worker_count(file_size: int) -> int:
-        """Mirrors ferogram download_worker_count(). Hard ceiling: 4."""
+    def _download_worker_count(self, file_size: int) -> int:
+        """Mirrors ferogram download_worker_count(), capped by
+        `TransferLimits.download_tcp_connections`. With
+        `bypass_tcp_allotments` set, skips the size table entirely and
+        always returns the configured ceiling."""
+        limits = self._transfer_limits
+        if limits.bypass_tcp_allotments:
+            return limits.download_tcp_connections
         if file_size < 10 * 1024 * 1024:
-            return 1
-        if file_size < 50 * 1024 * 1024:
-            return 2
-        if file_size < 300 * 1024 * 1024:
-            return 3
-        return 4
+            table = 1
+        elif file_size < 50 * 1024 * 1024:
+            table = 2
+        elif file_size < 300 * 1024 * 1024:
+            table = 3
+        else:
+            table = 4
+        return max(1, min(table, limits.download_tcp_connections))
 
     @staticmethod
     def _detect_mime(path: str) -> str:
@@ -2041,18 +2272,26 @@ class Client(_RichMixin):
                     md5.update(chunk)
 
         # Open independent worker connections (sequentially -- see
-        # _open_worker_conn for why). Falls back to the home connection
-        # alone if no extra workers could be opened at all.
+        # _open_worker_conn for why), each holding a `max_tcp_connections`
+        # permit for the life of this upload. Falls back to the home
+        # connection alone if no extra workers could be opened at all.
         conns: list[DcConnection] = []
+        stack = AsyncExitStack()
         for _ in range(n_workers):
             try:
-                conns.append(await self._open_worker_conn(self._dc_id))
+                conns.append(await stack.enter_async_context(self._worker_slot(self._dc_id)))
             except Exception as e:
                 _log.warning(
                     "upload_file: worker connection failed, continuing with %d worker(s): %s",
                     max(len(conns), 1), e,
                 )
                 break
+        # Each conn above is a dedicated socket opened just for this
+        # transfer  - safe to consume into a PipelinedSender. The fallback
+        # below reuses the client's shared session connection instead, which
+        # must keep working for everything else the client does, so it can
+        # never be handed off to into_pipelined_sender().
+        dedicated = bool(conns)
         if not conns:
             conns = [self._require_conn()]
 
@@ -2099,6 +2338,24 @@ class Client(_RichMixin):
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, 30.0)
 
+        def _build_upload_req(part_idx: int, chunk: bytes) -> bytes:
+            if is_big:
+                req = {
+                    "_": "upload.saveBigFilePart",
+                    "file_id": file_id,
+                    "file_part": part_idx,
+                    "file_total_parts": total_parts,
+                    "bytes": chunk,
+                }
+            else:
+                req = {
+                    "_": "upload.saveFilePart",
+                    "file_id": file_id,
+                    "file_part": part_idx,
+                    "bytes": chunk,
+                }
+            return _tl.serialize(req, _SCHEMA)
+
         async def worker(conn: "DcConnection") -> None:
             nonlocal next_part
             while True:
@@ -2109,7 +2366,63 @@ class Client(_RichMixin):
                     next_part += 1
                 await upload_part_on(conn, idx, chunks[idx])
 
-        await asyncio.gather(*[worker(c) for c in conns])
+        async def worker_pipelined(conn: "DcConnection") -> None:
+            """X > 1 worker: keeps `upload_pipeline_depth` chunk requests in
+            flight on one socket at once instead of one-at-a-time. Mirrors
+            the sliding-window loop in ferogram's Rust `media.rs`."""
+            nonlocal next_part
+            depth = max(1, self._transfer_limits.upload_pipeline_depth)
+            sender = await conn.into_pipelined_sender()
+            # Sliding window of (part_idx, chunk, in-flight PipelinedRequest).
+            window: deque[tuple[int, bytes, Any]] = deque()
+
+            async def submit_next() -> bool:
+                nonlocal next_part
+                async with next_part_lock:
+                    if next_part >= total_parts:
+                        return False
+                    idx = next_part
+                    next_part += 1
+                chunk = chunks[idx]
+                request = await sender.enqueue(_build_upload_req(idx, chunk))
+                window.append((idx, chunk, request))
+                return True
+
+            while True:
+                if handle is not None:
+                    await handle._poll_pause_cancel()
+                while len(window) < depth:
+                    if not await submit_next():
+                        break
+                if not window:
+                    return
+                idx, chunk, request = window.popleft()
+                try:
+                    resp_bytes = await request.wait()
+                except Exception as e:
+                    if not sender.is_alive():
+                        raise
+                    # Transient failure on an otherwise-live connection:
+                    # retry this one part directly, out of band from the
+                    # window, rather than tearing down the whole worker.
+                    _log.warning(
+                        "upload_file: pipelined part %d failed, retrying directly: %s",
+                        idx, e,
+                    )
+                    resp_bytes = await sender.call(_build_upload_req(idx, chunk))
+                ok = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+                if not ok:
+                    raise RuntimeError(f"upload_file: part {idx} rejected by server")
+                if handle is not None:
+                    handle._add_bytes(len(chunk))
+
+        try:
+            if dedicated:
+                await asyncio.gather(*[worker_pipelined(c) for c in conns])
+            else:
+                await asyncio.gather(*[worker(c) for c in conns])
+        finally:
+            await stack.aclose()
 
         if is_big:
             return {"_": "inputFileBig", "id": file_id, "parts": total_parts, "name": file_name}
@@ -2127,7 +2440,8 @@ class Client(_RichMixin):
         return msg.get("id")
 
     async def download_media(self, peer: str, msg_id: int, path: str, *,
-                             handle: "TransferHandle | None" = None) -> str:
+                             handle: "TransferHandle | None" = None,
+                             quality: str = "original") -> str:
         """Download media from a message to a local file.
 
         Uses independent parallel worker connections opened directly on the
@@ -2135,17 +2449,29 @@ class Client(_RichMixin):
         not the home DC) and adaptive chunk sizes matching ferogram's Rust
         download implementation. Supports pause, resume, and cancel via
         handle.
+
+        `quality` picks a variant from the media's `alt_documents` (e.g. a
+        video with a quality picker in official clients): one of
+        `"original"` (default), `"highest"`, or `"lowest"`. Media with no
+        alternates only ever has `"original"` to pick from; every other
+        value falls back to it automatically. Use `available_qualities()`
+        to see what's actually on offer before choosing.
         """
         msg = await self.get_message(peer, msg_id)
         if not msg:
             raise ValueError(f"Message {msg_id} not found")
         media = msg.get("media", {})
-        return await self._download_media_object(media, path, handle=handle)
+        return await self._download_media_object(media, path, handle=handle, quality=quality)
 
     async def _download_media_object(self, media: dict, path: str, *,
-                                      handle: "TransferHandle | None" = None) -> str:
+                                      handle: "TransferHandle | None" = None,
+                                      quality: str = "original") -> str:
         if not isinstance(media, dict):
             raise ValueError("No media in message")
+        if quality not in ("original", "highest", "lowest"):
+            raise ValueError(
+                f'unknown quality {quality!r}, use: "original" | "highest" | "lowest"'
+            )
         t = media.get("_", "")
         file_size = 0
         media_dc_id = self._dc_id
@@ -2173,7 +2499,9 @@ class Client(_RichMixin):
             }
 
         elif t == "messageMediaDocument":
-            doc = media.get("document", {})
+            doc = _resolve_quality_document(media, quality)
+            if not isinstance(doc, dict):
+                raise ValueError("media has no downloadable document for the requested quality")
             file_size = doc.get("size", 0)
             media_dc_id = doc.get("dc_id") or self._dc_id
             location = {
@@ -2204,17 +2532,25 @@ class Client(_RichMixin):
             n_workers = min(n_workers, total_parts)
 
             # Open independent worker connections directly on the DC the
-            # media lives on (sequentially -- see _open_worker_conn).
+            # media lives on (sequentially -- see _open_worker_conn), each
+            # holding a `max_tcp_connections` permit for the life of this
+            # download.
             conns: list[DcConnection] = []
+            dl_stack = AsyncExitStack()
             for _ in range(n_workers):
                 try:
-                    conns.append(await self._open_worker_conn(media_dc_id))
+                    conns.append(await dl_stack.enter_async_context(self._worker_slot(media_dc_id)))
                 except Exception as e:
                     _log.warning(
                         "download: worker connection to DC%d failed, continuing with %d worker(s): %s",
                         media_dc_id, max(len(conns), 1), e,
                     )
                     break
+            # Same reasoning as upload_file: only conns opened here are
+            # dedicated sockets safe to hand off to a PipelinedSender. The
+            # fallback reuses the shared home connection and must stay on
+            # the one-at-a-time path.
+            dl_dedicated = bool(conns)
             if not conns:
                 conns = [await open_conn_for(media_dc_id)]
 
@@ -2274,7 +2610,84 @@ class Client(_RichMixin):
                         next_part += 1
                     cur_conn = await fetch_part_on(cur_conn, idx)
 
-            await asyncio.gather(*[worker(c) for c in conns])
+            def _build_download_req(offset: int) -> bytes:
+                return _tl.serialize({
+                    "_": "upload.getFile",
+                    "location": location,
+                    "offset": offset,
+                    "limit": chunk_size,
+                }, _SCHEMA)
+
+            async def worker_pipelined(conn: "DcConnection") -> None:
+                """X > 1 worker: keeps `download_pipeline_depth` chunk
+                requests in flight on one socket at once. Mirrors the
+                sliding-window loop in ferogram's Rust `media.rs`."""
+                nonlocal next_part
+                depth = max(1, self._transfer_limits.download_pipeline_depth)
+                sender = await conn.into_pipelined_sender()
+                # Sliding window of (part_idx, in-flight PipelinedRequest).
+                window: deque[tuple[int, Any]] = deque()
+
+                async def submit_next() -> bool:
+                    nonlocal next_part
+                    async with next_part_lock:
+                        if next_part >= total_parts:
+                            return False
+                        idx = next_part
+                        next_part += 1
+                    request = await sender.enqueue(_build_download_req(idx * chunk_size))
+                    window.append((idx, request))
+                    return True
+
+                while True:
+                    if handle is not None:
+                        await handle._poll_pause_cancel()
+                    while len(window) < depth:
+                        if not await submit_next():
+                            break
+                    if not window:
+                        return
+                    idx, request = window.popleft()
+                    try:
+                        resp_bytes = await request.wait()
+                    except Exception as e:
+                        new_dc = _parse_migrate(str(e)) if isinstance(e, RuntimeError) else None
+                        if new_dc is not None:
+                            # A redirect invalidates every part still in
+                            # flight from the old DC/session, not just this
+                            # one -- reopen fresh and resubmit the lot.
+                            _log.info(
+                                "download: FILE_MIGRATE_%d mid-pipeline, reopening on new DC (part %d)",
+                                new_dc, idx,
+                            )
+                            pending = [idx] + [w[0] for w in window]
+                            window.clear()
+                            new_conn = await self._open_worker_conn(new_dc)
+                            sender = await new_conn.into_pipelined_sender()
+                            for pidx in sorted(pending):
+                                req = await sender.enqueue(_build_download_req(pidx * chunk_size))
+                                window.append((pidx, req))
+                            continue
+                        if not sender.is_alive():
+                            raise
+                        _log.warning(
+                            "download: pipelined part %d failed, retrying directly: %s",
+                            idx, e,
+                        )
+                        resp_bytes = await sender.call(_build_download_req(idx * chunk_size))
+                    result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+                    data = result.get("bytes", b"") if isinstance(result, dict) else b""
+                    parts_buf[idx] = data
+                    if handle is not None:
+                        handle._add_bytes(len(data))
+
+            try:
+                if dl_dedicated:
+                    await asyncio.gather(*[worker_pipelined(c) for c in conns])
+                else:
+                    await asyncio.gather(*[worker(c) for c in conns])
+            finally:
+                await dl_stack.aclose()
 
             with open(path, "wb") as fh:
                 for part in parts_buf:
@@ -2324,11 +2737,14 @@ class Client(_RichMixin):
         on_progress: "Callable[[int, int], None] | None" = None,
         *,
         handle: "TransferHandle | None" = None,
+        quality: str = "original",
     ) -> str:
         """Download media with an optional per-second progress callback.
 
         on_progress(bytes_done, total_bytes) is called once per second while
         downloading. Pass a TransferHandle to pause, resume, or cancel.
+        `quality` is the same `"original"|"highest"|"lowest"` picker as
+        `download_media`.
         """
         if handle is None:
             handle = TransferHandle()
@@ -2343,7 +2759,7 @@ class Client(_RichMixin):
 
         ticker_task = asyncio.ensure_future(_ticker())
         try:
-            result = await self.download_media(peer, msg_id, path, handle=handle)
+            result = await self.download_media(peer, msg_id, path, handle=handle, quality=quality)
         finally:
             stop_ticker.set()
             ticker_task.cancel()
@@ -2424,6 +2840,62 @@ class Client(_RichMixin):
         result = await self._rpc({"_": "photos.getUserPhotos", "user_id": user_peer, "offset": 0, "max_id": 0, "limit": limit})
         photos = result.get("photos", []) if isinstance(result, dict) else []
         return [(p.get("id", 0), p.get("access_hash", 0), p.get("dc_id", 0)) for p in photos]
+
+    async def get_chat_photos(self, peer: str, limit: int = 100) -> list[tuple[int, int, int]]:
+        """Photo/avatar history for a group or channel (get_profile_photos only works for users).
+
+        The current photo comes from the chat's full info, so it's returned
+        even if every photo-change message has been deleted. Older photos
+        come from `messageActionChatEditPhoto` service messages, so those
+        are lost if the underlying messages were deleted; there's no other
+        way to recover them.
+        """
+        input_peer = await self._resolve_peer(peer)
+        photos: list[tuple[int, int, int]] = []
+        seen_id: int | None = None
+
+        t = input_peer.get("_", "")
+        try:
+            if "Channel" in t:
+                full_result = await self._rpc({"_": "channels.getFullChannel", "channel": input_peer})
+            else:
+                full_result = await self._rpc({"_": "messages.getFullChat", "chat_id": input_peer.get("chat_id", 0)})
+            full = full_result.get("full_chat", {}) if isinstance(full_result, dict) else {}
+            current = full.get("chat_photo")
+            if isinstance(current, dict) and current.get("_") == "photo":
+                seen_id = current.get("id", 0)
+                photos.append((current.get("id", 0), current.get("access_hash", 0), current.get("dc_id", 0)))
+        except Exception:
+            pass  # current photo is a nice-to-have; fall through to history regardless
+
+        result = await self._rpc({
+            "_": "messages.search",
+            "peer": input_peer,
+            "q": "",
+            "filter": {"_": "inputMessagesFilterChatPhotos"},
+            "min_date": 0,
+            "max_date": 0,
+            "offset_id": 0,
+            "add_offset": 0,
+            "limit": limit,
+            "max_id": 0,
+            "min_id": 0,
+            "hash": 0,
+        })
+        messages = result.get("messages", []) if isinstance(result, dict) else []
+        for m in messages:
+            action = m.get("action", {}) if isinstance(m, dict) else {}
+            if action.get("_") != "messageActionChatEditPhoto":
+                continue
+            photo = action.get("photo", {})
+            if not isinstance(photo, dict) or photo.get("_") != "photo":
+                continue
+            pid = photo.get("id", 0)
+            if pid == seen_id:
+                continue
+            photos.append((pid, photo.get("access_hash", 0), photo.get("dc_id", 0)))
+
+        return photos
 
 
     async def block_user(self, peer: str) -> None:

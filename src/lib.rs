@@ -13,6 +13,7 @@
 use pyo3::prelude::*;
 
 pub mod connection;
+pub mod pipelined;
 pub mod raw;
 pub mod session;
 pub mod srp;
@@ -24,6 +25,8 @@ pub fn py_err(e: impl std::fmt::Display) -> PyErr {
 #[pymodule]
 fn _ferogram(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<connection::DcConnection>()?;
+    m.add_class::<pipelined::PyPipelinedSender>()?;
+    m.add_class::<pipelined::PyPipelinedRequest>()?;
     m.add_class::<session::FileSession>()?;
     m.add_class::<session::MemorySession>()?;
     m.add_class::<session::StringSession>()?;

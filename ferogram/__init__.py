@@ -26,6 +26,7 @@ if _main_file:
         )
 
 from .client import Client, StopPropagation, ContinuePropagation, TransferHandle, TransferCancelled
+from .client import TransferLimits, available_qualities
 from . import filters
 
 # Session classes stay in Rust
@@ -59,7 +60,7 @@ from .updates import (
 __all__ = [
     # Core
     "Client", "filters", "StopPropagation", "ContinuePropagation",
-    "TransferHandle", "TransferCancelled",
+    "TransferHandle", "TransferCancelled", "TransferLimits", "available_qualities",
     # Session (Rust)
     "FileSession", "MemorySession", "StringSession",
     "SqliteSession", "LibSqlSession", "CustomSession",
