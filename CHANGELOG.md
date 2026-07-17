@@ -1,10 +1,9 @@
-## Unreleased
+## 0.5.2 (2026-07-17)
 
 - Added `Client.get_chat_photos(peer, limit)`: photo/avatar history for groups and channels (`get_profile_photos` only ever worked for users). Current photo comes from the chat's full info, so it survives message deletion; older photos come from `messageActionChatEditPhoto` search history.
 - Added fast re-auth support: `sign_out()` captures a `future_auth_token` when Telegram returns one and persists it via a new `DcConnection.get_future_auth_token`/`set_future_auth_token` pair (rides along in the existing session blob, no new session format code needed here). `request_login_code()` replays it automatically, so a returning session can skip code entry entirely (`auth.sentCodeSuccess`).
-- Depends on `ferogram-session` 0.6.4 (not yet published) for the `future_auth_token` field on `PersistedSession`; the Rust-side accessors are written but won't compile until that dependency is bumped.
-- Also pending on that same bump: an MTProto handshake fix upstream (dc-tagged `p_q_inner_data` was being rejected by Telegram with RPC 444 outside DC2), pulled in transitively via `ferogram-mtsender`.
-
+- MTProto handshake fix upstream (dc-tagged `p_q_inner_data` was being rejected by Telegram with RPC 444 outside DC2), pulled in transitively via `ferogram-mtsender`.
+- Layer Upgrade to 228
 ## 0.5.1 (2026-06-29)
 
 ## What's Changed
