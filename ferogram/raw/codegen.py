@@ -27,7 +27,7 @@ TL_LINE = re.compile(
     r'((?:\s+[\w.]+:[^\s=]+)*)'
     r'\s*=\s*([\w.<>]+);'
 )
-FIELD_RE   = re.compile(r'([\w.]+):([\w?.<>]+)')
+FIELD_RE   = re.compile(r'([\w.]+):([\w?.<>#]+)')
 FLAG_FIELD = re.compile(r'^(flags\d*)\.(\d+)\?(.+)$')
 
 PRIMITIVES = {"int", "long", "double", "string", "bytes", "Bool",
@@ -57,12 +57,25 @@ class Constructor(NamedTuple):
     fields:      list[Field]
     ret:         str
     is_function: bool
+    flag_markers: dict[str, int] = {}
 
 
-def parse_fields(raw: str) -> list[Field]:
-    fields = []
+def parse_fields(raw: str) -> tuple[list[Field], dict[str, int]]:
+    """Parse fields, and also record where each ``group:#`` marker sits.
+
+    ``flag_markers[group]`` is the number of *data* fields already seen
+    when that marker token was encountered in the schema text - i.e. the
+    index in the returned field list that the group's flags word must be
+    read/written immediately before. Wire order is whatever the schema
+    text says; it is NOT always "flags first" (e.g. ``poll#966e2dbf
+    id:long flags:# closed:flags.0?true ...`` reads ``id`` before the
+    flags word).
+    """
+    fields: list[Field] = []
+    flag_markers: dict[str, int] = {}
     for fname, ftype in FIELD_RE.findall(raw):
         if ftype == "#":
+            flag_markers[fname] = len(fields)
             continue
         m = FLAG_FIELD.match(ftype)
         if m:
@@ -70,7 +83,7 @@ def parse_fields(raw: str) -> list[Field]:
             fields.append(Field(fname, inner, Flag(group, int(bit_str))))
         else:
             fields.append(Field(fname, ftype, None))
-    return fields
+    return fields, flag_markers
 
 
 def parse_tl(path: Path) -> tuple[list[Constructor], list[Constructor]]:
@@ -89,8 +102,8 @@ def parse_tl(path: Path) -> tuple[list[Constructor], list[Constructor]]:
             continue
         name, cid_hex, fields_raw, ret = m.groups()
         cid = int(cid_hex, 16)
-        fields = parse_fields(fields_raw)
-        c = Constructor(name, cid, fields, ret, in_functions)
+        fields, flag_markers = parse_fields(fields_raw)
+        c = Constructor(name, cid, fields, ret, in_functions, flag_markers)
         (funcs if in_functions else types).append(c)
     return types, funcs
 
@@ -179,10 +192,10 @@ def _read_expr(ftype: str, access_data: str, access_pos: str) -> tuple[str, str]
     if ftype == "bytes":
         return None   # _pack_bytes logic is non-trivial; use generic
     if ftype == "string":
-        return None   # same — needs decode attempt
+        return None   # same -- needs decode attempt
     if ftype == "Bool":
         return None   # needs CID dispatch
-    return None       # TL object or Vector — generic fallback
+    return None       # TL object or Vector -- generic fallback
 
 
 def _emit_read_body(c: Constructor) -> list[str]:
@@ -201,42 +214,68 @@ def _emit_read_body(c: Constructor) -> list[str]:
     lines: list[str] = []
     lines.append(f'{I}obj = {{"_": "{c.name}"}}')
 
-    # Determine flag groups present (in encounter order)
-    seen_groups: set[str] = set()
-    flag_groups: list[str] = []
-    for f in c.fields:
-        if f.flag and f.flag.group not in seen_groups:
-            seen_groups.add(f.flag.group)
-            flag_groups.append(f.flag.group)
+    # Determine flag groups present. A group counts as present if it was
+    # *declared* (a "flags:#" / "flags2:#" marker in the schema text) even
+    # if zero fields end up gated on it - the word is still 4 bytes on the
+    # wire either way and must be consumed/emitted, or every field after
+    # it silently misaligns. Order by the marker's schema position.
+    flag_groups: list[str] = sorted(c.flag_markers, key=lambda g: c.flag_markers[g])
 
     if not flag_groups:
-        # Fast path — no flags
+        # Fast path - no flags
         lines.extend(_emit_read_fields(c.fields, indent=I))
         lines.append(f"{I}return obj, pos")
         return lines
 
-    # Pre-read "flags" word if present (always first in wire order)
-    if "flags" in seen_groups:
-        lines.append(f"{I}_flags_word, = _struct.unpack_from('<I', data, pos)")
+    # Emit each flag group's word read at its true schema position (the
+    # marker's index into c.fields), not always hoisted to the front.
+    # Groups whose marker sits at index 0 (the overwhelmingly common case)
+    # still get read first, same as before; a marker declared after N data
+    # fields (e.g. poll#966e2dbf id:long flags:# ...) reads those N fields
+    # first, matching real wire order.
+    markers = c.flag_markers
+
+    def _emit_group_read(grp: str) -> None:
+        lines.append(f"{I}_{grp}_word, = _struct.unpack_from('<I', data, pos)")
         lines.append(f"{I}pos += 4")
 
-    emitted_reads: set[str] = {"flags"} if "flags" in seen_groups else set()
+    emitted_reads: set[str] = set()
+
+    # Any group whose marker position is 0 reads before the first field.
+    for grp in flag_groups:
+        if markers.get(grp, 0) == 0 and grp not in emitted_reads:
+            _emit_group_read(grp)
+            emitted_reads.add(grp)
 
     i = 0
     fields = c.fields
     while i < len(fields):
         f = fields[i]
 
-        # Lazily read the flag group word on first encounter
+        # Emit any group whose marker sits exactly at this field index.
+        for grp in flag_groups:
+            if grp not in emitted_reads and markers.get(grp, 0) == i:
+                _emit_group_read(grp)
+                emitted_reads.add(grp)
+
+        # Fall back: lazily read on first flagged-field encounter, in case
+        # a group has no recorded marker (shouldn't happen, but safe).
         if f.flag and f.flag.group not in emitted_reads:
             grp = f.flag.group
-            lines.append(f"{I}_{grp}_word, = _struct.unpack_from('<I', data, pos)")
-            lines.append(f"{I}pos += 4")
+            _emit_group_read(grp)
             emitted_reads.add(grp)
 
-        # Try batch of consecutive unconditional fixed-width fields
+        # Try batch of consecutive unconditional fixed-width fields  but
+        # never cross a not-yet-emitted flags marker's position, or a
+        # mid-sequence group (e.g. poll/wallPaper's "flags" after "id")
+        # would get read too late.
         if f.flag is None and f.ftype in _FIXED_READ:
-            run = _collect_fixed_read_run(fields, i)
+            next_marker = min(
+                (pos for grp, pos in markers.items()
+                 if grp not in emitted_reads and pos > i),
+                default=len(fields),
+            )
+            run = _collect_fixed_read_run(fields[:next_marker], i)
             if len(run) >= 2:
                 fmt = "<" + "".join(_FIXED_READ[rf.ftype][0] for rf in run)
                 size = sum(_FIXED_READ[rf.ftype][1] for rf in run)
@@ -320,7 +359,7 @@ _FIXED_FMT: dict[str, str] = {
 }
 
 # int128 / int256 are rare (only 2 total in the schema) and handled via
-# .to_bytes() — not worth special-casing in the batch logic.
+# .to_bytes() - not worth special-casing in the batch logic.
 
 
 def _emit_serialize_body(c: Constructor) -> list[str]:
@@ -356,16 +395,12 @@ def _emit_serialize_body(c: Constructor) -> list[str]:
     cid_bytes = c.cid.to_bytes(4, "little")
     lines.append(f"{I}out = {cid_bytes!r}")
 
-    # Determine which flag groups are present
-    flag_groups: list[str] = []
-    seen_groups: set[str] = set()
-    for f in c.fields:
-        if f.flag and f.flag.group not in seen_groups:
-            seen_groups.add(f.flag.group)
-            flag_groups.append(f.flag.group)
+    # Determine which flag groups are present. Same rule as the
+    # deserializer: a declared marker counts even with zero gated fields.
+    flag_groups: list[str] = sorted(c.flag_markers, key=lambda g: c.flag_markers[g])
 
     if not flag_groups:
-        # Fast path: no flags at all — just emit fields sequentially.
+        # Fast path: no flags at all - just emit fields sequentially.
         lines.extend(_emit_fields_sequence(c.fields, conditional=False, indent=I))
         lines.append(f"{I}return out")
         return lines
@@ -380,11 +415,20 @@ def _emit_serialize_body(c: Constructor) -> list[str]:
         word_expr = " | ".join(parts) if parts else "0"
         lines.append(f"{I}_{grp}_word = {word_expr}")
 
-    # Emit "flags" word first (TL convention)
-    if "flags" in seen_groups:
-        lines.append(f"{I}out += _struct.pack('<I', _flags_word)")
+    # Emit each flag word at its true schema position (mirrors the
+    # deserializer fix: a marker at index 0 still writes first, but a
+    # mid-sequence marker, e.g. poll/wallPaper's "flags" after "id", now
+    # writes after the fields that precede it in the schema text).
+    markers = c.flag_markers
 
-    emitted_groups: set[str] = {"flags"} if "flags" in seen_groups else set()
+    def _emit_group_write(grp: str) -> None:
+        lines.append(f"{I}out += _struct.pack('<I', _{grp}_word)")
+
+    emitted_groups: set[str] = set()
+    for grp in flag_groups:
+        if markers.get(grp, 0) == 0 and grp not in emitted_groups:
+            _emit_group_write(grp)
+            emitted_groups.add(grp)
 
     # Walk fields, batching fixed-width unconditional runs
     i = 0
@@ -392,15 +436,28 @@ def _emit_serialize_body(c: Constructor) -> list[str]:
     while i < len(fields):
         f = fields[i]
 
-        # Emit any not-yet-emitted flag group whose first field we're about to visit
+        # Emit any group whose marker sits exactly at this field index.
+        for grp in flag_groups:
+            if grp not in emitted_groups and markers.get(grp, 0) == i:
+                _emit_group_write(grp)
+                emitted_groups.add(grp)
+
+        # Fall back: emit on first flagged-field encounter if no marker
+        # position was recorded for its group (shouldn't happen, but safe).
         if f.flag and f.flag.group not in emitted_groups:
             grp = f.flag.group
-            lines.append(f"{I}out += _struct.pack('<I', _{grp}_word)")
+            _emit_group_write(grp)
             emitted_groups.add(grp)
 
-        # Try to batch consecutive unconditional fixed-width scalars
+        # Try to batch consecutive unconditional fixed-width scalars  but
+        # never cross a not-yet-emitted flags marker's position.
         if f.flag is None and f.ftype in _FIXED_FMT:
-            run = _collect_fixed_run(fields, i)
+            next_marker = min(
+                (pos for grp, pos in markers.items()
+                 if grp not in emitted_groups and pos > i),
+                default=len(fields),
+            )
+            run = _collect_fixed_run(fields[:next_marker], i)
             if len(run) >= 2:
                 fmt = "<" + "".join(_FIXED_FMT[rf.ftype] for rf in run)
                 args = ", ".join(f"self.{_safe_param(rf.name)}" for rf in run)
@@ -436,7 +493,7 @@ def _emit_single_field(f: Field, indent: str) -> list[str]:
         grp, bit = f.flag.group, f.flag.bit
         inner = _pack_expr(f.ftype, f"self.{p}")
         if inner is None:
-            # true/True: zero wire size — the bit in the flags word is enough,
+            # true/True: zero wire size - the bit in the flags word is enough,
             # nothing to write. Skip emitting an if block entirely.
             return []
         lines = [f"{I}if _{grp}_word & (1 << {bit}):"]
@@ -445,7 +502,7 @@ def _emit_single_field(f: Field, indent: str) -> list[str]:
 
     expr = _pack_expr(f.ftype, f"self.{p}")
     if expr is None:
-        return []   # true/True — zero wire size, unconditional
+        return []   # true/True - zero wire size, unconditional
     return [f"{I}out += {expr}"]
 
 
@@ -472,7 +529,7 @@ def _pack_expr(ftype: str, access: str) -> str | None:
         return f"{access}.to_bytes(16, 'little', signed=False)"
     if ftype == "int256":
         return f"{access}.to_bytes(32, 'little', signed=False)"
-    # Vector or TL object — fall back to generic serialize
+    # Vector or TL object - fall back to generic serialize
     return f"_tl.serialize(_tl._resolve({access}), _SCHEMA)"
 
 
@@ -523,7 +580,7 @@ def render_class(c: Constructor) -> str:
         lines.append("    def __init__(self) -> None:")
         lines.append("        pass")
 
-    # to_dict — keep for dict-style callers and _tl._resolve compatibility
+    # to_dict - keep for dict-style callers and _tl._resolve compatibility
     lines.append("")
     lines.append("    def to_dict(self) -> dict:")
     lines.append(f'        return {{"_": "{c.name}", **{{')
@@ -531,12 +588,12 @@ def render_class(c: Constructor) -> str:
         lines.append(f'            "{f.name}": _tl._resolve(self.{_safe_param(f.name)}),')
     lines.append("        }}")
 
-    # to_bytes — specialized, inlined struct.pack calls
+    # to_bytes - specialized, inlined struct.pack calls
     lines.append("")
     lines.append("    def to_bytes(self) -> bytes:")
     lines.extend(_emit_serialize_body(c))
 
-    # from_bytes — specialized, inlined struct.unpack calls
+    # from_bytes - specialized, inlined struct.unpack calls
     lines.append("")
     lines.append("    @classmethod")
     lines.append("    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:")

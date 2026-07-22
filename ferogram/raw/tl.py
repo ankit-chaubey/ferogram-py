@@ -123,11 +123,12 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
         if obj.get(fname) is not None:
             flag_words[group] |= (1 << bit)
 
-    # "flags" is always written first as a prefix word (TL convention).
-    if "flags" in flag_words:
-        out += _pack_uint32(flag_words["flags"])
-
-    emitted: set[str] = {"flags"} if "flags" in flag_words else set()
+    # Every flag group's word (including "flags") is written lazily, on
+    # its first appearance in field order - not hoisted to the front.
+    # Some constructors (poll#966e2dbf, wallPaper#a437c3ed) declare a
+    # field before the "flags:#" marker in the schema text, so "flags"
+    # is not always the first thing on the wire.
+    emitted: set[str] = set()
 
     for fname, ftype, flag in fields:
         if flag is not None:
@@ -314,10 +315,14 @@ def _read_value(data: bytes, pos: int, schema: dict) -> tuple[Any, int]:
     name, fields = schema[cid]
     obj: dict[str, Any] = {"_": name}
 
-    # Read "flags" word first if any field is gated on it.
+    # Every flag group's word (including "flags" itself) is read lazily,
+    # on first encounter of a field that's actually gated on it. Do NOT
+    # special-case "flags" as always-first: some constructors declare a
+    # field before the "flags:#" marker in the schema text (e.g.
+    # poll#966e2dbf and wallPaper#a437c3ed both read "id" before flags),
+    # and hoisting the word early would misread that field's bytes as
+    # the flags word.
     flag_words: dict[str, int] = {}
-    if any(f[2] is not None and f[2][0] == "flags" for f in fields):
-        flag_words["flags"], pos = _read_uint32(data, pos)
 
     for fname, ftype, flag in fields:
         if flag is not None:

@@ -40,6 +40,8 @@ class AllStoriesNotModified:
 
     def to_bytes(self) -> bytes:
         out = b'>\xfeX\x11'
+        _flags_word = 0
+        out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.state)
         out += _tl.serialize(_tl._resolve(self.stealth_mode), _SCHEMA)
         return out
@@ -47,6 +49,8 @@ class AllStoriesNotModified:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.allStoriesNotModified"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
         obj["state"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
         obj["stealth_mode"], pos = _tl._read_typed(data, pos, "StoriesStealthMode", _SCHEMA_BY_CID)
         return obj, pos

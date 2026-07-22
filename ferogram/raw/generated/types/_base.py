@@ -10034,8 +10034,8 @@ class WallPaper:
     def to_bytes(self) -> bytes:
         out = b'\xed\xc37\xa4'
         _flags_word = (0 if self.creator is None else (1 << 0)) | (0 if self.default is None else (1 << 1)) | (0 if self.pattern is None else (1 << 3)) | (0 if self.dark is None else (1 << 4)) | (0 if self.settings is None else (1 << 2))
-        out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.id)
+        out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.access_hash)
         out += _tl._pack_string(self.slug)
         out += _tl.serialize(_tl._resolve(self.document), _SCHEMA)
@@ -10046,10 +10046,10 @@ class WallPaper:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "wallPaper"}
-        _flags_word, = _struct.unpack_from('<I', data, pos)
-        pos += 4
         obj["id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
         if _flags_word & (1 << 0):
             obj["creator"] = True
         if _flags_word & (1 << 1):
@@ -10095,8 +10095,8 @@ class WallPaperNoFile:
     def to_bytes(self) -> bytes:
         out = b'\x16A\x80\xe0'
         _flags_word = (0 if self.default is None else (1 << 1)) | (0 if self.dark is None else (1 << 4)) | (0 if self.settings is None else (1 << 2))
-        out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.id)
+        out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 2):
             out += _tl.serialize(_tl._resolve(self.settings), _SCHEMA)
         return out
@@ -10104,10 +10104,10 @@ class WallPaperNoFile:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "wallPaperNoFile"}
-        _flags_word, = _struct.unpack_from('<I', data, pos)
-        pos += 4
         obj["id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
         if _flags_word & (1 << 1):
             obj["default"] = True
         if _flags_word & (1 << 4):
@@ -36634,8 +36634,8 @@ class Poll:
     def to_bytes(self) -> bytes:
         out = b'\xbf-n\x96'
         _flags_word = (0 if self.closed is None else (1 << 0)) | (0 if self.public_voters is None else (1 << 1)) | (0 if self.multiple_choice is None else (1 << 2)) | (0 if self.quiz is None else (1 << 3)) | (0 if self.open_answers is None else (1 << 6)) | (0 if self.revoting_disabled is None else (1 << 7)) | (0 if self.shuffle_answers is None else (1 << 8)) | (0 if self.hide_results_until_close is None else (1 << 9)) | (0 if self.creator is None else (1 << 10)) | (0 if self.subscribers_only is None else (1 << 11)) | (0 if self.close_period is None else (1 << 4)) | (0 if self.close_date is None else (1 << 5)) | (0 if self.countries_iso2 is None else (1 << 12))
-        out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.id)
+        out += _struct.pack('<I', _flags_word)
         out += _tl.serialize(_tl._resolve(self.question), _SCHEMA)
         out += _tl.serialize(_tl._resolve(self.answers), _SCHEMA)
         if _flags_word & (1 << 4):
@@ -36650,10 +36650,10 @@ class Poll:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "poll"}
-        _flags_word, = _struct.unpack_from('<I', data, pos)
-        pos += 4
         obj["id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
         if _flags_word & (1 << 0):
             obj["closed"] = True
         if _flags_word & (1 << 1):
@@ -44743,6 +44743,8 @@ class ExportedChatlistInvite:
 
     def to_bytes(self) -> bytes:
         out = b'\xac\x81Q\x0c'
+        _flags_word = 0
+        out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.title)
         out += _tl._pack_string(self.url)
         out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
@@ -44751,6 +44753,8 @@ class ExportedChatlistInvite:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "exportedChatlistInvite"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
         obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
         obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
         obj["peers"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
