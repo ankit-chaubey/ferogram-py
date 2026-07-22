@@ -1,3 +1,19 @@
+## Unreleased
+
+- Fixed a codegen bug that corrupted `updates.getDifference` and any response with a `Poll` or `WallPaper`: `flags:#` was assumed to always be first on the wire and hoisted to the front of `from_bytes()`/`to_bytes()`. `poll#966e2dbf`, `wallPaper#a437c3ed`, and `wallPaperNoFile#e0804116` all declare `id:long` before `flags:#`, so those fields were read/written swapped, producing a garbage flags word that could trigger optional fields that weren't actually present and eventually overrun the buffer. Codegen now tracks each flag marker's real position in the schema and emits it there.
+- Related fix: `exportedChatlistInvite` and `stories.allStoriesNotModified` declare `flags:#` with no field gated on it; codegen treated "unused" as "not on the wire" and silently dropped 4 bytes, misaligning everything after. Flag groups are now determined from declared markers, not field usage.
+- `ferogram/raw/tl.py`'s runtime fallback interpreter (`_read_value`/`serialize_object`) had the same "flags always first" assumption; fixed to match wire order.
+- Regenerated all 1642 types + 795 functions from `api.tl`; `tests/test_tl_roundtrip.py` (4874 combinations) passes.
+- Peer cache now tracks communities separately from channels instead of collapsing them together; `chatEmpty` is no longer cached as a basic chat, and a non-zero access hash can no longer be overwritten by a zero one.
+- `get_dialogs`/`get_pinned_dialogs` now handle `dialogCommunity` via `community_id` instead of assuming a `peer` field. Added `Chat.is_community` and `Dialog.community_id`/`is_community`.
+- `join_chat`/`join_invite_link` now handle `messages.ChatInviteJoinResult` instead of assuming a bare `Updates` response. `Ok` resolves and caches the joined peer; `WebView` returns `None` (interactive bot flow not yet supported).
+- `serialize_object` now dispatches to generated `to_bytes()` before falling back to generic serialization: ~1.7x faster, byte-identical output verified across all 2,437 constructors.
+- `send_message`, `edit_message`, `forward_messages` now respect `no_webpage`, `silent`, `schedule_date`, `send_as`, and related params instead of hardcoding them.
+- `promote_participant(rights=...)` now replaces requested rights instead of merging into a fixed base set, so limited admin permissions actually work.
+- Removed hardcoded values from `send_invoice(test=...)`, `add_contact(add_phone_privacy_exception=...)`, `get_blocked_users(my_stories_from=...)`.
+
+---
+
 ## 0.5.2 (2026-07-17)
 
 - Added `Client.get_chat_photos(peer, limit)`: photo/avatar history for groups and channels (`get_profile_photos` only ever worked for users). Current photo comes from the chat's full info, so it survives message deletion; older photos come from `messageActionChatEditPhoto` search history.
