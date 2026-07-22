@@ -226,9 +226,9 @@ impl DcConnection {
         let inner = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let mut guard = inner.lock().await;
-            let conn = guard.as_mut().ok_or_else(|| {
-                py_err("connection was consumed by into_pipelined_sender()")
-            })?;
+            let conn = guard
+                .as_mut()
+                .ok_or_else(|| py_err("connection was consumed by into_pipelined_sender()"))?;
             let result = conn
                 .rpc_call(&crate::raw::RawCall(tl_bytes))
                 .await
@@ -387,9 +387,9 @@ impl DcConnection {
         let inner = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let guard = inner.lock().await;
-            let conn = guard.as_ref().ok_or_else(|| {
-                py_err("connection was consumed by into_pipelined_sender()")
-            })?;
+            let conn = guard
+                .as_ref()
+                .ok_or_else(|| py_err("connection was consumed by into_pipelined_sender()"))?;
             Ok(conn.auth_key_bytes().to_vec())
         })
     }

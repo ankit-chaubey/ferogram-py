@@ -1008,16 +1008,7 @@ class Client(_RichMixin):
             if uid is not None and ah is not None:
                 self._peer_cache.store_user(uid, ah)
         for ch in obj.get("chats") or []:
-            if not isinstance(ch, dict) or ch.get("min"):
-                continue
-            cid = ch.get("id")
-            if cid is None:
-                continue
-            ah = ch.get("access_hash")
-            if ah is not None:
-                self._peer_cache.store_channel(cid, ah)
-            else:
-                self._peer_cache.store_chat(cid)
+            self._peer_cache.store_chat_entity(ch)
 
 
     async def start(
@@ -1269,7 +1260,7 @@ class Client(_RichMixin):
                 title=((raw.get("first_name") or "") + " " + (raw.get("last_name") or "")).strip(),
                 username=raw.get("username"),
                 is_channel=False, is_megagroup=False, is_gigagroup=False,
-                is_broadcast=False, members_count=None,
+                is_broadcast=False, is_community=False, members_count=None,
                 access_hash=raw.get("access_hash", 0), _raw=raw,
             )
         return None
@@ -1282,7 +1273,16 @@ class Client(_RichMixin):
     async def send_message(self, peer: Any, text: str, *,
                            parse_mode: str | None = None,
                            reply_to: int | None = None,
-                           reply_markup=None) -> Message:
+                           reply_markup=None,
+                           no_webpage: bool = True,
+                           silent: bool = False,
+                           schedule_date: int | None = None,
+                           send_as: Any = None,
+                           noforwards: bool = False,
+                           background: bool = False,
+                           clear_draft: bool = False,
+                           effect: int | None = None,
+                           invert_media: bool = False) -> Message:
         pm = self._resolve_pm(parse_mode)
         if pm in ("markdown", "md"):
             plain, entities = _tl.parse_markdown(text)
@@ -1296,9 +1296,26 @@ class Client(_RichMixin):
             "peer": input_peer,
             "message": plain,
             "random_id": random.randint(-(2**63), 2**63 - 1),
-            "no_webpage": True,
             "entities": entities,
         }
+        if no_webpage:
+            req["no_webpage"] = True
+        if silent:
+            req["silent"] = True
+        if noforwards:
+            req["noforwards"] = True
+        if background:
+            req["background"] = True
+        if clear_draft:
+            req["clear_draft"] = True
+        if invert_media:
+            req["invert_media"] = True
+        if schedule_date is not None:
+            req["schedule_date"] = schedule_date
+        if effect is not None:
+            req["effect"] = effect
+        if send_as is not None:
+            req["send_as"] = await self._resolve_peer(send_as)
         if reply_to is not None:
             req["reply_to"] = {"_": "inputReplyToMessage", "reply_to_msg_id": reply_to}
         if reply_markup is not None:
@@ -1311,7 +1328,8 @@ class Client(_RichMixin):
 
     async def edit_message(self, peer: Any, message_id: int, new_text: str, *,
                            parse_mode: str | None = None,
-                           reply_markup=None) -> None:
+                           reply_markup=None,
+                           no_webpage: bool = True) -> None:
         pm = self._resolve_pm(parse_mode)
         if pm in ("markdown", "md"):
             plain, entities = _tl.parse_markdown(new_text)
@@ -1325,8 +1343,9 @@ class Client(_RichMixin):
             "peer": input_peer,
             "id": message_id,
             "message": plain,
-            "no_webpage": True,
         }
+        if no_webpage:
+            req["no_webpage"] = True
         if entities:
             req["entities"] = entities
         if reply_markup is not None:
@@ -1364,16 +1383,38 @@ class Client(_RichMixin):
                 "revoke": revoke,
             })
 
-    async def forward_messages(self, destination: str, source: str, message_ids: list[int]) -> None:
+    async def forward_messages(self, destination: str, source: str, message_ids: list[int], *,
+                               silent: bool = False,
+                               drop_author: bool = False,
+                               drop_media_captions: bool = False,
+                               noforwards: bool = False,
+                               background: bool = False,
+                               schedule_date: int | None = None,
+                               send_as: Any = None) -> None:
         from_peer = await self._resolve_peer(source)
         to_peer   = await self._resolve_peer(destination)
-        await self._rpc({
+        req: dict = {
             "_": "messages.forwardMessages",
             "from_peer": from_peer,
             "to_peer": to_peer,
             "id": message_ids,
             "random_id": [random.randint(-(2**63), 2**63 - 1) for _ in message_ids],
-        })
+        }
+        if silent:
+            req["silent"] = True
+        if drop_author:
+            req["drop_author"] = True
+        if drop_media_captions:
+            req["drop_media_captions"] = True
+        if noforwards:
+            req["noforwards"] = True
+        if background:
+            req["background"] = True
+        if schedule_date is not None:
+            req["schedule_date"] = schedule_date
+        if send_as is not None:
+            req["send_as"] = await self._resolve_peer(send_as)
+        await self._rpc(req)
 
     async def pin_message(self, peer: Any, message_id: int, *, notify: bool = False) -> None:
         input_peer = await self._resolve_peer(peer)
@@ -1692,13 +1733,38 @@ class Client(_RichMixin):
             "hash": 0,
             "exclude_pinned": False,
         })
-        return result.get("dialogs", []) if isinstance(result, dict) else []
+        if not isinstance(result, dict):
+            return []
+        self._populate_cache(result)
+        dialogs = result.get("dialogs", []) or []
+        chat_map = {c.get("id"): c for c in (result.get("chats") or []) if isinstance(c, dict) and c.get("id") is not None}
+        for d in dialogs:
+            if not isinstance(d, dict):
+                continue
+            # dialogCommunity has no `peer` field - it's addressed by
+            # `community_id` instead, since there is no Peer::Community on
+            # the wire. Attach the resolved chat under "chat" either way so
+            # callers don't need to branch on the dialog's `_` type.
+            if d.get("_") == "dialogCommunity":
+                d["chat"] = chat_map.get(d.get("community_id"))
+            else:
+                peer = d.get("peer") or {}
+                cid = peer.get("user_id") or peer.get("chat_id") or peer.get("channel_id")
+                d["chat"] = chat_map.get(cid)
+        return dialogs
 
     async def get_pinned_dialogs(self, folder_id: int = 0) -> list[int]:
         result = await self._rpc({"_": "messages.getPinnedDialogs", "folder_id": folder_id})
         dialogs = result.get("dialogs", []) if isinstance(result, dict) else []
         out = []
         for d in dialogs:
+            if not isinstance(d, dict):
+                continue
+            if d.get("_") == "dialogCommunity":
+                cid = d.get("community_id")
+                if cid:
+                    out.append(-(1_000_000_000 + cid))
+                continue
             peer = d.get("peer", {})
             if isinstance(peer, dict):
                 out.append(peer.get("user_id") or peer.get("chat_id") or peer.get("channel_id") or 0)
@@ -1734,13 +1800,63 @@ class Client(_RichMixin):
         await self._rpc({"_": "messages.deleteHistory", "peer": input_peer, "max_id": max_id, "revoke": revoke})
 
 
-    async def join_chat(self, peer: str) -> None:
+    def _resolve_chat_invite_join_result(self, result: Any) -> dict | None:
+        """Normalize a `messages.ChatInviteJoinResult` into a resolved InputPeer.
+
+        `messages.importChatInvite` and `channels.joinChannel` no longer
+        return a bare `Updates` object (layer 228) - they return this union:
+
+          - `chatInviteJoinResultOk` wraps `updates: Updates`. The joined
+            chat/channel/community is pulled out of the embedded
+            users/chats and cached.
+          - `chatInviteJoinResultWebView` carries only `bot_id`/`query_id`/
+            `users`, with no Updates at all. Telegram hasn't actually
+            completed the join here - the client needs to drive an
+            interactive bot webview flow to finish it. That flow isn't
+            implemented, so this returns None instead of pretending the
+            join succeeded.
+        """
+        if not isinstance(result, dict):
+            return None
+        t = result.get("_", "")
+        if t == "messages.chatInviteJoinResultWebView":
+            return None
+        if t != "messages.chatInviteJoinResultOk":
+            return None
+        updates = result.get("updates") or {}
+        if not isinstance(updates, dict):
+            return None
+        self._populate_cache(updates)
+        for ch in updates.get("chats") or []:
+            if not isinstance(ch, dict) or ch.get("min"):
+                continue
+            ctype = ch.get("_", "")
+            if ctype in ("channel", "community"):
+                return {"_": "inputPeerChannel", "channel_id": ch.get("id"), "access_hash": ch.get("access_hash", 0)}
+            if ctype == "chat":
+                return {"_": "inputPeerChat", "chat_id": ch.get("id")}
+        return None
+
+    async def join_chat(self, peer: str) -> dict | None:
+        """Join a chat, channel, or community by username/link.
+
+        Returns the joined chat's InputPeer on success, or None if Telegram
+        responded with a WebView join result - meaning the join requires an
+        interactive bot flow that hasn't completed yet (see
+        `_resolve_chat_invite_join_result`).
+        """
         if peer.startswith("+") or "/+" in peer:
             link = peer.split("/+")[-1] if "/+" in peer else peer[1:]
-            await self._rpc({"_": "messages.importChatInvite", "hash": link})
+            result = await self._rpc({"_": "messages.importChatInvite", "hash": link})
+            return self._resolve_chat_invite_join_result(result)
         else:
             channel = await self._resolve_peer(peer)
-            await self._rpc({"_": "channels.joinChannel", "channel": channel})
+            result = await self._rpc({"_": "channels.joinChannel", "channel": channel})
+            if isinstance(result, dict) and result.get("_") == "messages.chatInviteJoinResultWebView":
+                return None
+            if isinstance(result, dict) and result.get("_") == "messages.chatInviteJoinResultOk":
+                self._populate_cache(result.get("updates") or {})
+            return channel
 
     async def leave_chat(self, peer: str) -> None:
         input_peer = await self._resolve_peer(peer)
@@ -1840,30 +1956,32 @@ class Client(_RichMixin):
             },
         })
 
-    async def promote_participant(self, peer: str, user: str, rights: list[str] | None = None) -> None:
+    _DEFAULT_ADMIN_RIGHTS = (
+        "change_info", "post_messages", "edit_messages", "delete_messages",
+        "ban_users", "invite_users", "pin_messages", "manage_call", "manage_topics",
+    )
+
+    async def promote_participant(self, peer: str, user: str, rights: list[str] | None = None, *, title: str = "") -> None:
+        """Promote a user to admin.
+
+        `rights` is now exact, not additive: pass e.g. `["delete_messages"]`
+        for a limited admin with only that permission. Omit it for the
+        previous default (full admin) behavior. Valid right names: change_info,
+        post_messages, edit_messages, delete_messages, ban_users, invite_users,
+        pin_messages, add_admins, anonymous, manage_call, other, manage_topics,
+        post_stories, edit_stories, delete_stories, manage_direct_messages,
+        manage_ranks, manage_linked_peers.
+        """
         channel = await self._resolve_peer(peer)
         user_peer = await self._resolve_peer(user)
-        admin_rights: dict = {
-            "_": "chatAdminRights",
-            "change_info": True,
-            "post_messages": True,
-            "edit_messages": True,
-            "delete_messages": True,
-            "ban_users": True,
-            "invite_users": True,
-            "pin_messages": True,
-            "manage_call": True,
-            "manage_topics": True,
-        }
-        if rights:
-            for r in rights:
-                admin_rights[r] = True
+        chosen = rights if rights is not None else self._DEFAULT_ADMIN_RIGHTS
+        admin_rights: dict = {"_": "chatAdminRights", **{r: True for r in chosen}}
         await self._rpc({
             "_": "channels.editAdmin",
             "channel": channel,
             "user_id": user_peer,
             "admin_rights": admin_rights,
-            "rank": "",
+            "rank": title,
         })
 
     async def demote_participant(self, peer: str, user: str) -> None:
@@ -2906,16 +3024,17 @@ class Client(_RichMixin):
         input_peer = await self._resolve_peer(peer)
         await self._rpc({"_": "contacts.unblock", "id": input_peer})
 
-    async def get_blocked_users(self, limit: int = 100) -> list[int]:
-        result = await self._rpc({"_": "contacts.getBlocked", "my_stories_from": False, "offset": 0, "limit": limit})
+    async def get_blocked_users(self, limit: int = 100, my_stories_from: bool = False) -> list[int]:
+        result = await self._rpc({"_": "contacts.getBlocked", "my_stories_from": my_stories_from, "offset": 0, "limit": limit})
         blocked = result.get("blocked", []) if isinstance(result, dict) else []
         return [b.get("peer_id", {}).get("user_id", 0) for b in blocked]
 
-    async def add_contact(self, user_id: int, first_name: str, last_name: str = "", phone: str = "") -> None:
+    async def add_contact(self, user_id: int, first_name: str, last_name: str = "", phone: str = "",
+                          add_phone_privacy_exception: bool = False) -> None:
         ah = self._peer_cache.get_user(user_id) or 0
         await self._rpc({
             "_": "contacts.addContact",
-            "add_phone_privacy_exception": False,
+            "add_phone_privacy_exception": add_phone_privacy_exception,
             "id": {"_": "inputUser", "user_id": user_id, "access_hash": ah},
             "first_name": first_name,
             "last_name": last_name,
@@ -3136,7 +3255,8 @@ class Client(_RichMixin):
         await self._rpc(req)
 
     async def edit_inline_message(self, msg_id: "InlineMessageId | tuple[int, bytes]",
-                                   new_text: str, reply_markup=None) -> bool:
+                                   new_text: str, reply_markup=None,
+                                   no_webpage: bool = True) -> bool:
         if isinstance(msg_id, InlineMessageId):
             dc_id, id_bytes = msg_id.dc_id, msg_id.id_bytes
         else:
@@ -3145,8 +3265,9 @@ class Client(_RichMixin):
             "_": "messages.editInlineBotMessage",
             "id": {"_": "inputBotInlineMessageID64", "dc_id": dc_id, "id": int.from_bytes(id_bytes[:8], "little")},
             "message": new_text,
-            "no_webpage": True,
         }
+        if no_webpage:
+            req["no_webpage"] = True
         if reply_markup is not None:
             req["reply_markup"] = _markup_to_dict(reply_markup)
         await self._rpc(req)
@@ -3215,13 +3336,14 @@ class Client(_RichMixin):
                            currency: str, prices: list[tuple[str, int]],
                            photo_url: str | None = None, need_name: bool = False,
                            need_phone: bool = False, need_email: bool = False,
-                           need_shipping_address: bool = False, is_flexible: bool = False) -> dict:
+                           need_shipping_address: bool = False, is_flexible: bool = False,
+                           test: bool = False) -> dict:
         input_peer = await self._resolve_peer(peer)
         invoice: dict = {
             "_": "invoice",
             "currency": currency,
             "prices": [{"_": "labeledPrice", "label": l, "amount": a} for l, a in prices],
-            "test": False,
+            "test": test,
             "name_requested": need_name,
             "phone_requested": need_phone,
             "email_requested": need_email,
@@ -3347,8 +3469,20 @@ class Client(_RichMixin):
     async def resolve_invite_link(self, link: str):
         return await self._rpc({"_": "messages.checkChatInvite", "hash": _extract_invite_hash(link)})
 
-    async def join_invite_link(self, link: str):
-        return await self._rpc({"_": "messages.importChatInvite", "hash": _extract_invite_hash(link)})
+    async def join_invite_link(self, link: str) -> dict:
+        """Import a chat invite link.
+
+        Returns the raw `messages.ChatInviteJoinResult` dict as-is - either
+        `messages.chatInviteJoinResultOk` (`{"updates": ...}`) or
+        `messages.chatInviteJoinResultWebView` (`{"bot_id", "query_id",
+        "users"}`, no Updates - join isn't complete without driving that bot
+        flow). Use `join_chat()` for a version that resolves this down to an
+        InputPeer or None.
+        """
+        result = await self._rpc({"_": "messages.importChatInvite", "hash": _extract_invite_hash(link)})
+        if isinstance(result, dict) and result.get("_") == "messages.chatInviteJoinResultOk":
+            self._populate_cache(result.get("updates") or {})
+        return result
 
     async def iter_reaction_users(self, peer: str, msg_id: int, *, reaction: str | None = None):
         input_peer = await self._resolve_peer(peer)

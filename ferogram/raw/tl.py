@@ -90,6 +90,21 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
     name = obj["_"]
     if name not in schema:
         raise KeyError(f"unknown TL constructor: {name!r}")
+
+    # Fast path: dispatch to the generated class's specialized to_bytes(),
+    # which has the field layout inlined at codegen time instead of walking
+    # the schema dict per field. Falls back to the generic walk below for
+    # anything not in the dispatch table (shouldn't normally happen - it's
+    # built from the same schema every to_bytes() constructor is generated
+    # from) or if the dict's shape doesn't match the constructor's __init__
+    # (extra/missing keys), so a mismatch degrades instead of breaking.
+    cls = _ensure_serialize_dispatch().get(name)
+    if cls is not None:
+        try:
+            return cls(**{k: v for k, v in obj.items() if k != "_"}).to_bytes()
+        except TypeError:
+            pass
+
     cid, fields = schema[name]
     out = _pack_uint32(cid)
 
@@ -129,6 +144,46 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
         out += _serialize_field(val, ftype, schema)
 
     return out
+
+
+# constructor name -> generated class; populated lazily on first serialize call.
+# Covers both raw/generated/types (nested field values, e.g. inputPeerChannel)
+# and raw/generated/functions (top-level RPC requests). Keyed by name (not CID,
+# unlike _CID_TO_CLASS below) since that's what obj["_"] carries.
+_NAME_TO_CLASS: dict[str, type] | None = None
+
+
+def _ensure_serialize_dispatch() -> dict[str, type]:
+    global _NAME_TO_CLASS
+    if _NAME_TO_CLASS is None:
+        import importlib
+        import pkgutil
+        from ferogram.raw.generated import functions as _functions_pkg
+        from ferogram.raw.generated import types as _types_pkg
+        from ferogram.raw.generated._tl_schema import _SCHEMA
+
+        # First constructor name wins on a CID collision - shouldn't happen,
+        # every CID in api.tl is unique by construction.
+        name_by_cid: dict[int, str] = {}
+        for cname, (cid, _fields) in _SCHEMA.items():
+            name_by_cid.setdefault(cid, cname)
+
+        mapping: dict[str, type] = {}
+        for pkg in (_types_pkg, _functions_pkg):
+            for _, modname, _ in pkgutil.walk_packages(
+                path=pkg.__path__,
+                prefix=pkg.__name__ + ".",
+            ):
+                mod = importlib.import_module(modname)
+                for attr in dir(mod):
+                    obj = getattr(mod, attr)
+                    if isinstance(obj, type) and hasattr(obj, "to_bytes"):
+                        cid = getattr(obj, "_CID", None)
+                        cname = name_by_cid.get(cid)
+                        if cname is not None:
+                            mapping[cname] = obj
+        _NAME_TO_CLASS = mapping
+    return _NAME_TO_CLASS
 
 
 def _serialize_field(val: Any, ftype: str, schema: dict) -> bytes:

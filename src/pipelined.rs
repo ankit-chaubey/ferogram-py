@@ -120,7 +120,10 @@ impl PyPipelinedSender {
     /// separate `PipelinedRequest` object.
     fn call<'py>(&self, py: Python<'py>, tl_bytes: Vec<u8>) -> PyResult<Bound<'py, PyAny>> {
         let inner = self.inner.clone();
-        future_into_py(py, async move { inner.call(tl_bytes).await.map_err(py_err) })
+        future_into_py(
+            py,
+            async move { inner.call(tl_bytes).await.map_err(py_err) },
+        )
     }
 
     fn __repr__(&self) -> String {

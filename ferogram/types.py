@@ -235,6 +235,7 @@ class Chat:
     is_megagroup: bool
     is_gigagroup: bool
     is_broadcast: bool
+    is_community: bool
     members_count: int | None
     access_hash: int
     _raw: dict = field(default_factory=dict, repr=False)
@@ -250,6 +251,7 @@ class Chat:
             is_megagroup=_bool(d, "megagroup"),
             is_gigagroup=_bool(d, "gigagroup"),
             is_broadcast=_bool(d, "broadcast"),
+            is_community="community" in t.lower(),
             members_count=d.get("participants_count"),
             access_hash=_int(d, "access_hash"),
             _raw=d,
@@ -404,6 +406,7 @@ class Dialog:
     unread_reactions_count: int
     pinned: bool
     folder_id: int | None
+    community_id: int | None = None
     _raw: dict = field(default_factory=dict, repr=False)
 
     @classmethod
@@ -416,12 +419,26 @@ class Dialog:
             unread_reactions_count=_int(d, "unread_reactions_count"),
             pinned=_bool(d, "pinned"),
             folder_id=d.get("folder_id"),
+            community_id=d.get("community_id"),
             _raw=d,
         )
 
     @property
+    def is_community(self) -> bool:
+        return self._raw.get("_") == "dialogCommunity"
+
+    @property
     def peer_id(self) -> int:
-        return _peer_to_id(self.peer) or 0
+        pid = _peer_to_id(self.peer)
+        if pid is not None:
+            return pid
+        if self.community_id:
+            # No Peer::Community on the wire, so use the same
+            # channel-style negative-id encoding as _peer_to_id does for
+            # peerChannel, keeping ids from dialogCommunity consistent with
+            # everything else (matches _resolve_int_peer's reverse mapping).
+            return -(1_000_000_000 + self.community_id)
+        return 0
 
     def __repr__(self) -> str:
         return f"Dialog(peer={self.peer}, unread={self.unread_count})"

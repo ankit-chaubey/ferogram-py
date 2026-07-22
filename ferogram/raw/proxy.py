@@ -157,22 +157,75 @@ class MethodCaller:
 
 
 
+_COMMUNITY_TYPES = {"community", "communityForbidden"}
+_CHANNEL_TYPES   = {"channel", "channelForbidden"}
+_BASIC_CHAT_TYPES = {"chat", "chatForbidden"}
+
+
 class PeerCache:
-    """access_hash cache for users, channels, and basic groups."""
+    """access_hash cache for users, channels, communities, and basic groups.
+
+    A community is wire-compatible with a channel (addressed via
+    `inputPeerChannel`/`inputChannel`, keyed by the same id space), but it is
+    tracked in its own bucket so it never collapses into a plain channel
+    entry - mirrors `ferogram::peer_cache::PeerCache` in the Rust core.
+    """
 
     def __init__(self) -> None:
-        self._users:    dict[int, int] = {}    # user_id    → access_hash
-        self._channels: dict[int, int] = {}    # channel_id → access_hash
-        self._chats:    set[int]       = set() # basic group ids (no hash)
+        self._users:      dict[int, int] = {}    # user_id      → access_hash
+        self._channels:   dict[int, int] = {}    # channel_id   → access_hash
+        self._communities: dict[int, int] = {}   # community_id → access_hash
+        self._chats:      set[int]       = set() # basic group ids (no hash)
 
     def store_user(self, user_id: int, access_hash: int) -> None:
-        self._users[user_id] = access_hash
+        self._store_hash(self._users, user_id, access_hash)
 
     def store_channel(self, channel_id: int, access_hash: int) -> None:
-        self._channels[channel_id] = access_hash
+        self._store_hash(self._channels, channel_id, access_hash)
+
+    def store_community(self, community_id: int, access_hash: int) -> None:
+        self._store_hash(self._communities, community_id, access_hash)
+
+    @staticmethod
+    def _store_hash(bucket: dict[int, int], key: int, access_hash: int) -> None:
+        # Never overwrite a valid non-zero hash with zero - a zero hash from
+        # a later, less-detailed response shouldn't clobber one we already
+        # resolved. Same rule as ferogram-rust's cache_user/cache_chat.
+        if access_hash != 0:
+            bucket[key] = access_hash
+        else:
+            bucket.setdefault(key, 0)
 
     def store_chat(self, chat_id: int) -> None:
         self._chats.add(chat_id)
+
+    def store_chat_entity(self, chat: dict) -> None:
+        """Route a raw `Chat` dict into the right bucket by its `_` type.
+
+        Covers `channel`/`channelForbidden`, `community`/`communityForbidden`
+        (both keyed by id + access_hash, addressed like a channel on the
+        wire), and basic `chat`/`chatForbidden` (existence only, no hash).
+        `min` entities are skipped - same as the rest of the cache, there is
+        no separate min-tracking bucket here.
+        """
+        if not isinstance(chat, dict) or chat.get("min"):
+            return
+        t = chat.get("_", "")
+        cid = chat.get("id")
+        if cid is None:
+            return
+        if t in _COMMUNITY_TYPES:
+            ah = chat.get("access_hash")
+            if ah is not None:
+                self.store_community(cid, ah)
+        elif t in _CHANNEL_TYPES:
+            ah = chat.get("access_hash")
+            if ah is not None:
+                self.store_channel(cid, ah)
+        elif t in _BASIC_CHAT_TYPES:
+            self.store_chat(cid)
+        # anything else (e.g. chatEmpty) is a no-op - mirrors the catch-all
+        # arm in ferogram-rust's PeerCache::cache_chat
 
     def get_user(self, user_id: int) -> int | None:
         return self._users.get(user_id)
@@ -180,8 +233,14 @@ class PeerCache:
     def get_channel(self, channel_id: int) -> int | None:
         return self._channels.get(channel_id)
 
+    def get_community(self, community_id: int) -> int | None:
+        return self._communities.get(community_id)
+
     def has_chat(self, chat_id: int) -> bool:
         return chat_id in self._chats
+
+    def has_community(self, community_id: int) -> bool:
+        return community_id in self._communities
 
 
 
@@ -219,11 +278,16 @@ async def _resolve_str_peer(client: Any, peer: str) -> dict:
                 return {"_": "inputPeerUser", "user_id": uid, "access_hash": ah}
         return {"_": "inputPeerUser", "user_id": uid, "access_hash": 0}
     if t == "peerChannel":
+        # A community is addressed on the wire exactly like a channel (there
+        # is no `peerCommunity`), so this branch also covers usernames that
+        # resolve to a community. The actual `Chat` entry in `result.chats`
+        # tells us whether it's a channel or a community so it's cached in
+        # the right bucket - mirrors the comment in ferogram's resolve.rs.
         cid = found_peer.get("channel_id", 0)
         for ch in result.get("chats") or []:
             if ch.get("id") == cid:
                 ah = ch.get("access_hash", 0)
-                client._peer_cache.store_channel(cid, ah)
+                client._peer_cache.store_chat_entity(ch)
                 return {"_": "inputPeerChannel", "channel_id": cid, "access_hash": ah}
         return {"_": "inputPeerChannel", "channel_id": cid, "access_hash": 0}
     if t == "peerChat":
@@ -256,9 +320,14 @@ async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
             # regular group chat, no access_hash needed
             return {"_": "inputPeerChat", "chat_id": abs_id}
 
-        # supergroup / channel
+        # supergroup / channel / community - all three share the same id
+        # space and are addressed via inputPeerChannel on the wire, so a
+        # cache hit in either bucket is enough to answer without a fetch.
         channel_id = abs_id - 1_000_000_000
         ah = cache.get_channel(channel_id)
+        if ah is not None:
+            return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
+        ah = cache.get_community(channel_id)
         if ah is not None:
             return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
         # cache miss: fetch from API
@@ -267,9 +336,9 @@ async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
         for ch in chats:
             if ch.get("id") == channel_id:
                 ah = ch.get("access_hash", 0)
-                cache.store_channel(channel_id, ah)
+                cache.store_chat_entity(ch)
                 return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
-        raise ValueError(f"Channel/supergroup {peer_id} not found")
+        raise ValueError(f"Channel/supergroup/community {peer_id} not found")
 
 
 def _make_get_users(user_ids: list[int]) -> dict:
