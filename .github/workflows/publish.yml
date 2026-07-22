@@ -15,7 +15,7 @@ on:
           - linux
           - macos
           - windows
-          - android
+          - android-termux
           - sdist
       publish:
         description: "Upload to PyPI after build"
@@ -102,8 +102,14 @@ jobs:
           name: wheels-windows
           path: dist
 
-  android:
-    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'android'
+  # Builds for Termux (the terminal app), not for embedding inside a
+  # general Android APK. This links against Termux's own Python package
+  # and Termux's runtime library layout - a wheel from this job is only
+  # installable via `pip install` inside Termux. It will not work with
+  # app-embedded interpreters like Chaquopy or python-for-android; those
+  # bundle their own CPython and need a separate build target entirely.
+  android-termux:
+    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'android-termux'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -128,7 +134,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Setup Android NDK r26d
+      - name: Setup Android NDK r26d (cross-compiler for the Termux target)
         uses: nttld/setup-ndk@v1
         id: ndk
         with:
@@ -190,7 +196,7 @@ jobs:
           echo "TERMUX_PYVER=$PYVER" >> $GITHUB_ENV
           echo "Linking against Termux libpython $PYVER ($SO_FILE)"
 
-      - name: Build Android wheel
+      - name: Build Termux wheel
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
           ANDROID_API_LEVEL: ${{ matrix.api }}
@@ -217,14 +223,13 @@ jobs:
           export AR_${TARGET_LOWER}=$NDK_BIN/llvm-ar
           export CARGO_TARGET_${TARGET_UPPER}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
 
-          # Link against Termux's real libpython<version>.so (not an empty
-          # stub) so the build succeeds. This still embeds a version-pinned
-          # DT_NEEDED at this point - the next step rewrites it to be
-          # version-agnostic, since bionic requires DT_NEEDED to resolve by
-          # exact filename at dlopen time and won't fall back to whatever
-          # Python happens to already be resident in the process, unlike
-          # glibc.
-          export RUSTFLAGS="-L native=$TERMUX_LIBDIR"
+          # Link against Termux's real libpython<version>.so, and embed the
+          # rpath Termux's own binaries carry (/data/data/com.termux/files/usr/lib)
+          # so the loader actually searches that directory at dlopen time.
+          # Without this, DT_NEEDED entries resolve to nothing even when the
+          # target file exists right there, since bionic doesn't search
+          # $PREFIX/lib by default the way it does system paths.
+          export RUSTFLAGS="-L native=$TERMUX_LIBDIR -C link-arg=-Wl,-rpath=/data/data/com.termux/files/usr/lib"
 
           maturin build \
             --release \
@@ -254,7 +259,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-android-${{ matrix.target }}
+          name: wheels-android-termux-${{ matrix.target }}
           path: dist
 
   sdist:
@@ -272,7 +277,7 @@ jobs:
           path: dist
 
   publish:
-    needs: [linux, macos, windows, android, sdist]
+    needs: [linux, macos, windows, android-termux, sdist]
     if: |
       always() &&
       (github.event_name == 'push' || inputs.publish == true) &&
