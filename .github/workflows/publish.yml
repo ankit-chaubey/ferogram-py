@@ -218,12 +218,12 @@ jobs:
           export CARGO_TARGET_${TARGET_UPPER}_LINKER=$NDK_BIN/${CLANG_PREFIX}-clang
 
           # Link against Termux's real libpython<version>.so (not an empty
-          # stub). This embeds DT_NEEDED: libpython<version>.so in the
-          # extension, so bionic resolves all Python symbols explicitly at
-          # dlopen time via Termux's LD_LIBRARY_PATH - instead of relying on
-          # global namespace propagation, which Android's linker does not
-          # guarantee. The version is whatever Termux's apt repo currently
-          # ships (see the fetch step above), not a fixed constant.
+          # stub) so the build succeeds. This still embeds a version-pinned
+          # DT_NEEDED at this point - the next step rewrites it to be
+          # version-agnostic, since bionic requires DT_NEEDED to resolve by
+          # exact filename at dlopen time and won't fall back to whatever
+          # Python happens to already be resident in the process, unlike
+          # glibc.
           export RUSTFLAGS="-L native=$TERMUX_LIBDIR"
 
           maturin build \
@@ -231,6 +231,26 @@ jobs:
             --target $TARGET \
             --compatibility off \
             --out dist
+
+      - name: Rewrite libpython dependency to be version-agnostic
+        run: |
+          which patchelf >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y patchelf)
+          for whl in dist/*.whl; do
+            whl_abs=$(readlink -f "$whl")
+            workdir=$(mktemp -d)
+            unzip -q "$whl_abs" -d "$workdir"
+            so_file=$(find "$workdir" -name "_ferogram*.so" | head -1)
+            if [ -z "$so_file" ]; then
+              echo "::error::No _ferogram*.so found inside $whl"
+              exit 1
+            fi
+            patchelf --replace-needed "libpython${TERMUX_PYVER}.so" "libpython3.so" "$so_file"
+            echo "Patched $so_file: DT_NEEDED libpython${TERMUX_PYVER}.so -> libpython3.so"
+
+            rm -f "$whl_abs"
+            (cd "$workdir" && zip -qr "$whl_abs" .)
+            rm -rf "$workdir"
+          done
 
       - uses: actions/upload-artifact@v4
         with:
