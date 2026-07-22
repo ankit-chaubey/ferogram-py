@@ -247,4 +247,4 @@ Ten new methods for managing group and channel members.
 
 ## 0.2.2
 
-Previous release.
+Releases prior to 0.2.2 were not documented in this changelog.
