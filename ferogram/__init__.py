@@ -25,35 +25,6 @@ if _main_file:
             "Rename your file to something like 'bot.py', 'main.py', or 'app.py'."
         )
 
-def _ensure_termux_libpython_symlink():
-    """On Termux, the native extension's DT_NEEDED entry is the
-    unversioned 'libpython3.so'. Termux itself does not ship that
-    name, only the versioned 'libpythonX.Y.so' matching whatever is
-    currently installed. Create the missing symlink so dlopen can
-    resolve it, regardless of which Python minor version Termux is
-    on. No-op everywhere else, and a no-op if the symlink already
-    exists or the extension turns out not to need it."""
-    if "com.termux" not in sys.prefix:
-        return
-    try:
-        import glob
-        lib_dir = os.path.join(sys.prefix, "lib")
-        target = os.path.join(lib_dir, "libpython3.so")
-        if os.path.exists(target):
-            return
-        candidates = sorted(glob.glob(os.path.join(lib_dir, "libpython3.*.so")))
-        if not candidates:
-            return
-        os.symlink(os.path.basename(candidates[-1]), target)
-    except OSError:
-        # Read-only filesystem, permission issue, or already raced by
-        # another process. The import below will fail with a clear
-        # dlopen error if this symlink turns out to be required.
-        pass
-
-
-_ensure_termux_libpython_symlink()
-
 from .client import Client, StopPropagation, ContinuePropagation, TransferHandle, TransferCancelled
 from .client import TransferLimits, available_qualities
 from . import filters
