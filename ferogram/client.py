@@ -15,12 +15,14 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import inspect
 import logging
 import os
 import random
 import struct
+import time
 from collections import deque
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any, Callable
@@ -42,7 +44,7 @@ from .types import (
 from .updates import wrap_update
 from .keyboards import InlineKeyboard, ReplyKeyboard, RemoveKeyboard, ForceReply
 
-__all__ = ["Client", "StopPropagation", "ContinuePropagation", "TransferHandle", "TransferLimits", "TransferCancelled", "available_qualities"]
+__all__ = ["Client", "StopPropagation", "ContinuePropagation", "TransferHandle", "TransferLimits", "TransferCancelled", "SignInCodeInvalid", "available_qualities"]
 
 _log = logging.getLogger("ferogram")
 
@@ -72,7 +74,6 @@ class TransferHandle:
     """
 
     def __init__(self) -> None:
-        import time
         self._paused    = False
         self._cancelled = False
         self._done      = 0
@@ -98,7 +99,6 @@ class TransferHandle:
         return self._cancelled
 
     def progress(self) -> dict:
-        import time
         now_ms   = int(time.time() * 1000)
         elapsed  = max(now_ms - self._start_ms, 1)
         done     = self._done
@@ -143,7 +143,6 @@ class TransferHandle:
         self._done += n
 
     def _reset_start(self) -> None:
-        import time
         self._start_ms = int(time.time() * 1000)
         self._done = 0
 
@@ -159,6 +158,19 @@ class TransferHandle:
 
 class TransferCancelled(Exception):
     """Raised when a TransferHandle is cancelled during upload or download."""
+
+
+class SignInCodeInvalid(RuntimeError):
+    """Raised by sign_in() when Telegram rejects the login code.
+
+    `expired` is True for PHONE_CODE_EXPIRED (the code timed out - call
+    resend_code() before trying again) and False for PHONE_CODE_INVALID /
+    PHONE_CODE_EMPTY (the code itself was wrong - just re-prompt and retry
+    with the same sent_code). Mirrors ferogram's Rust `SignInError::InvalidCode`.
+    """
+    def __init__(self, message: str, expired: bool = False) -> None:
+        super().__init__(message)
+        self.expired = expired
 
 
 class TransferLimits:
@@ -315,6 +327,60 @@ def _build_import_authorization(id_: int, bytes_: bytes) -> bytes:
     return _pack_u32(_CID_IMPORT_AUTHORIZATION) + _pack_i64(id_) + _pack_bytes(bytes_)
 
 
+def _parse_proxy_link(url: str) -> dict:
+    """Parse a `https://t.me/proxy?...` or `tg://proxy?...` MTProxy link into
+    `{"dc_addr": ..., "transport": ..., "proxy_secret": ..., "domain": ...}`,
+    mirroring ferogram's Rust `parse_proxy_link`. `domain` is only
+    meaningful (non-None) for "faketls" links - the SNI hostname presented
+    in the fake TLS ClientHello, taken from the secret's trailing bytes if
+    present, else falling back to the link's own `server` host.
+    """
+    for prefix in ("https://t.me/proxy?", "tg://proxy?"):
+        if url.startswith(prefix):
+            rest = url[len(prefix):]
+            break
+    else:
+        raise ValueError(f"not an MTProxy link: {url!r}")
+
+    params = dict(kv.split("=", 1) for kv in rest.split("&") if "=" in kv)
+    try:
+        host = params["server"]
+        port = int(params["port"])
+        secret_param = params["secret"]
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"invalid MTProxy link {url!r}: missing/bad server, port, or secret") from exc
+
+    if len(secret_param) >= 32 and all(c in "0123456789abcdefABCDEF" for c in secret_param):
+        secret_bytes = bytes.fromhex(secret_param)
+    else:
+        padded = secret_param.replace("-", "+").replace("_", "/")
+        pad_len = (-len(padded)) % 4
+        secret_bytes = base64.b64decode(padded + "=" * pad_len)
+
+    if not secret_bytes:
+        raise ValueError(f"invalid MTProxy link {url!r}: empty secret")
+
+    prefix_byte = secret_bytes[0]
+    domain = None
+    if prefix_byte == 0xDD:
+        key = secret_bytes[1:17]
+        transport = "padded_intermediate"
+    elif prefix_byte == 0xEE:
+        key = secret_bytes[1:17]
+        domain = secret_bytes[17:].decode("utf-8", errors="replace") if len(secret_bytes) > 17 else host
+        transport = "faketls"
+    else:
+        key = secret_bytes[:16]
+        transport = "obfuscated"
+
+    return {
+        "dc_addr": f"{host}:{port}",
+        "transport": transport,
+        "proxy_secret": key.hex(),
+        "domain": domain,
+    }
+
+
 def _quality_candidates(media: dict) -> "list[dict]":
     """Every Document on `media` that could be a quality variant: the
     primary document (if any) followed by every entry in `alt_documents`
@@ -441,11 +507,18 @@ class Client(_RichMixin):
         phone: str | None = None,
         password: str | None = None,
         proxy: str | None = None,
+        proxy_secret: str | None = None,
+        proxy_link: str | None = None,
+        domain: str | None = None,
+        transport: str | None = None,
+        test_mode: bool = False,
+        dc_id: int = 0,
         allow_ipv6: bool = False,
         dc_addr: str | None = None,
         resilient_connect: bool = False,
         catch_up: bool = False,
         pfs: bool = False,
+        future_auth_token: bytes | None = None,
         device: str | None = None,
         system_version: str | None = None,
         app_version: str | None = None,
@@ -467,11 +540,52 @@ class Client(_RichMixin):
         self._phone                   = phone
         self._password                = password
         self.proxy                    = proxy
+        # `proxy_secret` only configures the AES-obfuscation secret used
+        # together with `transport="obfuscated"`/`"padded_intermediate"`.
+        # It does not address a proxy on its own - `proxy` above is a SOCKS5
+        # relay, unrelated to MTProxy. Pass a full `tg://proxy?...` link via
+        # `proxy_link` instead for the common case; it derives dc_addr,
+        # transport, and proxy_secret from the link for you.
+        self.proxy_secret             = proxy_secret
+        # "full" (default), "abridged", "intermediate", "http",
+        # "obfuscated", "padded_intermediate", or "fastest" (races a couple
+        # of built-in transports on a fresh handshake only; a resumed
+        # connection with a saved key ignores this and reuses whatever
+        # transport it was established on).
+        self.transport                = transport
+        # SNI hostname presented in the fake TLS ClientHello. Only used (and
+        # required) when `transport="faketls"`; ignored for every other
+        # transport.
+        self.domain                   = domain
+        self.test_mode                = test_mode
+        # 0 = auto (session's persisted home DC, else DC2). Only applied on
+        # the initial connect in start() - _migrate() and worker
+        # connections always target an explicit DC of their own.
+        self._dc_id_override          = dc_id
         self.allow_ipv6               = allow_ipv6
         self.dc_addr                  = dc_addr
+        if proxy_link:
+            # An MTProxy link dictates its own address and transport, same
+            # as ferogram's Rust `ClientBuilder.proxy_link()` - it wins over
+            # any `dc_addr`/`transport`/`proxy_secret`/`domain` passed
+            # alongside it. Connecting to the proxy's host:port with the
+            # transport it requires is functionally identical to the Rust
+            # core's dedicated MTProxy path: both just apply the same
+            # obfuscated/padded-intermediate/faketls framing to whatever
+            # address gets dialed.
+            derived = _parse_proxy_link(proxy_link)
+            self.dc_addr      = derived["dc_addr"]
+            self.transport    = derived["transport"]
+            self.proxy_secret = derived["proxy_secret"]
+            self.domain       = derived["domain"]
         self.resilient_connect        = resilient_connect
         self.catch_up                 = catch_up
         self.pfs                      = pfs
+        # Seeds a future_auth_token for fast re-login on the very first
+        # connect, for stateless setups that store the token themselves
+        # instead of relying on the session file. Only applied if the
+        # session doesn't already have one persisted - see start().
+        self._future_auth_token       = future_auth_token
         self.device                   = device or _DEVICE_MODEL
         self.system_version           = system_version or _SYSTEM_VERSION
         self.app_version              = app_version or _APP_VERSION
@@ -888,6 +1002,8 @@ class Client(_RichMixin):
             session = FileSession(path)
         self._conn = await DcConnection.connect(
             session, api_id, api_hash, dc_id,
+            test_mode=self.test_mode, transport=self.transport,
+            proxy_secret=self.proxy_secret, domain=self.domain,
             proxy=self.proxy, pfs=self.pfs,
             flood_sleep_threshold=self._flood_sleep_threshold,
         )
@@ -986,6 +1102,8 @@ class Client(_RichMixin):
         async with self._worker_conn_lock:
             conn = await DcConnection.connect(
                 session, api_id, api_hash, target_dc,
+                test_mode=self.test_mode, transport=self.transport,
+                proxy_secret=self.proxy_secret, domain=self.domain,
                 proxy=self.proxy, pfs=self.pfs,
                 flood_sleep_threshold=self._flood_sleep_threshold,
             )
@@ -1104,11 +1222,19 @@ class Client(_RichMixin):
 
         _log.info("connecting (session=%r)", repr(session))
         self._conn = await DcConnection.connect(
-            session, api_id, api_hash,
+            session, api_id, api_hash, self._dc_id_override,
+            test_mode=self.test_mode, transport=self.transport,
+            proxy_secret=self.proxy_secret, domain=self.domain,
             dc_addr=self.dc_addr, proxy=self.proxy, pfs=self.pfs,
             flood_sleep_threshold=self._flood_sleep_threshold,
         )
         self._dc_id = self._conn.dc_id
+        if self._future_auth_token is not None:
+            # Don't clobber a real token the session already persisted
+            # from a previous sign_out() with a stale constructor value.
+            existing = await self._conn.get_future_auth_token()
+            if existing is None:
+                await self._conn.set_future_auth_token(self._future_auth_token)
         await self._init_connection()
         if not await self.is_authorized():
             if self.bot_token:
@@ -1139,7 +1265,24 @@ class Client(_RichMixin):
             _log.info("signed in as user (fast re-auth, no code needed)")
             print("\nPlease ensure your usage complies with Telegram's API Terms of Service.")
             return
-        pw_token = await self.sign_in(sent, input("Code: "))
+
+        pw_token = None
+        for attempt in range(3):
+            try:
+                pw_token = await self.sign_in(sent, input("Code: "))
+                break
+            except SignInCodeInvalid as e:
+                if e.expired:
+                    print("Code expired, requesting a new one...")
+                    sent = await self.resend_code(sent)
+                    if sent.get("_") == "auth.sentCodeSuccess":
+                        _log.info("signed in as user (fast re-auth, no code needed)")
+                        print("\nPlease ensure your usage complies with Telegram's API Terms of Service.")
+                        return
+                elif attempt < 2:
+                    print("Invalid code, try again.")
+                else:
+                    raise
         if pw_token is not None:
             hint = pw_token.get("hint", "")
             pwd  = self._password or input(f"2FA password (hint: {hint}): " if hint else "2FA password: ")
@@ -1179,8 +1322,29 @@ class Client(_RichMixin):
             result = await self._rpc({"_": "users.getUsers", "id": [{"_": "inputUserSelf"}]})
             users = result if isinstance(result, list) else result.get("users", [])
             return bool(users)
-        except Exception:
+        except Exception as exc:
+            _log.debug("is_authorized() check failed: %s", exc)
             return False
+
+    async def _handle_sent_code(self, result: dict, phone: str) -> dict:
+        """Shared post-processing for auth.sendCode / auth.resendCode
+        responses. Mirrors ferogram's Rust `handle_sent_code`, reused by
+        both `request_login_code` and `resend_code` since Telegram returns
+        the same `auth.SentCode` shape for both.
+        """
+        if result.get("_") == "auth.sentCodeSuccess":
+            # Telegram authorized the session outright; the token was
+            # single-use, so drop it rather than risk replaying a stale one.
+            await self._require_conn().set_future_auth_token(None)
+            authorization = result.get("authorization", {})
+            user = authorization.get("user") if isinstance(authorization, dict) else None
+            if isinstance(user, dict):
+                self._populate_cache({"users": [user]})
+            return result
+        # auth.sentCode does not carry phone_number back, so stash it
+        # for sign_in()/resend_code() which need it.
+        result["phone_number"] = phone
+        return result
 
     async def request_login_code(self, phone: str) -> dict:
         """Ask Telegram to send a login code.
@@ -1205,29 +1369,58 @@ class Client(_RichMixin):
             "api_hash": api_hash,
             "settings": code_settings,
         })
-        if result.get("_") == "auth.sentCodeSuccess":
-            # Telegram authorized the session outright; the token was
-            # single-use, so drop it rather than risk replaying a stale one.
-            await self._require_conn().set_future_auth_token(None)
-            authorization = result.get("authorization", {})
-            user = authorization.get("user") if isinstance(authorization, dict) else None
-            if isinstance(user, dict):
-                self._populate_cache({"users": [user]})
-            return result
-        # auth.sentCode does not carry phone_number back, so stash it
-        # for sign_in()/resend_code() which need it.
-        result["phone_number"] = phone
-        return result
+        return await self._handle_sent_code(result, phone)
 
-    async def sign_in(self, sent_code: dict, code: str) -> dict | None:
+    async def resend_code(self, sent_code: dict, reason: str | None = None) -> dict:
+        """Ask Telegram to resend the login code via a different delivery
+        method (e.g. SMS -> call), using `sent_code["next_type"]` as the
+        next method Telegram already told you it'll try.
+
+        `sent_code` is whatever `request_login_code`/`resend_code` last
+        returned. `reason` is an optional client-side diagnostic string
+        Telegram may log (e.g. "user did not receive code").
+
+        Like `request_login_code`, this can return an `auth.sentCodeSuccess`
+        dict instead of a new code - check `result["_"]` before prompting.
+        """
         phone = sent_code.get("phone_number", "")
         phone_code_hash = sent_code.get("phone_code_hash", "")
-        result = await self._rpc({
-            "_": "auth.signIn",
+        req: dict = {
+            "_": "auth.resendCode",
             "phone_number": phone,
             "phone_code_hash": phone_code_hash,
-            "phone_code": code,
-        })
+        }
+        if reason is not None:
+            req["reason"] = reason
+        result = await self._rpc(req)
+        return await self._handle_sent_code(result, phone)
+
+    async def sign_in(self, sent_code: dict, code: str) -> dict | None:
+        """Submit a login code. Returns None on success (no 2FA), or a
+        password-info dict if 2FA is required - pass that to
+        `check_password()`.
+
+        Raises `SignInCodeInvalid` if Telegram rejects the code
+        (`.expired=True` means the code timed out - call `resend_code()`
+        before trying again; `.expired=False` means it was just wrong -
+        re-prompt and retry with the same `sent_code`).
+        """
+        phone = sent_code.get("phone_number", "")
+        phone_code_hash = sent_code.get("phone_code_hash", "")
+        try:
+            result = await self._rpc({
+                "_": "auth.signIn",
+                "phone_number": phone,
+                "phone_code_hash": phone_code_hash,
+                "phone_code": code,
+            })
+        except RuntimeError as e:
+            msg = str(e)
+            if "PHONE_CODE_EXPIRED" in msg:
+                raise SignInCodeInvalid(msg, expired=True) from e
+            if "PHONE_CODE_INVALID" in msg or "PHONE_CODE_EMPTY" in msg:
+                raise SignInCodeInvalid(msg, expired=False) from e
+            raise
         if result.get("_") == "auth.authorizationSignUpRequired":
             raise RuntimeError("Sign-up required - account does not exist.")
         if result.get("_") == "auth.authorization":
@@ -1259,8 +1452,8 @@ class Client(_RichMixin):
                 token = result.get("future_auth_token")
                 if isinstance(token, (bytes, bytearray)):
                     await self._require_conn().set_future_auth_token(bytes(token))
-        except Exception:
-            pass
+        except Exception as exc:
+            _log.warning("sign_out() RPC failed, local state may be stale: %s", exc)
 
     async def login_bot(self, token: str) -> None:
         await self.bot_sign_in(token)
@@ -3048,8 +3241,9 @@ class Client(_RichMixin):
             if isinstance(current, dict) and current.get("_") == "photo":
                 seen_id = current.get("id", 0)
                 photos.append((current.get("id", 0), current.get("access_hash", 0), current.get("dc_id", 0)))
-        except Exception:
-            pass  # current photo is a nice-to-have; fall through to history regardless
+        except Exception as exc:
+            # current photo is a nice-to-have; fall through to history regardless
+            _log.debug("get_chat_photos() current-photo lookup failed: %s", exc)
 
         result = await self._rpc({
             "_": "messages.search",
@@ -3160,7 +3354,8 @@ class Client(_RichMixin):
         try:
             result = await self._rpc({"_": "auth.acceptLoginToken", "token": token})
             return result.get("user", {}).get("username")
-        except Exception:
+        except Exception as exc:
+            _log.debug("check_qr_login() poll failed (expected while waiting): %s", exc)
             return None
 
 

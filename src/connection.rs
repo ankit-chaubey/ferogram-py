@@ -57,10 +57,18 @@ fn decode_secret16(hex: &str) -> PyResult<[u8; 16]> {
 /// Resolve the wire transport from the name the caller asked for.
 ///
 /// `full` (the Rust core's own default) is used when no transport is
-/// given. `proxy_secret` is only consulted for the obfuscated variants.
+/// given. `proxy_secret` is consulted for the obfuscated variants and is
+/// mandatory (not just optional) for `faketls`, since
+/// `TransportKind::FakeTls` has no keyless form. `domain` is only used (and
+/// required) for `faketls` - it's the SNI hostname presented in the fake
+/// TLS ClientHello, unrelated to `proxy_secret`.
 /// `"fastest"` is handled by the caller before this function is reached -
 /// it isn't a real `TransportKind`, it's a race between a couple of them.
-fn parse_transport(name: Option<&str>, proxy_secret: Option<&str>) -> PyResult<TransportKind> {
+fn parse_transport(
+    name: Option<&str>,
+    proxy_secret: Option<&str>,
+    domain: Option<&str>,
+) -> PyResult<TransportKind> {
     let secret = proxy_secret.map(decode_secret16).transpose()?;
     match name.unwrap_or("full").to_ascii_lowercase().as_str() {
         "full" => Ok(TransportKind::Full),
@@ -69,8 +77,20 @@ fn parse_transport(name: Option<&str>, proxy_secret: Option<&str>) -> PyResult<T
         "http" => Ok(TransportKind::Http),
         "obfuscated" => Ok(TransportKind::Obfuscated { secret }),
         "padded_intermediate" => Ok(TransportKind::PaddedIntermediate { secret }),
+        "faketls" | "fake_tls" => {
+            let secret = secret.ok_or_else(|| {
+                py_err("transport 'faketls' requires proxy_secret (32 hex chars / 16 bytes)")
+            })?;
+            let domain = domain
+                .filter(|d| !d.is_empty())
+                .ok_or_else(|| {
+                    py_err("transport 'faketls' requires domain (the SNI hostname to present)")
+                })?
+                .to_string();
+            Ok(TransportKind::FakeTls { secret, domain })
+        }
         other => Err(py_err(format!(
-            "unknown transport '{other}'; expected one of: full, abridged, intermediate, http, obfuscated, padded_intermediate, fastest"
+            "unknown transport '{other}'; expected one of: full, abridged, intermediate, http, obfuscated, padded_intermediate, faketls, fastest"
         ))),
     }
 }
@@ -97,19 +117,22 @@ impl DcConnection {
     ///
     /// `transport` selects the MTProto wire framing: one of "full" (default,
     /// matches the Rust core), "abridged", "intermediate", "http",
-    /// "obfuscated", or "padded_intermediate". The last two accept an
-    /// optional `proxy_secret` (32 hex chars / 16 bytes) for MTProxy use.
+    /// "obfuscated", "padded_intermediate", or "faketls". "obfuscated" and
+    /// "padded_intermediate" accept an optional `proxy_secret` (32 hex
+    /// chars / 16 bytes) for MTProxy use. "faketls" requires both
+    /// `proxy_secret` (mandatory, not optional, for this transport) and
+    /// `domain` - the SNI hostname presented in the fake TLS ClientHello.
     ///
     /// Pass `"fastest"` to race a couple of the core's built-in transports
     /// (full + obfuscated) in parallel and keep whichever completes the DH
     /// handshake first - this only kicks in when there's no saved auth key
     /// yet, since a resumed connection already knows which transport it's
-    /// on. `proxy_secret` is ignored in this mode, since the race doesn't
-    /// carry a secret through to its legs.
+    /// on. `proxy_secret`/`domain` are ignored in this mode, since the race
+    /// doesn't carry either through to its legs.
     ///
     /// `proxy` is a SOCKS5 relay, `"host:port"` or `"user:pass@host:port"`
     /// (an optional `socks5://` prefix is stripped). This is routing, not
-    /// wire obfuscation - unrelated to `proxy_secret`/`transport`.
+    /// wire obfuscation - unrelated to `proxy_secret`/`transport`/`domain`.
     ///
     /// `pfs` requests a temp-key DH bind on top of a resumed (saved-key)
     /// connection. It has no effect on a fresh handshake, which already
@@ -124,7 +147,7 @@ impl DcConnection {
     #[staticmethod]
     #[pyo3(signature = (
         session, api_id, api_hash, dc_id=0, test_mode=false, transport=None,
-        proxy_secret=None, proxy=None, pfs=false, dc_addr=None, flood_sleep_threshold=60
+        proxy_secret=None, domain=None, proxy=None, pfs=false, dc_addr=None, flood_sleep_threshold=60
     ))]
     fn connect<'py>(
         py: Python<'py>,
@@ -135,6 +158,7 @@ impl DcConnection {
         test_mode: bool,
         transport: Option<String>,
         proxy_secret: Option<String>,
+        domain: Option<String>,
         proxy: Option<String>,
         pfs: bool,
         dc_addr: Option<String>,
@@ -152,7 +176,11 @@ impl DcConnection {
         let transport_kind = if use_fastest {
             TransportKind::Full
         } else {
-            parse_transport(transport.as_deref(), proxy_secret.as_deref())?
+            parse_transport(
+                transport.as_deref(),
+                proxy_secret.as_deref(),
+                domain.as_deref(),
+            )?
         };
         let socks5 = proxy.as_deref().map(parse_socks5).transpose()?;
         let addr_override = dc_addr;
