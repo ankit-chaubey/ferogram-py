@@ -11,11 +11,11 @@ name       = "_ferogram"
 crate-type = ["cdylib"]
 
 [dependencies]
-ferogram-mtsender   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "f747bf418da2f8d9f6288cc5aa56875034c112f9" }
-ferogram-session    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "f747bf418da2f8d9f6288cc5aa56875034c112f9", features = ["sqlite-session", "libsql-session"] }
-ferogram-connect    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "f747bf418da2f8d9f6288cc5aa56875034c112f9" }
-ferogram-tl-types   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "f747bf418da2f8d9f6288cc5aa56875034c112f9" }
-ferogram-crypto     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "f747bf418da2f8d9f6288cc5aa56875034c112f9" }
+ferogram-mtsender   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd" }
+ferogram-session    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd", features = ["sqlite-session", "libsql-session"] }
+ferogram-connect    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd" }
+ferogram-tl-types   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd" }
+ferogram-crypto     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd" }
 getrandom           = "0.2"
 base64              = "0.22"
 pyo3                = { version = "0.24", features = ["extension-module", "abi3-py39"] }

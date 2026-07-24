@@ -11,16 +11,34 @@
 // Please keep this notice when redistributing.
 
 use base64::Engine as _;
-use ferogram_connect::TransportKind;
-use ferogram_mtsender::DcConnection as RustConn;
+use ferogram_connect::{Socks5Config, TransportKind};
+use ferogram_mtsender::{AutoSleep, DcConnection as RustConn, RetryLoop};
 use ferogram_session::{DcEntry, PersistedSession, SessionBackend, default_dc_addresses};
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 
 use crate::py_err;
 use crate::session::resolve_session;
+
+/// Parse a `"host:port"` / `"user:pass@host:port"` proxy string into a
+/// [`Socks5Config`]. This is SOCKS5 routing only - separate from
+/// `proxy_secret`, which just configures MTProxy wire obfuscation and
+/// doesn't route through a relay at all.
+fn parse_socks5(proxy: &str) -> PyResult<Socks5Config> {
+    let proxy = proxy.strip_prefix("socks5://").unwrap_or(proxy);
+    match proxy.split_once('@') {
+        Some((creds, addr)) => {
+            let (user, pass) = creds
+                .split_once(':')
+                .ok_or_else(|| py_err("proxy credentials must be 'user:pass@host:port'"))?;
+            Ok(Socks5Config::with_auth(addr, user, pass))
+        }
+        None => Ok(Socks5Config::new(proxy)),
+    }
+}
 
 /// Decode a hex-encoded 16-byte MTProxy secret. No `hex` crate dependency
 /// pulled in just for this; it's eight lines of arithmetic.
@@ -40,6 +58,8 @@ fn decode_secret16(hex: &str) -> PyResult<[u8; 16]> {
 ///
 /// `full` (the Rust core's own default) is used when no transport is
 /// given. `proxy_secret` is only consulted for the obfuscated variants.
+/// `"fastest"` is handled by the caller before this function is reached -
+/// it isn't a real `TransportKind`, it's a race between a couple of them.
 fn parse_transport(name: Option<&str>, proxy_secret: Option<&str>) -> PyResult<TransportKind> {
     let secret = proxy_secret.map(decode_secret16).transpose()?;
     match name.unwrap_or("full").to_ascii_lowercase().as_str() {
@@ -50,7 +70,7 @@ fn parse_transport(name: Option<&str>, proxy_secret: Option<&str>) -> PyResult<T
         "obfuscated" => Ok(TransportKind::Obfuscated { secret }),
         "padded_intermediate" => Ok(TransportKind::PaddedIntermediate { secret }),
         other => Err(py_err(format!(
-            "unknown transport '{other}'; expected one of: full, abridged, intermediate, http, obfuscated, padded_intermediate"
+            "unknown transport '{other}'; expected one of: full, abridged, intermediate, http, obfuscated, padded_intermediate, fastest"
         ))),
     }
 }
@@ -62,6 +82,9 @@ pub struct DcConnection {
     persisted: Arc<Mutex<PersistedSession>>,
     #[pyo3(get)]
     dc_id: i32,
+    /// Max FLOOD_WAIT this connection will sleep through automatically in
+    /// `rpc_call` before giving up and propagating the error. Seconds.
+    flood_sleep_threshold: u64,
 }
 
 #[pymethods]
@@ -76,8 +99,33 @@ impl DcConnection {
     /// matches the Rust core), "abridged", "intermediate", "http",
     /// "obfuscated", or "padded_intermediate". The last two accept an
     /// optional `proxy_secret` (32 hex chars / 16 bytes) for MTProxy use.
+    ///
+    /// Pass `"fastest"` to race a couple of the core's built-in transports
+    /// (full + obfuscated) in parallel and keep whichever completes the DH
+    /// handshake first - this only kicks in when there's no saved auth key
+    /// yet, since a resumed connection already knows which transport it's
+    /// on. `proxy_secret` is ignored in this mode, since the race doesn't
+    /// carry a secret through to its legs.
+    ///
+    /// `proxy` is a SOCKS5 relay, `"host:port"` or `"user:pass@host:port"`
+    /// (an optional `socks5://` prefix is stripped). This is routing, not
+    /// wire obfuscation - unrelated to `proxy_secret`/`transport`.
+    ///
+    /// `pfs` requests a temp-key DH bind on top of a resumed (saved-key)
+    /// connection. It has no effect on a fresh handshake, which already
+    /// establishes a permanent key from scratch.
+    ///
+    /// `dc_addr` overrides the address this connects to, bypassing both
+    /// the persisted session's saved address and the built-in DC table.
+    ///
+    /// `flood_sleep_threshold` (seconds) is the longest FLOOD_WAIT
+    /// `rpc_call` will sleep through automatically before giving up and
+    /// raising. Longer waits are propagated immediately.
     #[staticmethod]
-    #[pyo3(signature = (session, api_id, api_hash, dc_id=0, test_mode=false, transport=None, proxy_secret=None))]
+    #[pyo3(signature = (
+        session, api_id, api_hash, dc_id=0, test_mode=false, transport=None,
+        proxy_secret=None, proxy=None, pfs=false, dc_addr=None, flood_sleep_threshold=60
+    ))]
     fn connect<'py>(
         py: Python<'py>,
         session: PyObject,
@@ -87,11 +135,27 @@ impl DcConnection {
         test_mode: bool,
         transport: Option<String>,
         proxy_secret: Option<String>,
+        proxy: Option<String>,
+        pfs: bool,
+        dc_addr: Option<String>,
+        flood_sleep_threshold: u64,
     ) -> PyResult<Bound<'py, PyAny>> {
         let _ = api_id;
         let _ = api_hash;
         let backend = resolve_session(py, &session)?;
-        let transport_kind = parse_transport(transport.as_deref(), proxy_secret.as_deref())?;
+        let use_fastest = transport
+            .as_deref()
+            .is_some_and(|t| t.eq_ignore_ascii_case("fastest"));
+        // "fastest" only applies to a fresh DH handshake (the `None` branch
+        // below); a resumed connection with a saved key still needs one
+        // concrete TransportKind, so fall back to the core's own default.
+        let transport_kind = if use_fastest {
+            TransportKind::Full
+        } else {
+            parse_transport(transport.as_deref(), proxy_secret.as_deref())?
+        };
+        let socks5 = proxy.as_deref().map(parse_socks5).transpose()?;
+        let addr_override = dc_addr;
         future_into_py(py, async move {
             // SessionBackend::load/save are synchronous, blocking calls
             // (SQLite, file I/O, ...). Running them straight on this task
@@ -128,17 +192,19 @@ impl DcConnection {
                 default_dc_addresses()
             };
 
-            let dc_addr = persisted
-                .dcs
-                .iter()
-                .find(|d| d.dc_id == dc_id as i32)
-                .map(|d| d.addr.clone())
-                .unwrap_or_else(|| {
-                    addrs
-                        .get(&(dc_id as i32))
-                        .cloned()
-                        .unwrap_or_else(|| "149.154.167.51:443".to_string())
-                });
+            let dc_addr = addr_override.unwrap_or_else(|| {
+                persisted
+                    .dcs
+                    .iter()
+                    .find(|d| d.dc_id == dc_id as i32)
+                    .map(|d| d.addr.clone())
+                    .unwrap_or_else(|| {
+                        addrs
+                            .get(&(dc_id as i32))
+                            .cloned()
+                            .unwrap_or_else(|| "149.154.167.51:443".to_string())
+                    })
+            });
 
             let existing_key = persisted
                 .dcs
@@ -158,24 +224,46 @@ impl DcConnection {
                         key,
                         entry.first_salt,
                         entry.time_offset,
-                        None,
+                        socks5.as_ref(),
                         None,
                         &transport_kind,
                         dc_id,
-                        false,
+                        pfs,
                     )
                     .await
                     .map_err(py_err)?;
                     (c, key, entry.first_salt, entry.time_offset)
                 }
                 None => {
-                    let c = tokio::time::timeout(
-                        std::time::Duration::from_secs(30),
-                        RustConn::connect_raw(&dc_addr, None, &transport_kind, dc_id),
-                    )
-                    .await
-                    .map_err(|_| py_err("connect timed out after 30s"))?
-                    .map_err(py_err)?;
+                    let c = if use_fastest {
+                        // connect_fastest only takes socks5 (no mtproxy leg,
+                        // no transport - it races its own built-in set), and
+                        // returns the winning transport's debug label, which
+                        // we don't have a use for here.
+                        tokio::time::timeout(
+                            std::time::Duration::from_secs(30),
+                            RustConn::connect_fastest(&dc_addr, socks5.as_ref(), dc_id),
+                        )
+                        .await
+                        .map_err(|_| py_err("connect timed out after 30s"))?
+                        .map_err(py_err)?
+                        .0
+                    } else {
+                        tokio::time::timeout(
+                            std::time::Duration::from_secs(30),
+                            // mtproxy isn't wired up to a Python param yet, see comment above
+                            RustConn::connect_raw(
+                                &dc_addr,
+                                socks5.as_ref(),
+                                None,
+                                &transport_kind,
+                                dc_id,
+                            ),
+                        )
+                        .await
+                        .map_err(|_| py_err("connect timed out after 30s"))?
+                        .map_err(py_err)?
+                    };
                     let key = c.auth_key_bytes();
                     let salt = c.first_salt();
                     let toff = c.time_offset();
@@ -217,23 +305,37 @@ impl DcConnection {
                 session: backend,
                 persisted: Arc::new(Mutex::new(updated)),
                 dc_id: dc_id as i32,
+                flood_sleep_threshold,
             })
         })
     }
 
     /// Send pre-serialized TL bytes through the encrypted MTProto channel.
+    /// Automatically sleeps through FLOOD_WAIT up to `flood_sleep_threshold`
+    /// (set at `connect()` time); longer waits, and anything else, propagate
+    /// straight to the caller.
     fn rpc_call<'py>(&self, py: Python<'py>, tl_bytes: Vec<u8>) -> PyResult<Bound<'py, PyAny>> {
         let inner = Arc::clone(&self.inner);
+        let threshold = self.flood_sleep_threshold;
         future_into_py(py, async move {
-            let mut guard = inner.lock().await;
-            let conn = guard
-                .as_mut()
-                .ok_or_else(|| py_err("connection was consumed by into_pipelined_sender()"))?;
-            let result = conn
-                .rpc_call(&crate::raw::RawCall(tl_bytes))
-                .await
-                .map_err(py_err)?;
-            Ok(result)
+            let policy = Arc::new(AutoSleep {
+                threshold: Duration::from_secs(threshold),
+                io_errors_as_flood_of: Some(Duration::from_secs(1)),
+            });
+            let mut retries = RetryLoop::new(policy);
+            loop {
+                let mut guard = inner.lock().await;
+                let conn = guard
+                    .as_mut()
+                    .ok_or_else(|| py_err("connection was consumed by into_pipelined_sender()"))?;
+                match conn.rpc_call(&crate::raw::RawCall(tl_bytes.clone())).await {
+                    Ok(result) => return Ok(result),
+                    Err(e) => {
+                        drop(guard);
+                        retries.advance(e).await.map_err(py_err)?;
+                    }
+                }
+            }
         })
     }
 
@@ -312,6 +414,45 @@ impl DcConnection {
                     auth_key: Some(key_arr),
                     first_salt,
                     time_offset,
+                    flags: Default::default(),
+                });
+            }
+            let to_save = p.clone();
+            drop(p);
+            tokio::task::spawn_blocking(move || session.save(&to_save))
+                .await
+                .map_err(py_err)?
+                .map_err(py_err)?;
+            Ok(())
+        })
+    }
+
+    /// Update just the address stored for `dc_id`, preserving its auth key
+    /// (if any). Used to persist the address `help.getConfig` returned for
+    /// the caller's `allow_ipv6` preference, without disturbing an
+    /// already-established session.
+    fn set_dc_addr<'py>(
+        &self,
+        py: Python<'py>,
+        dc_id: i32,
+        addr: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let persisted = Arc::clone(&self.persisted);
+        let session = Arc::clone(&self.session);
+        future_into_py(py, async move {
+            let mut p = persisted.lock().await;
+            if let Some(entry) = p.dcs.iter_mut().find(|d| d.dc_id == dc_id) {
+                if entry.addr == addr {
+                    return Ok(());
+                }
+                entry.addr = addr;
+            } else {
+                p.dcs.push(DcEntry {
+                    dc_id,
+                    addr,
+                    auth_key: None,
+                    first_salt: 0,
+                    time_offset: 0,
                     flags: Default::default(),
                 });
             }

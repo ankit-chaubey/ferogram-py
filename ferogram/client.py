@@ -443,7 +443,6 @@ class Client(_RichMixin):
         proxy: str | None = None,
         allow_ipv6: bool = False,
         dc_addr: str | None = None,
-        probe_transport: bool = False,
         resilient_connect: bool = False,
         catch_up: bool = False,
         pfs: bool = False,
@@ -454,12 +453,8 @@ class Client(_RichMixin):
         system_lang_code: str | None = None,
         lang_pack: str | None = None,
         session_string: str | None = None,
-        in_memory: bool = False,
         update_queue_capacity: int | None = None,
-        update_overflow: str | None = None,
-        low_memory_mode: bool = False,
-        allow_missing_channel_hash: bool = False,
-        auto_resolve_peers: bool = False,
+        update_overflow: str | None = "drop_oldest",
         parse_mode: str | None = None,
         workers: int = 4,
         flood_sleep_threshold: int = 60,
@@ -474,7 +469,6 @@ class Client(_RichMixin):
         self.proxy                    = proxy
         self.allow_ipv6               = allow_ipv6
         self.dc_addr                  = dc_addr
-        self.probe_transport          = probe_transport
         self.resilient_connect        = resilient_connect
         self.catch_up                 = catch_up
         self.pfs                      = pfs
@@ -485,12 +479,8 @@ class Client(_RichMixin):
         self.system_lang_code         = system_lang_code or _SYSTEM_LANG
         self.lang_pack                = lang_pack or _LANG_PACK
         self.session_string           = session_string
-        self.in_memory                = in_memory
         self.update_queue_capacity    = update_queue_capacity
         self.update_overflow          = update_overflow
-        self.low_memory_mode          = low_memory_mode
-        self.allow_missing_channel_hash = allow_missing_channel_hash
-        self.auto_resolve_peers       = auto_resolve_peers
         self.parse_mode               = parse_mode
         self._workers                 = workers
         self._flood_sleep_threshold   = flood_sleep_threshold
@@ -679,6 +669,39 @@ class Client(_RichMixin):
                     _log.error("handler error in %s: %s", event_type, exc, exc_info=True)
                 break
 
+    async def _enqueue_update(self, item: tuple) -> None:
+        """Put an update on the dispatch queue, honoring `update_overflow`.
+
+        - "drop_oldest" (default): when full, evict the queue's oldest item
+          to make room for the incoming one (mirrors the Rust core's default
+          `OverflowStrategy::DropOldest`).
+        - "drop_newest": when full, drop the incoming item and keep the
+          queue as-is.
+        - None: block until there's room - never drops an update. Opt-in
+          only; not the default, since an unbounded stall here can back up
+          the whole update pipeline.
+        """
+        if self.update_overflow is None:
+            await self._update_queue.put(item)
+            return
+        try:
+            self._update_queue.put_nowait(item)
+        except asyncio.QueueFull:
+            if self.update_overflow == "drop_oldest":
+                try:
+                    self._update_queue.get_nowait()
+                    self._update_queue.task_done()
+                except asyncio.QueueEmpty:
+                    pass
+                self._update_queue.put_nowait(item)
+            elif self.update_overflow == "drop_newest":
+                pass
+            else:
+                raise ValueError(
+                    f"unknown update_overflow {self.update_overflow!r}; "
+                    "expected None, 'drop_oldest', or 'drop_newest'"
+                )
+
     async def _worker(self) -> None:
         while True:
             item = await self._update_queue.get()
@@ -750,7 +773,9 @@ class Client(_RichMixin):
 
     async def _run_updates(self) -> None:
         _log.debug("update loop started")
-        self._update_queue = asyncio.Queue(maxsize=self._workers * 4)
+        self._update_queue = asyncio.Queue(
+            maxsize=self.update_queue_capacity or (self._workers * 4)
+        )
         worker_tasks = [
             asyncio.create_task(self._worker())
             for _ in range(self._workers)
@@ -818,7 +843,7 @@ class Client(_RichMixin):
                         entity = wrapped
                     if hasattr(entity, "_client"):
                         entity._client = self
-                    await self._update_queue.put((event_type, entity))
+                    await self._enqueue_update((event_type, entity))
 
         except (asyncio.CancelledError, KeyboardInterrupt):
             pass
@@ -861,7 +886,11 @@ class Client(_RichMixin):
             path = session if session.endswith(".session") else session + ".session"
             from ._ferogram import FileSession
             session = FileSession(path)
-        self._conn = await DcConnection.connect(session, api_id, api_hash, dc_id)
+        self._conn = await DcConnection.connect(
+            session, api_id, api_hash, dc_id,
+            proxy=self.proxy, pfs=self.pfs,
+            flood_sleep_threshold=self._flood_sleep_threshold,
+        )
         self._dc_id = dc_id
         await self._init_connection()
         _log.info("migrated to DC%d", dc_id)
@@ -887,7 +916,35 @@ class Client(_RichMixin):
         return _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
 
     async def _init_connection(self) -> None:
-        await self._init_connection_on(self._require_conn())
+        config = await self._init_connection_on(self._require_conn())
+        await self._apply_dc_options(config.get("dc_options") or [])
+
+    async def _apply_dc_options(self, dc_options: "list[dict]") -> None:
+        """Persist the address help.getConfig reports for our current DC,
+        honoring `allow_ipv6`. Only touches the DC we're connected to right
+        now - not a full multi-DC table refresh, and it never forces a
+        reconnect; it just makes the *next* connect pick the right family.
+        """
+        if not dc_options or self._conn is None:
+            return
+        best = None
+        for opt in dc_options:
+            if opt.get("id") != self._dc_id:
+                continue
+            if opt.get("media_only") or opt.get("cdn") or opt.get("tcpo_only"):
+                continue
+            if bool(opt.get("ipv6")) == self.allow_ipv6:
+                best = opt
+                break
+            if best is None:
+                best = opt  # fallback: still connectable, just not the preferred family
+        if best is None:
+            return
+        addr = f"{best['ip_address']}:{best['port']}"
+        try:
+            await self._conn.set_dc_addr(self._dc_id, addr)
+        except Exception as exc:
+            _log.debug("failed to persist DC address from getConfig: %s", exc)
 
     def _session_backend(self):
         """Resolve self.session into a concrete session backend object."""
@@ -927,7 +984,11 @@ class Client(_RichMixin):
         # other's entries; this only costs one handshake's worth of
         # latency at transfer setup, not per-chunk.
         async with self._worker_conn_lock:
-            conn = await DcConnection.connect(session, api_id, api_hash, target_dc)
+            conn = await DcConnection.connect(
+                session, api_id, api_hash, target_dc,
+                proxy=self.proxy, pfs=self.pfs,
+                flood_sleep_threshold=self._flood_sleep_threshold,
+            )
 
             if target_dc == self._dc_id or target_dc in self._auth_imported_dcs:
                 await self._init_connection_on(conn)
@@ -1042,7 +1103,11 @@ class Client(_RichMixin):
             session = FileSession(path)
 
         _log.info("connecting (session=%r)", repr(session))
-        self._conn = await DcConnection.connect(session, api_id, api_hash)
+        self._conn = await DcConnection.connect(
+            session, api_id, api_hash,
+            dc_addr=self.dc_addr, proxy=self.proxy, pfs=self.pfs,
+            flood_sleep_threshold=self._flood_sleep_threshold,
+        )
         self._dc_id = self._conn.dc_id
         await self._init_connection()
         if not await self.is_authorized():
