@@ -53,6 +53,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
+name = "arc-swap"
+version = "1.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c049c0be4daef0b145cb3555416b3b8ef5b7888a38aea1a3a155801fe7b0810b"
+dependencies = [
+ "rustversion",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -393,7 +402,7 @@ checksum = "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a"
 [[package]]
 name = "ferogram-connect"
 version = "0.6.4"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=0589dbd#0589dbd1633494c731a4a139ad780f92aaae8c67"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=358ee50#358ee5013befb4a288d4363d81bda0e4e38ef7e1"
 dependencies = [
  "ferogram-crypto",
  "ferogram-mtproto",
@@ -409,7 +418,7 @@ dependencies = [
 [[package]]
 name = "ferogram-crypto"
 version = "0.6.4"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=0589dbd#0589dbd1633494c731a4a139ad780f92aaae8c67"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=358ee50#358ee5013befb4a288d4363d81bda0e4e38ef7e1"
 dependencies = [
  "aes",
  "ctr",
@@ -424,9 +433,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferogram-msgbox"
+version = "0.6.4"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=358ee50#358ee5013befb4a288d4363d81bda0e4e38ef7e1"
+dependencies = [
+ "ferogram-tl-types",
+ "tracing",
+]
+
+[[package]]
 name = "ferogram-mtproto"
 version = "0.6.4"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=0589dbd#0589dbd1633494c731a4a139ad780f92aaae8c67"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=358ee50#358ee5013befb4a288d4363d81bda0e4e38ef7e1"
 dependencies = [
  "ferogram-crypto",
  "ferogram-tl-types",
@@ -439,7 +457,7 @@ dependencies = [
 [[package]]
 name = "ferogram-mtsender"
 version = "0.6.4"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=0589dbd#0589dbd1633494c731a4a139ad780f92aaae8c67"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=358ee50#358ee5013befb4a288d4363d81bda0e4e38ef7e1"
 dependencies = [
  "ferogram-connect",
  "ferogram-crypto",
@@ -458,20 +476,23 @@ dependencies = [
  "base64 0.22.1",
  "ferogram-connect",
  "ferogram-crypto",
+ "ferogram-msgbox",
  "ferogram-mtsender",
  "ferogram-session",
  "ferogram-tl-types",
  "getrandom 0.2.17",
+ "log",
  "pyo3",
  "pyo3-async-runtimes",
  "pyo3-build-config",
+ "pyo3-log",
  "tokio",
 ]
 
 [[package]]
 name = "ferogram-session"
 version = "0.6.4"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=0589dbd#0589dbd1633494c731a4a139ad780f92aaae8c67"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=358ee50#358ee5013befb4a288d4363d81bda0e4e38ef7e1"
 dependencies = [
  "base64 0.22.1",
  "libsql",
@@ -484,7 +505,7 @@ dependencies = [
 [[package]]
 name = "ferogram-tl-gen"
 version = "0.6.4"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=0589dbd#0589dbd1633494c731a4a139ad780f92aaae8c67"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=358ee50#358ee5013befb4a288d4363d81bda0e4e38ef7e1"
 dependencies = [
  "ferogram-tl-parser",
 ]
@@ -492,12 +513,12 @@ dependencies = [
 [[package]]
 name = "ferogram-tl-parser"
 version = "0.6.4"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=0589dbd#0589dbd1633494c731a4a139ad780f92aaae8c67"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=358ee50#358ee5013befb4a288d4363d81bda0e4e38ef7e1"
 
 [[package]]
 name = "ferogram-tl-types"
 version = "0.6.4"
-source = "git+https://github.com/ankit-chaubey/ferogram?rev=0589dbd#0589dbd1633494c731a4a139ad780f92aaae8c67"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=358ee50#358ee5013befb4a288d4363d81bda0e4e38ef7e1"
 dependencies = [
  "ferogram-tl-gen",
  "ferogram-tl-parser",
@@ -1421,6 +1442,17 @@ checksum = "78f9cf92ba9c409279bc3305b5409d90db2d2c22392d443a87df3a1adad59e33"
 dependencies = [
  "libc",
  "pyo3-build-config",
+]
+
+[[package]]
+name = "pyo3-log"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45192e5e4a4d2505587e27806c7b710c231c40c56f3bfc19535d0bb25df52264"
+dependencies = [
+ "arc-swap",
+ "log",
+ "pyo3",
 ]
 
 [[package]]

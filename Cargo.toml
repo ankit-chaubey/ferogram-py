@@ -11,16 +11,19 @@ name       = "_ferogram"
 crate-type = ["cdylib"]
 
 [dependencies]
-ferogram-mtsender   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd" }
-ferogram-session    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd", features = ["sqlite-session", "libsql-session"] }
-ferogram-connect    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd" }
-ferogram-tl-types   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd" }
-ferogram-crypto     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "0589dbd" }
+ferogram-mtsender   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "358ee50" }
+ferogram-session    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "358ee50", features = ["sqlite-session", "libsql-session"] }
+ferogram-connect    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "358ee50" }
+ferogram-tl-types   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "358ee50" }
+ferogram-crypto     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "358ee50" }
+ferogram-msgbox     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "358ee50" }
 getrandom           = "0.2"
 base64              = "0.22"
 pyo3                = { version = "0.24", features = ["extension-module", "abi3-py39"] }
 pyo3-async-runtimes = { version = "0.24", features = ["tokio-runtime"] }
 tokio               = { version = "1", features = ["full"] }
+pyo3-log            = "0.12"
+log                 = "0.4"
 
 [profile.release]
 strip     = true

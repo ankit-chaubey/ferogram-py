@@ -24,10 +24,10 @@ import random
 import struct
 import time
 from collections import deque
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from typing import Any, Callable
 
-from ._ferogram import DcConnection, srp_calculate
+from ._ferogram import DcConnection, MessageBox, srp_calculate
 from ._ferogram import (
     FileSession, MemorySession, StringSession,
     SqliteSession, LibSqlSession, CustomSession,
@@ -47,6 +47,31 @@ from .keyboards import InlineKeyboard, ReplyKeyboard, RemoveKeyboard, ForceReply
 __all__ = ["Client", "StopPropagation", "ContinuePropagation", "TransferHandle", "TransferLimits", "TransferCancelled", "SignInCodeInvalid", "available_qualities"]
 
 _log = logging.getLogger("ferogram")
+
+
+class _ClientLoggerAdapter(logging.LoggerAdapter):
+    """Prefixes every record with a short tag identifying which `Client`
+    instance logged it, so output from two clients running in the same
+    process (e.g. a userbot + a bot account) doesn't collapse into one
+    indistinguishable stream. The tag starts as the session name/type and
+    gains a "dcN" suffix once start() knows which DC it landed on.
+    """
+
+    def process(self, msg, kwargs):
+        return f"[{self.extra['client']}] {msg}", kwargs
+
+
+def _session_tag(session: Any, session_string: str | None) -> str:
+    """Short, stable identifier for a session, used to tag log lines.
+
+    Doesn't try to be unique - just distinguishable enough to tell two
+    Client instances' log lines apart at a glance.
+    """
+    if session_string:
+        return "session_string"
+    if isinstance(session, str):
+        return session
+    return type(session).__name__
 
 
 class TransferHandle:
@@ -534,6 +559,7 @@ class Client(_RichMixin):
         transfer_limits: "TransferLimits | None" = None,
     ) -> None:
         self.session                  = session
+        self._log                     = _ClientLoggerAdapter(_log, {"client": _session_tag(session, session_string)})
         self.api_id                   = api_id or int(os.environ.get("API_ID", 0)) or None
         self.api_hash                 = api_hash or os.environ.get("API_HASH")
         self.bot_token                = bot_token or os.environ.get("BOT_TOKEN")
@@ -604,6 +630,7 @@ class Client(_RichMixin):
         # Rust core's `max_tcp_connections` (the "city-wide speed limit").
         self._transfer_semaphore      = asyncio.Semaphore(self._transfer_limits.max_tcp_connections)
         self._conn: DcConnection | None = None
+        self._frame_pump_task: asyncio.Task | None = None
         self._dc_id: int = 0
         # DCs we've already bound a worker connection's auth key to via
         # auth.importAuthorization this process run (export tokens are
@@ -619,10 +646,12 @@ class Client(_RichMixin):
         }
         self._update_queue: asyncio.Queue | None = None
         self._peer_cache = PeerCache()
-        self._pts: int = 0
-        self._qts: int = 0
-        self._date: int = 0
-        self._seq: int = 0
+        # Owns pts/qts/date/seq + per-channel pts and does the actual gap
+        # detection/buffering (see ferogram-msgbox). Lives here, not on
+        # DcConnection, so it survives a DC migration - `start()`/`_migrate()`
+        # rebind it to whichever connection is current via
+        # `conn.bind_message_box(self._message_box)`.
+        self._message_box = MessageBox()
         self.raw = RawProxy(self)
 
     def _resolve_pm(self, local: str | None) -> str | None:
@@ -780,7 +809,7 @@ class Client(_RichMixin):
                 except ContinuePropagation:
                     continue
                 except Exception as exc:
-                    _log.error("handler error in %s: %s", event_type, exc, exc_info=True)
+                    self._log.error("handler error in %s: %s", event_type, exc, exc_info=True)
                 break
 
     async def _enqueue_update(self, item: tuple) -> None:
@@ -825,7 +854,7 @@ class Client(_RichMixin):
                 event_type, update = item
                 await self._dispatch(event_type, update)
             except Exception as exc:
-                _log.error("worker error: %s", exc, exc_info=True)
+                self._log.error("worker error: %s", exc, exc_info=True)
             finally:
                 self._update_queue.task_done()
 
@@ -869,24 +898,37 @@ class Client(_RichMixin):
         # everything else goes to raw_update
         return ("raw_update", upd)
 
-    def _collect_updates(self, resp: dict) -> list[dict]:
-        t = resp.get("_", "")
-        if t in ("updates", "updatesCombined"):
-            self._populate_cache(resp)
-            return resp.get("updates") or []
-        if t == "updateShort":
-            return [resp.get("update", resp)]
-        if t == "updateShortMessage":
-            return [resp]
-        if t == "updates.difference":
-            self._populate_cache(resp)
-            msgs = [{"_": "updateNewMessage", "message": m, "pts": 0, "pts_count": 0}
-                    for m in (resp.get("new_messages") or [])]
-            return msgs + (resp.get("other_updates") or [])
-        return []
+    async def _dispatch_raw_batch(
+        self, updates_b: list[bytes], users_b: list[bytes], chats_b: list[bytes],
+    ) -> None:
+        """Deserialize a `(updates, users, chats)` batch of individually
+        TL-serialized items (as returned by `MessageBox.apply_difference`,
+        `apply_channel_difference`, or `process_raw`) and route/enqueue each
+        update exactly like the old dict-based diff path did.
+        """
+        if users_b or chats_b:
+            self._populate_cache({
+                "users": [_tl.deserialize(b, _SCHEMA_BY_CID) for b in users_b],
+                "chats": [_tl.deserialize(b, _SCHEMA_BY_CID) for b in chats_b],
+            })
+        for b in updates_b:
+            upd = _tl.deserialize(b, _SCHEMA_BY_CID)
+            routed = self._route_update(upd)
+            if routed is None:
+                continue
+            event_type, event = routed
+            self._log.debug("dispatching %s", event_type)
+            wrapped = wrap_update(event_type, event)
+            if event_type in ("message", "edited_message"):
+                entity = wrapped.message
+            else:
+                entity = wrapped
+            if hasattr(entity, "_client"):
+                entity._client = self
+            await self._enqueue_update((event_type, entity))
 
     async def _run_updates(self) -> None:
-        _log.debug("update loop started")
+        self._log.debug("update loop started")
         self._update_queue = asyncio.Queue(
             maxsize=self.update_queue_capacity or (self._workers * 4)
         )
@@ -895,69 +937,107 @@ class Client(_RichMixin):
             for _ in range(self._workers)
         ]
         try:
-            # get initial state
-            try:
-                state = await self._rpc({"_": "updates.getState"})
-                self._pts  = state.get("pts", 0)
-                self._qts  = state.get("qts", 0)
-                self._date = state.get("date", 0)
-                self._seq  = state.get("seq", 0)
-            except Exception as e:
-                _log.warning("getState failed: %s", e)
+            # Seed pts/qts/date/seq. MessageBox.set_state is only valid
+            # while empty, so this only ever runs once per MessageBox
+            # lifetime (i.e. not again after a DC migration - the box
+            # already has state by then).
+            if await self._message_box.is_empty():
+                try:
+                    state = await self._rpc({"_": "updates.getState"})
+                    await self._message_box.set_state(
+                        state.get("pts", 0), state.get("qts", 0),
+                        state.get("date", 0), state.get("seq", 0),
+                    )
+                    self._log.debug(
+                        "seeded state: pts=%s qts=%s date=%s seq=%s",
+                        state.get("pts", 0), state.get("qts", 0),
+                        state.get("date", 0), state.get("seq", 0),
+                    )
+                except Exception as e:
+                    self._log.warning("getState failed: %s", e)
 
             while True:
-                await asyncio.sleep(0.3)
+                conn = self._conn
+                if conn is None:
+                    return
+
+                # MessageBox is the single authority on timing now: it
+                # reports 0.0 the instant a diff is actually owed (gap
+                # detected, or the no-updates deadline elapsed), and a
+                # longer wait otherwise. Replaces the old fixed 0.3s poll.
+                delay = await self._message_box.check_deadline_secs()
+                if delay > 0:
+                    # Cap the sleep so cancellation/shutdown stays responsive
+                    # even if a channel's deadline is far out.
+                    await asyncio.sleep(min(delay, 30.0))
+                    continue
+
+                # Global (pts/qts) difference, if one is due.
+                req = await self._message_box.get_difference_bytes()
+                if req is not None:
+                    try:
+                        body = await conn.rpc_call(req)
+                    except Exception as e:
+                        self._log.debug("getDifference error: %s", e)
+                        await self._message_box.abort_difference()
+                        await asyncio.sleep(2)
+                        continue
+                    try:
+                        updates_b, users_b, chats_b = await self._message_box.apply_difference(body)
+                    except Exception as e:
+                        self._log.warning("apply_difference failed: %s", e)
+                        await self._message_box.abort_difference()
+                        continue
+                    self._log.debug("global diff applied: %d updates", len(updates_b))
+                    await self._dispatch_raw_batch(updates_b, users_b, chats_b)
+                    continue
+
+                # Otherwise, a specific channel may need getChannelDifference.
+                chan = await self._message_box.next_channel_diff()
+                if chan is None:
+                    # Nothing owed right now; re-check next deadline.
+                    continue
+                channel_id, pts = chan
+                access_hash = self._peer_cache.get_channel(channel_id)
+                if access_hash is None:
+                    # Can't build a valid request without the access_hash -
+                    # give up on this round; it'll be retried once the
+                    # channel gets resolved through normal use (e.g. the
+                    # next message the client sends/receives there).
+                    self._log.debug(
+                        "channel %s: no access_hash cached, skipping diff at pts=%s "
+                        "(will retry once the channel is resolved through normal use)",
+                        channel_id, pts,
+                    )
+                    await self._message_box.end_channel_difference(banned=False)
+                    continue
                 try:
                     diff = await self._rpc({
-                        "_": "updates.getDifference",
-                        "pts": self._pts,
-                        "date": self._date,
-                        "qts": self._qts,
-                    })
+                        "_": "updates.getChannelDifference",
+                        "force": False,
+                        "channel": {
+                            "_": "inputChannel",
+                            "channel_id": channel_id,
+                            "access_hash": access_hash,
+                        },
+                        "filter": {"_": "channelMessagesFilterEmpty"},
+                        "pts": pts,
+                        "limit": 100,
+                    }, return_bytes=True)
                 except Exception as e:
-                    _log.debug("getDifference error: %s", e)
-                    await asyncio.sleep(2)
+                    msg = str(e)
+                    banned = "CHANNEL_PRIVATE" in msg or "CHANNEL_INVALID" in msg
+                    self._log.debug("getChannelDifference error for %s: %s", channel_id, e)
+                    await self._message_box.end_channel_difference(banned=banned)
                     continue
-
-                dt = diff.get("_", "")
-                if dt == "updates.differenceEmpty":
-                    new_date = diff.get("date")
-                    if new_date:
-                        self._date = new_date
+                try:
+                    updates_b, users_b, chats_b = await self._message_box.apply_channel_difference(diff)
+                except Exception as e:
+                    self._log.warning("apply_channel_difference failed for %s: %s", channel_id, e)
+                    await self._message_box.end_channel_difference(banned=False)
                     continue
-
-                updates_list = self._collect_updates(diff)
-
-                # update state
-                new_state = diff.get("state") or diff.get("intermediate_state")
-                if new_state:
-                    self._pts  = new_state.get("pts", self._pts)
-                    self._qts  = new_state.get("qts", self._qts)
-                    self._date = new_state.get("date", self._date)
-                    self._seq  = new_state.get("seq", self._seq)
-                else:
-                    for u in updates_list:
-                        pts = u.get("pts")
-                        if pts:
-                            self._pts = max(self._pts, pts)
-                        date = u.get("date")
-                        if date:
-                            self._date = max(self._date, date)
-
-                for upd in updates_list:
-                    routed = self._route_update(upd)
-                    if routed is None:
-                        continue
-                    event_type, event = routed
-                    _log.debug("dispatching %s", event_type)
-                    wrapped = wrap_update(event_type, event)
-                    if event_type in ("message", "edited_message"):
-                        entity = wrapped.message
-                    else:
-                        entity = wrapped
-                    if hasattr(entity, "_client"):
-                        entity._client = self
-                    await self._enqueue_update((event_type, entity))
+                self._log.debug("channel %s diff applied: %d updates", channel_id, len(updates_b))
+                await self._dispatch_raw_batch(updates_b, users_b, chats_b)
 
         except (asyncio.CancelledError, KeyboardInterrupt):
             pass
@@ -966,50 +1046,141 @@ class Client(_RichMixin):
                 await self._update_queue.put(None)
             await asyncio.gather(*worker_tasks)
 
+    async def _run_frame_pump(self) -> None:
+        """Drain `DcConnection.recv_frame()` and feed pushed update frames
+        into the MessageBox as they arrive.
 
-    async def _rpc(self, obj: dict, _retried_restart: bool = False) -> dict:
+        `_run_updates()` only discovers updates when it already knows a gap
+        exists (via `check_deadline_secs()`), so it needs something reading
+        the socket continuously to notice pushed updates at all. This is
+        that reader: it runs alongside `_run_updates()`, not instead of it -
+        the deadline/gap poll is still what performs the actual catch-up
+        diff, including for channels.
+
+        Reads `self._conn` fresh every iteration instead of capturing it
+        once, since `_migrate()` swaps that attribute out. A connection
+        already blocked inside `recv_frame()` can't observe that swap until
+        the call returns, so `_migrate()` cancels and restarts this task
+        against the new connection rather than relying on the fresh read
+        alone.
+        """
+        self._log.debug("frame pump started")
+        while True:
+            conn = self._conn
+            if conn is None:
+                return
+            frame = await conn.recv_frame()
+            if frame is None:
+                self._log.warning("frame pump: sender task shut down; pushed updates stopped arriving")
+                return
+            kind, payload = frame
+            if kind == "update":
+                try:
+                    result = await self._message_box.process_raw(payload)
+                except Exception as e:
+                    self._log.debug("process_raw failed for pushed frame: %s", e)
+                    continue
+                if result is None:
+                    # No dispatchable content, or a gap was detected -
+                    # _run_updates()'s deadline poll will catch it up.
+                    continue
+                updates_b, users_b, chats_b = result
+                self._log.debug("pushed frame applied: %d updates", len(updates_b))
+                await self._dispatch_raw_batch(updates_b, users_b, chats_b)
+            elif kind == "connected":
+                self._log.debug("frame pump: sender task (re)connected")
+                await self._message_box.mark_gap()
+            elif kind == "error":
+                self._log.warning("frame pump: connection error: %s", payload.decode("utf-8", "replace"))
+                # Streaming connections aren't reconnected in place here;
+                # stop the pump rather than loop silently on a dead socket.
+                return
+
+    async def _rpc(
+        self, obj: dict, _retried_restart: bool = False, return_bytes: bool = False,
+    ) -> dict | bytes:
         conn = self._require_conn()
+        method = obj.get("_", "?")
         req_bytes = _tl.serialize(obj, _SCHEMA)
+        t0 = time.monotonic()
         try:
             resp_bytes = await conn.rpc_call(req_bytes)
         except RuntimeError as e:
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
             msg = str(e)
             dc = _parse_migrate(msg)
             if dc is not None:
-                await self._migrate(dc)
-                return await self._rpc(obj)
+                self._log.debug("rpc %s failed after %dms: %s", method, elapsed_ms, msg)
+                await self._migrate(dc, reason=f"{method} -> {msg}")
+                return await self._rpc(obj, return_bytes=return_bytes)
             if "SESSION_PASSWORD_NEEDED" in msg:
+                if return_bytes:
+                    raise
                 return {"_": "rpc_error", "error_code": 401,
                         "error_message": "SESSION_PASSWORD_NEEDED"}
             if "AUTH_RESTART" in msg and not _retried_restart:
                 # AUTH_RESTART is transient right after a fresh auth key is
                 # created on a new DC (e.g. after migrating for auth.sendCode).
                 # Telegram expects the same request to simply be resent.
-                _log.debug("AUTH_RESTART received, retrying request once")
-                return await self._rpc(obj, _retried_restart=True)
+                self._log.debug("AUTH_RESTART received for %s, retrying request once", method)
+                return await self._rpc(obj, _retried_restart=True, return_bytes=return_bytes)
+            self._log.debug("rpc %s failed after %dms: %s", method, elapsed_ms, msg)
             raise
+        elapsed_ms = int((time.monotonic() - t0) * 1000)
+        self._log.debug("rpc %s (%dms)", method, elapsed_ms)
+        if return_bytes:
+            # Caller needs the exact wire bytes (e.g. to feed straight into
+            # `MessageBox.apply_difference`/`apply_channel_difference`), not
+            # the dict form. Cache population still runs off a best-effort
+            # dict decode so peer resolution keeps working either way.
+            try:
+                self._populate_cache(_tl.deserialize(resp_bytes, _SCHEMA_BY_CID))
+            except Exception:
+                pass
+            return resp_bytes
         result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
         self._populate_cache(result)
         return result
 
-    async def _migrate(self, dc_id: int) -> None:
+    async def _migrate(self, dc_id: int, reason: str = "") -> None:
         api_id, api_hash = self._require_creds()
-        _log.info("migrating to DC%d", dc_id)
+        if reason:
+            self._log.info("migrating to DC%d (%s)", dc_id, reason)
+        else:
+            self._log.info("migrating to DC%d", dc_id)
         session = self.session
         if isinstance(session, str):
             path = session if session.endswith(".session") else session + ".session"
             from ._ferogram import FileSession
             session = FileSession(path)
+        t0 = time.monotonic()
         self._conn = await DcConnection.connect(
             session, api_id, api_hash, dc_id,
             test_mode=self.test_mode, transport=self.transport,
             proxy_secret=self.proxy_secret, domain=self.domain,
             proxy=self.proxy, pfs=self.pfs,
             flood_sleep_threshold=self._flood_sleep_threshold,
+            stream_updates=True,
         )
         self._dc_id = dc_id
+        self._log.extra["client"] = f"{_session_tag(self.session, self.session_string)} dc{self._dc_id}"
+        # Same MessageBox, new connection - rebind so pts/qts/gap state
+        # carries over the migration instead of resetting.
+        self._conn.bind_message_box(self._message_box)
+        # The pump task (if `run_until_disconnected()` started one) is
+        # sitting in an `await conn.recv_frame()` on the *old* connection
+        # object, which just got replaced above - it can't see the swap
+        # until that await returns (which, for a healthy old connection,
+        # may be a long time / never). Restart it against the new one
+        # rather than leave pushed updates undrained after a migration.
+        if self._frame_pump_task is not None:
+            self._frame_pump_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._frame_pump_task
+            self._frame_pump_task = asyncio.create_task(self._run_frame_pump())
         await self._init_connection()
-        _log.info("migrated to DC%d", dc_id)
+        connect_ms = int((time.monotonic() - t0) * 1000)
+        self._log.info("migrated to DC%d in %dms", dc_id, connect_ms)
 
     async def _init_connection_on(self, conn: "DcConnection", inner: bytes | None = None) -> dict:
         """Send invokeWithLayer(initConnection(...)) on an arbitrary connection.
@@ -1060,7 +1231,7 @@ class Client(_RichMixin):
         try:
             await self._conn.set_dc_addr(self._dc_id, addr)
         except Exception as exc:
-            _log.debug("failed to persist DC address from getConfig: %s", exc)
+            self._log.debug("failed to persist DC address from getConfig: %s", exc)
 
     def _session_backend(self):
         """Resolve self.session into a concrete session backend object."""
@@ -1165,7 +1336,7 @@ class Client(_RichMixin):
             )
             msg._client = self
             return msg
-        _log.warning("_extract_sent_message: unrecognised response type %r, constructing minimal Message", t)
+        self._log.warning("_extract_sent_message: unrecognised response type %r, constructing minimal Message", t)
         msg = Message(
             id=resp.get("id", 0), text=text, sender_id=None, peer_id=peer_id or {},
             date=resp.get("date", 0), edit_date=None, reply_to_msg_id=None,
@@ -1220,15 +1391,26 @@ class Client(_RichMixin):
             path = session if session.endswith(".session") else session + ".session"
             session = FileSession(path)
 
-        _log.info("connecting (session=%r)", repr(session))
+        # session_string may have been overridden by this call (vs the
+        # constructor), so recompute the tag before it appears in any log
+        # line below.
+        self._log.extra["client"] = _session_tag(self.session, self.session_string)
+
+        self._log.info("connecting (session=%r)", repr(session))
+        t0 = time.monotonic()
         self._conn = await DcConnection.connect(
             session, api_id, api_hash, self._dc_id_override,
             test_mode=self.test_mode, transport=self.transport,
             proxy_secret=self.proxy_secret, domain=self.domain,
             dc_addr=self.dc_addr, proxy=self.proxy, pfs=self.pfs,
             flood_sleep_threshold=self._flood_sleep_threshold,
+            stream_updates=True,
         )
+        connect_ms = int((time.monotonic() - t0) * 1000)
         self._dc_id = self._conn.dc_id
+        self._log.extra["client"] = f"{_session_tag(self.session, self.session_string)} dc{self._dc_id}"
+        self._log.info("connected to DC%d in %dms", self._dc_id, connect_ms)
+        self._conn.bind_message_box(self._message_box)
         if self._future_auth_token is not None:
             # Don't clobber a real token the session already persisted
             # from a previous sign_out() with a stale constructor value.
@@ -1239,13 +1421,13 @@ class Client(_RichMixin):
         if not await self.is_authorized():
             if self.bot_token:
                 await self.bot_sign_in(self.bot_token)
-                _log.info("signed in as bot")
+                self._log.info("signed in as bot")
             else:
                 await self._interactive_login()
             await self._conn.set_home_dc(self._conn.dc_id)
             await self._conn.save_session()
         else:
-            _log.info("reusing existing session")
+            self._log.info("reusing existing session")
         return self
 
     async def _interactive_login(self) -> None:
@@ -1255,14 +1437,14 @@ class Client(_RichMixin):
 
         if _is_bot_token(identifier):
             await self.bot_sign_in(identifier)
-            _log.info("signed in as bot")
+            self._log.info("signed in as bot")
             print("\nPlease ensure your usage complies with Telegram's API Terms of Service.")
             return
 
         sent = await self.request_login_code(identifier)
         if sent.get("_") == "auth.sentCodeSuccess":
             # Fast re-auth via a stored future_auth_token; no code needed.
-            _log.info("signed in as user (fast re-auth, no code needed)")
+            self._log.info("signed in as user (fast re-auth, no code needed)")
             print("\nPlease ensure your usage complies with Telegram's API Terms of Service.")
             return
 
@@ -1276,7 +1458,7 @@ class Client(_RichMixin):
                     print("Code expired, requesting a new one...")
                     sent = await self.resend_code(sent)
                     if sent.get("_") == "auth.sentCodeSuccess":
-                        _log.info("signed in as user (fast re-auth, no code needed)")
+                        self._log.info("signed in as user (fast re-auth, no code needed)")
                         print("\nPlease ensure your usage complies with Telegram's API Terms of Service.")
                         return
                 elif attempt < 2:
@@ -1287,21 +1469,27 @@ class Client(_RichMixin):
             hint = pw_token.get("hint", "")
             pwd  = self._password or input(f"2FA password (hint: {hint}): " if hint else "2FA password: ")
             await self.check_password(pw_token, pwd)
-        _log.info("signed in as user")
+        self._log.info("signed in as user")
         print("\nPlease ensure your usage complies with Telegram's API Terms of Service.")
 
     async def stop(self) -> None:
         if self._conn:
             await self.sign_out()
             self._conn = None
-            _log.info("signed out")
+            self._log.info("signed out")
 
     async def run_until_disconnected(self) -> None:
         await self.start()
+        self._frame_pump_task = asyncio.create_task(self._run_frame_pump())
         try:
             await self._run_updates()
         except (KeyboardInterrupt, asyncio.CancelledError):
             pass
+        finally:
+            if self._frame_pump_task is not None:
+                self._frame_pump_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await self._frame_pump_task
 
     def run(self) -> None:
         try:
@@ -1323,7 +1511,7 @@ class Client(_RichMixin):
             users = result if isinstance(result, list) else result.get("users", [])
             return bool(users)
         except Exception as exc:
-            _log.debug("is_authorized() check failed: %s", exc)
+            self._log.debug("is_authorized() check failed: %s", exc)
             return False
 
     async def _handle_sent_code(self, result: dict, phone: str) -> dict:
@@ -1453,7 +1641,7 @@ class Client(_RichMixin):
                 if isinstance(token, (bytes, bytearray)):
                     await self._require_conn().set_future_auth_token(bytes(token))
         except Exception as exc:
-            _log.warning("sign_out() RPC failed, local state may be stale: %s", exc)
+            self._log.warning("sign_out() RPC failed, local state may be stale: %s", exc)
 
     async def login_bot(self, token: str) -> None:
         await self.bot_sign_in(token)
@@ -1625,15 +1813,21 @@ class Client(_RichMixin):
         input_peer = await self._resolve_peer(peer)
         t = input_peer.get("_", "")
         if t == "inputPeerChannel":
-            await self._rpc({
+            channel_id = input_peer["channel_id"]
+            req_bytes = _tl.serialize({
                 "_": "channels.deleteMessages",
                 "channel": {
                     "_": "inputChannel",
-                    "channel_id": input_peer["channel_id"],
+                    "channel_id": channel_id,
                     "access_hash": input_peer.get("access_hash", 0),
                 },
                 "id": message_ids,
-            })
+            }, _SCHEMA)
+            # channels.deleteMessages returns a channel-scoped
+            # AffectedMessages - the generic rpc_call auto-feed can't tell
+            # that apart from a global one, only this call site knows
+            # channel_id, so route it through the dedicated method instead.
+            await self._conn.delete_channel_messages(req_bytes, channel_id)
         else:
             await self._rpc({
                 "_": "messages.deleteMessages",
@@ -2657,7 +2851,7 @@ class Client(_RichMixin):
             try:
                 conns.append(await stack.enter_async_context(self._worker_slot(self._dc_id)))
             except Exception as e:
-                _log.warning(
+                self._log.warning(
                     "upload_file: worker connection failed, continuing with %d worker(s): %s",
                     max(len(conns), 1), e,
                 )
@@ -2707,7 +2901,7 @@ class Client(_RichMixin):
                 except Exception as e:
                     if attempt == MAX_ATTEMPTS - 1:
                         raise
-                    _log.warning(
+                    self._log.warning(
                         "upload_file: part %d failed (attempt %d/%d): %s — retrying in %.1fs",
                         part_idx, attempt + 1, MAX_ATTEMPTS, e, delay,
                     )
@@ -2781,7 +2975,7 @@ class Client(_RichMixin):
                     # Transient failure on an otherwise-live connection:
                     # retry this one part directly, out of band from the
                     # window, rather than tearing down the whole worker.
-                    _log.warning(
+                    self._log.warning(
                         "upload_file: pipelined part %d failed, retrying directly: %s",
                         idx, e,
                     )
@@ -2917,7 +3111,7 @@ class Client(_RichMixin):
                 try:
                     conns.append(await dl_stack.enter_async_context(self._worker_slot(media_dc_id)))
                 except Exception as e:
-                    _log.warning(
+                    self._log.warning(
                         "download: worker connection to DC%d failed, continuing with %d worker(s): %s",
                         media_dc_id, max(len(conns), 1), e,
                     )
@@ -2959,7 +3153,7 @@ class Client(_RichMixin):
                     except Exception as e:
                         new_dc = _parse_migrate(str(e)) if isinstance(e, RuntimeError) else None
                         if new_dc is not None:
-                            _log.info(
+                            self._log.info(
                                 "download: FILE_MIGRATE_%d for part %d, reopening worker on new DC",
                                 new_dc, part_idx,
                             )
@@ -2968,7 +3162,7 @@ class Client(_RichMixin):
                         attempt += 1
                         if attempt >= MAX_ATTEMPTS:
                             raise
-                        _log.warning(
+                        self._log.warning(
                             "download: part %d failed (attempt %d/%d): %s — retrying in %.1fs",
                             part_idx, attempt, MAX_ATTEMPTS, e, delay,
                         )
@@ -3032,7 +3226,7 @@ class Client(_RichMixin):
                             # A redirect invalidates every part still in
                             # flight from the old DC/session, not just this
                             # one -- reopen fresh and resubmit the lot.
-                            _log.info(
+                            self._log.info(
                                 "download: FILE_MIGRATE_%d mid-pipeline, reopening on new DC (part %d)",
                                 new_dc, idx,
                             )
@@ -3046,7 +3240,7 @@ class Client(_RichMixin):
                             continue
                         if not sender.is_alive():
                             raise
-                        _log.warning(
+                        self._log.warning(
                             "download: pipelined part %d failed, retrying directly: %s",
                             idx, e,
                         )
@@ -3243,7 +3437,7 @@ class Client(_RichMixin):
                 photos.append((current.get("id", 0), current.get("access_hash", 0), current.get("dc_id", 0)))
         except Exception as exc:
             # current photo is a nice-to-have; fall through to history regardless
-            _log.debug("get_chat_photos() current-photo lookup failed: %s", exc)
+            self._log.debug("get_chat_photos() current-photo lookup failed: %s", exc)
 
         result = await self._rpc({
             "_": "messages.search",
@@ -3355,7 +3549,7 @@ class Client(_RichMixin):
             result = await self._rpc({"_": "auth.acceptLoginToken", "token": token})
             return result.get("user", {}).get("username")
         except Exception as exc:
-            _log.debug("check_qr_login() poll failed (expected while waiting): %s", exc)
+            self._log.debug("check_qr_login() poll failed (expected while waiting): %s", exc)
             return None
 
 

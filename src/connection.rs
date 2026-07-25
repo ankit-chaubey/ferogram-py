@@ -12,14 +12,19 @@
 
 use base64::Engine as _;
 use ferogram_connect::{Socks5Config, TransportKind};
-use ferogram_mtsender::{AutoSleep, DcConnection as RustConn, RetryLoop};
+use ferogram_msgbox::MessageBoxes;
+use ferogram_mtsender::{
+    AutoSleep, DcConnection as RustConn, FrameEvent, RetryLoop, RpcEnqueue, spawn_sender_task,
+};
 use ferogram_session::{DcEntry, PersistedSession, SessionBackend, default_dc_addresses};
+use ferogram_tl_types::Deserializable;
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, mpsc, oneshot};
 
+use crate::message_box::PyMessageBox;
 use crate::py_err;
 use crate::session::resolve_session;
 
@@ -97,7 +102,21 @@ fn parse_transport(
 
 #[pyclass]
 pub struct DcConnection {
+    /// `Some` only when this connection is in the default "blocking" mode
+    /// (see `connect(stream_updates=...)`): a raw connection that owns the
+    /// socket directly and is read from only while `rpc_call` is awaiting
+    /// its own response. `into_pipelined_sender()`/`auth_key_bytes()` only
+    /// work in this mode.
     inner: Arc<Mutex<Option<RustConn>>>,
+    /// `Some` only in "streaming" mode: RPCs are enqueued to the sender
+    /// task's background loop instead of blocking this object's own socket
+    /// read. This is what lets pushed (server-initiated) update frames get
+    /// read at all, since the sender task's read loop runs continuously
+    /// instead of only while an RPC is outstanding.
+    rpc_tx: std::sync::Mutex<Option<mpsc::Sender<RpcEnqueue>>>,
+    /// `Some` only in streaming mode: pushed frames (updates, reconnect
+    /// signals, errors) land here. Drained via `recv_frame()`.
+    frame_rx: Arc<Mutex<Option<mpsc::Receiver<FrameEvent>>>>,
     session: Arc<dyn SessionBackend>,
     persisted: Arc<Mutex<PersistedSession>>,
     #[pyo3(get)]
@@ -105,6 +124,30 @@ pub struct DcConnection {
     /// Max FLOOD_WAIT this connection will sleep through automatically in
     /// `rpc_call` before giving up and propagating the error. Seconds.
     flood_sleep_threshold: u64,
+    /// Set via `bind_message_box()`. When present, every successful
+    /// `rpc_call` response is auto-fed into it (mirrors the Rust core's
+    /// `Client::feed_own_updates`). `None` means responses are returned
+    /// as-is with no update tracking applied.
+    message_box: std::sync::Mutex<Option<Arc<Mutex<MessageBoxes>>>>,
+}
+
+impl DcConnection {
+    /// Streaming-mode RPC: enqueue pre-serialized TL bytes to the sender
+    /// task and await its oneshot response. One request in flight per call
+    /// (same shape as blocking `rpc_call`) - the sender task itself already
+    /// supports many callers enqueuing concurrently if that's ever needed.
+    async fn enqueue_streaming(
+        rpc_tx: &mpsc::Sender<RpcEnqueue>,
+        body: Vec<u8>,
+    ) -> Result<Vec<u8>, ferogram_mtsender::InvocationError> {
+        let (tx, rx) = oneshot::channel();
+        rpc_tx
+            .send(RpcEnqueue { body, tx })
+            .await
+            .map_err(|_| ferogram_mtsender::InvocationError::Dropped)?;
+        rx.await
+            .map_err(|_| ferogram_mtsender::InvocationError::Dropped)?
+    }
 }
 
 #[pymethods]
@@ -147,8 +190,10 @@ impl DcConnection {
     #[staticmethod]
     #[pyo3(signature = (
         session, api_id, api_hash, dc_id=0, test_mode=false, transport=None,
-        proxy_secret=None, domain=None, proxy=None, pfs=false, dc_addr=None, flood_sleep_threshold=60
+        proxy_secret=None, domain=None, proxy=None, pfs=false, dc_addr=None, flood_sleep_threshold=60,
+        stream_updates=false
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn connect<'py>(
         py: Python<'py>,
         session: PyObject,
@@ -163,6 +208,19 @@ impl DcConnection {
         pfs: bool,
         dc_addr: Option<String>,
         flood_sleep_threshold: u64,
+        // `False` (default): the connection stays in "blocking" mode -
+        // the only mode `into_pipelined_sender()` (used by file-transfer
+        // worker connections) supports.
+        //
+        // `True`: for the main session connection. Hands the socket to
+        // `ferogram_mtsender::spawn_sender_task` right after the handshake
+        // below, so a background loop keeps reading it continuously
+        // instead of only while `rpc_call` has a request in flight. That
+        // continuous read is what surfaces server-pushed update frames -
+        // without it, updates are only discoverable via the periodic
+        // `getDifference` poll, which can lag by up to `NO_UPDATES_TIMEOUT`
+        // (15 min). See `recv_frame()`.
+        stream_updates: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let _ = api_id;
         let _ = api_hash;
@@ -328,23 +386,70 @@ impl DcConnection {
                 .map_err(py_err)?
                 .map_err(py_err)?;
 
-            Ok(DcConnection {
-                inner: Arc::new(Mutex::new(Some(conn))),
-                session: backend,
-                persisted: Arc::new(Mutex::new(updated)),
-                dc_id: dc_id as i32,
-                flood_sleep_threshold,
-            })
+            if stream_updates {
+                // Hand the socket to the sender task's own read loop. From
+                // here on `conn` (the blocking RustConn) no longer exists -
+                // rpc_call goes through `rpc_tx`/oneshot instead, and pushed
+                // frames land in `frame_rx` for `recv_frame()` to drain.
+                let (stream, frame_kind, enc) = conn.into_parts();
+                let (handle, frame_rx) = spawn_sender_task(stream, enc, frame_kind, None);
+                Ok(DcConnection {
+                    inner: Arc::new(Mutex::new(None)),
+                    rpc_tx: std::sync::Mutex::new(Some(handle.rpc_tx)),
+                    frame_rx: Arc::new(Mutex::new(Some(frame_rx))),
+                    session: backend,
+                    persisted: Arc::new(Mutex::new(updated)),
+                    dc_id: dc_id as i32,
+                    flood_sleep_threshold,
+                    message_box: std::sync::Mutex::new(None),
+                })
+            } else {
+                Ok(DcConnection {
+                    inner: Arc::new(Mutex::new(Some(conn))),
+                    rpc_tx: std::sync::Mutex::new(None),
+                    frame_rx: Arc::new(Mutex::new(None)),
+                    session: backend,
+                    persisted: Arc::new(Mutex::new(updated)),
+                    dc_id: dc_id as i32,
+                    flood_sleep_threshold,
+                    message_box: std::sync::Mutex::new(None),
+                })
+            }
         })
+    }
+
+    /// Bind a `MessageBox` so every future `rpc_call` response is
+    /// auto-fed into it - mirrors the Rust core's `feed_own_updates`, using
+    /// the same `classify_own_response()` classifier under the hood.
+    ///
+    /// Call this once after `connect()`. If you reconnect/migrate to a new
+    /// `DcConnection` (e.g. `_migrate()`'s DC-switch), call it again on the
+    /// new connection with the *same* `MessageBox` object to keep tracking
+    /// state across the switch - `MessageBox` owns the state, not
+    /// `DcConnection`, so nothing is lost.
+    fn bind_message_box(&self, mbox: &PyMessageBox) {
+        *self.message_box.lock().expect("message_box mutex poisoned") = Some(mbox.shared());
     }
 
     /// Send pre-serialized TL bytes through the encrypted MTProto channel.
     /// Automatically sleeps through FLOOD_WAIT up to `flood_sleep_threshold`
     /// (set at `connect()` time); longer waits, and anything else, propagate
     /// straight to the caller.
+    ///
+    /// If a `MessageBox` is bound (via `bind_message_box`), the response is
+    /// transparently classified and fed into it before returning - callers
+    /// don't need to do anything extra for the common case (updates carried
+    /// piggyback on a normal RPC response, e.g. `sendMessage` returning the
+    /// new message's `Updates`).
     fn rpc_call<'py>(&self, py: Python<'py>, tl_bytes: Vec<u8>) -> PyResult<Bound<'py, PyAny>> {
         let inner = Arc::clone(&self.inner);
+        let rpc_tx = self.rpc_tx.lock().expect("rpc_tx mutex poisoned").clone();
         let threshold = self.flood_sleep_threshold;
+        let mbox = self
+            .message_box
+            .lock()
+            .expect("message_box mutex poisoned")
+            .clone();
         future_into_py(py, async move {
             let policy = Arc::new(AutoSleep {
                 threshold: Duration::from_secs(threshold),
@@ -352,14 +457,93 @@ impl DcConnection {
             });
             let mut retries = RetryLoop::new(policy);
             loop {
-                let mut guard = inner.lock().await;
-                let conn = guard
-                    .as_mut()
-                    .ok_or_else(|| py_err("connection was consumed by into_pipelined_sender()"))?;
-                match conn.rpc_call(&crate::raw::RawCall(tl_bytes.clone())).await {
-                    Ok(result) => return Ok(result),
+                let result = if let Some(rpc_tx) = &rpc_tx {
+                    Self::enqueue_streaming(rpc_tx, tl_bytes.clone()).await
+                } else {
+                    let mut guard = inner.lock().await;
+                    let conn = guard.as_mut().ok_or_else(|| {
+                        py_err("connection was consumed by into_pipelined_sender()")
+                    })?;
+                    let r = conn.rpc_call(&crate::raw::RawCall(tl_bytes.clone())).await;
+                    drop(guard);
+                    r
+                };
+                match result {
+                    Ok(result) => {
+                        if let Some(mbox) = &mbox {
+                            if let Some(parsed) = ferogram_msgbox::classify_own_response(&result) {
+                                let _ = mbox.lock().await.process_updates(parsed);
+                            }
+                        }
+                        return Ok(result);
+                    }
                     Err(e) => {
-                        drop(guard);
+                        retries.advance(e).await.map_err(py_err)?;
+                    }
+                }
+            }
+        })
+    }
+
+    /// Like `rpc_call`, but for `channels.deleteMessages` specifically.
+    ///
+    /// `channels.deleteMessages` returns a channel-scoped `AffectedMessages`,
+    /// but the generic auto-feed above can't tell that apart from a global
+    /// one - only the call site knows `channel_id`. Use this instead of
+    /// `rpc_call` for that one request so the response gets fed as
+    /// `AffectedChannelMessages` correctly. Behaves exactly like `rpc_call`
+    /// (same retry/FLOOD_WAIT/migrate handling) if no `MessageBox` is bound.
+    fn delete_channel_messages<'py>(
+        &self,
+        py: Python<'py>,
+        tl_bytes: Vec<u8>,
+        channel_id: i64,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let inner = Arc::clone(&self.inner);
+        let rpc_tx = self.rpc_tx.lock().expect("rpc_tx mutex poisoned").clone();
+        let threshold = self.flood_sleep_threshold;
+        let mbox = self
+            .message_box
+            .lock()
+            .expect("message_box mutex poisoned")
+            .clone();
+        future_into_py(py, async move {
+            let policy = Arc::new(AutoSleep {
+                threshold: Duration::from_secs(threshold),
+                io_errors_as_flood_of: Some(Duration::from_secs(1)),
+            });
+            let mut retries = RetryLoop::new(policy);
+            loop {
+                let result = if let Some(rpc_tx) = &rpc_tx {
+                    Self::enqueue_streaming(rpc_tx, tl_bytes.clone()).await
+                } else {
+                    let mut guard = inner.lock().await;
+                    let conn = guard.as_mut().ok_or_else(|| {
+                        py_err("connection was consumed by into_pipelined_sender()")
+                    })?;
+                    let r = conn.rpc_call(&crate::raw::RawCall(tl_bytes.clone())).await;
+                    drop(guard);
+                    r
+                };
+                match result {
+                    Ok(result) => {
+                        if let Some(mbox) = &mbox {
+                            if let Ok(affected) =
+                                ferogram_tl_types::types::messages::AffectedMessages::from_bytes_exact(
+                                    &result,
+                                )
+                            {
+                                let _ = mbox.lock().await.process_updates(
+                                    ferogram_msgbox::UpdatesLike::AffectedChannelMessages {
+                                        affected,
+                                        channel_id,
+                                    },
+                                );
+                            }
+                        }
+                        return Ok(result);
+                    }
+                    Err(e) => {
                         retries.advance(e).await.map_err(py_err)?;
                     }
                 }
@@ -548,6 +732,42 @@ impl DcConnection {
                 .map_err(py_err)?
                 .map_err(py_err)?;
             Ok(())
+        })
+    }
+
+    /// Streaming mode only (`connect(stream_updates=True)`): await the next
+    /// event from the sender task's background read loop.
+    ///
+    /// Returns `(kind, payload)`:
+    /// - `("update", body)` - a raw pushed update frame. Feed it to
+    ///   `MessageBox.process_raw(body)` the same way `apply_difference`
+    ///   results are handled, then dispatch whatever comes back.
+    /// - `("connected", b"")` - the sender task (re)established the
+    ///   session. Call `MessageBox.mark_gap()` so a catch-up
+    ///   `getDifference` runs and nothing sent while unobserved is missed.
+    /// - `("error", message)` - the connection failed. This binding does
+    ///   not auto-reconnect a streaming connection; the caller should stop
+    ///   pumping and surface/log `message`.
+    ///
+    /// Returns `None` once the sender task has shut down for good (all
+    /// handles dropped) - stop calling this after that.
+    fn recv_frame<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let frame_rx = Arc::clone(&self.frame_rx);
+        future_into_py(py, async move {
+            let mut guard = frame_rx.lock().await;
+            let rx = guard
+                .as_mut()
+                .ok_or_else(|| py_err("recv_frame() requires connect(stream_updates=True)"))?;
+            match rx.recv().await {
+                None => Ok(None),
+                Some(FrameEvent::Update(body)) => Ok(Some(("update".to_string(), body))),
+                Some(FrameEvent::Connected { .. }) => {
+                    Ok(Some(("connected".to_string(), Vec::new())))
+                }
+                Some(FrameEvent::Error(e)) => {
+                    Ok(Some(("error".to_string(), e.to_string().into_bytes())))
+                }
+            }
         })
     }
 
