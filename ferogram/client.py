@@ -3659,8 +3659,14 @@ class Client(_RichMixin):
     async def get_bot_info(self, lang_code: str = "") -> dict:
         return await self._rpc({"_": "bots.getBotInfo", "lang_code": lang_code})
 
-    async def answer_callback_query(self, query_id: int, text: str | None = None, alert: bool = False) -> None:
-        req: dict = {"_": "messages.setBotCallbackAnswer", "query_id": query_id, "alert": alert}
+    async def answer_callback_query(self, query_id: int, text: str | None = None,
+                                    alert: bool = False, cache_time: int = 0) -> None:
+        req: dict = {
+            "_": "messages.setBotCallbackAnswer",
+            "query_id": query_id,
+            "alert": alert,
+            "cache_time": cache_time,
+        }
         if text:
             req["message"] = text
         await self._rpc(req)

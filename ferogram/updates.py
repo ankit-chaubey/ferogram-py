@@ -112,8 +112,10 @@ class CallbackQuery:
     def chat_id(self) -> int:
         return _peer_to_id(self.peer) or self.sender_id
 
-    async def answer(self, text: str | None = None, *, alert: bool = False) -> None:
-        await self._require_client().answer_callback_query(self.query_id, text=text, alert=alert)
+    async def answer(self, text: str | None = None, *, alert: bool = False, cache_time: int = 0) -> None:
+        await self._require_client().answer_callback_query(
+            self.query_id, text=text, alert=alert, cache_time=cache_time,
+        )
 
     async def respond(self, text: str, *, parse_mode: str | None = None,
                       reply_markup: Any = None) -> Message:
