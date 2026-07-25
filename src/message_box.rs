@@ -118,6 +118,49 @@ impl PyMessageBox {
         })
     }
 
+    /// Atomic `is_empty() -> set_state()`, in a single lock acquisition.
+    ///
+    /// The caller has to `await` an `updates.getState` RPC (tens to
+    /// hundreds of ms) between deciding to seed and having a state to seed
+    /// with. If this box is bound to a live connection (`bind_message_box`),
+    /// a real pushed update can land and populate it during that RPC. Doing
+    /// the plain `is_empty()` check before the RPC and `set_state()` after
+    /// leaves a window where that race turns into `set_state`'s
+    /// `debug_assert!(self.is_empty())` panicking on a box something else
+    /// just populated.
+    ///
+    /// This re-checks emptiness at the moment of the write, atomically, and
+    /// simply skips the write if something else got there first - exactly
+    /// what the Rust core's `sync_pts_state()` does by holding its
+    /// `tokio::Mutex` guard across both the check and the write. Returns
+    /// `true` if it actually seeded the state, `false` if it was skipped
+    /// because the box was no longer empty.
+    fn seed_state<'py>(
+        &self,
+        py: Python<'py>,
+        pts: i32,
+        qts: i32,
+        date: i32,
+        seq: i32,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let inner = Arc::clone(&self.inner);
+        future_into_py(py, async move {
+            let mut mb = inner.lock().await;
+            if mb.is_empty() {
+                mb.set_state(tl::types::updates::State {
+                    pts,
+                    qts,
+                    date,
+                    seq,
+                    unread_count: 0,
+                });
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        })
+    }
+
     /// Record a channel's pts from `GetDialogs` - a no-op if already tracked.
     fn try_set_channel_state<'py>(
         &self,

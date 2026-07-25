@@ -176,28 +176,57 @@ class PeerCache:
         self._channels:   dict[int, int] = {}    # channel_id   → access_hash
         self._communities: dict[int, int] = {}   # community_id → access_hash
         self._chats:      set[int]       = set() # basic group ids (no hash)
+        # Channels seen with min=true: real channels, no usable access_hash
+        # yet. Never put these in _chats - that would make them resolve as
+        # a basic InputPeerChat, which is a fatal RPC failure. Mirrors
+        # ferogram-rust's `channels_min`.
+        self.channels_min: set[int] = set()
+        # user_id -> (peer_id, msg_id) for min users seen in a message
+        # context, addressable only via InputPeerUserFromMessage. Python
+        # doesn't populate this itself yet (that needs per-message context
+        # threading through _populate_cache, which nothing calls with today),
+        # but it round-trips whatever a Rust-core session already saved here
+        # instead of silently dropping it on the next save.
+        self.min_contexts: dict[int, tuple[int, int]] = {}
+        # Set whenever a store_* call actually changes something, so the
+        # client knows a disk flush is worth doing instead of writing an
+        # unchanged snapshot every autosave tick.
+        self.dirty = False
 
     def store_user(self, user_id: int, access_hash: int) -> None:
         self._store_hash(self._users, user_id, access_hash)
 
     def store_channel(self, channel_id: int, access_hash: int) -> None:
         self._store_hash(self._channels, channel_id, access_hash)
+        self.channels_min.discard(channel_id)
 
     def store_community(self, community_id: int, access_hash: int) -> None:
         self._store_hash(self._communities, community_id, access_hash)
 
-    @staticmethod
-    def _store_hash(bucket: dict[int, int], key: int, access_hash: int) -> None:
+    def store_channel_min(self, channel_id: int) -> None:
+        """Track a channel seen with min=true. No access_hash yet - just
+        existence, so `_resolve_int_peer` doesn't have to guess whether an
+        uncached id is a channel worth fetching or something else."""
+        if channel_id not in self._channels and channel_id not in self.channels_min:
+            self.channels_min.add(channel_id)
+            self.dirty = True
+
+    def _store_hash(self, bucket: dict[int, int], key: int, access_hash: int) -> None:
         # Never overwrite a valid non-zero hash with zero - a zero hash from
         # a later, less-detailed response shouldn't clobber one we already
         # resolved. Same rule as ferogram-rust's cache_user/cache_chat.
         if access_hash != 0:
-            bucket[key] = access_hash
-        else:
-            bucket.setdefault(key, 0)
+            if bucket.get(key) != access_hash:
+                bucket[key] = access_hash
+                self.dirty = True
+        elif key not in bucket:
+            bucket[key] = 0
+            self.dirty = True
 
     def store_chat(self, chat_id: int) -> None:
-        self._chats.add(chat_id)
+        if chat_id not in self._chats:
+            self._chats.add(chat_id)
+            self.dirty = True
 
     def store_chat_entity(self, chat: dict) -> None:
         """Route a raw `Chat` dict into the right bucket by its `_` type.
@@ -205,14 +234,19 @@ class PeerCache:
         Covers `channel`/`channelForbidden`, `community`/`communityForbidden`
         (both keyed by id + access_hash, addressed like a channel on the
         wire), and basic `chat`/`chatForbidden` (existence only, no hash).
-        `min` entities are skipped - same as the rest of the cache, there is
-        no separate min-tracking bucket here.
+        A min channel is tracked in `channels_min` (existence only, mirrors
+        ferogram-rust); a min community or anything else with `min` is
+        skipped, same as before.
         """
-        if not isinstance(chat, dict) or chat.get("min"):
+        if not isinstance(chat, dict):
             return
         t = chat.get("_", "")
         cid = chat.get("id")
         if cid is None:
+            return
+        if chat.get("min"):
+            if t in _CHANNEL_TYPES:
+                self.store_channel_min(cid)
             return
         if t in _COMMUNITY_TYPES:
             ah = chat.get("access_hash")
@@ -226,6 +260,45 @@ class PeerCache:
             self.store_chat(cid)
         # anything else (e.g. chatEmpty) is a no-op - mirrors the catch-all
         # arm in ferogram-rust's PeerCache::cache_chat
+
+    def to_persisted(self) -> tuple[list[tuple], list[tuple]]:
+        """Flatten this cache into the tuple shapes `DcConnection.
+        sync_persisted_peers()` expects: `(peers, min_peers)`. `channel_kind`
+        is always `None` here - Python doesn't track it yet, so a channel
+        saved by ferogram-py round-trips without one even if the Rust core
+        had recorded it previously."""
+        peers: list[tuple] = []
+        for uid, ah in self._users.items():
+            peers.append((uid, ah, False, False, None, False))
+        for cid, ah in self._channels.items():
+            peers.append((cid, ah, True, False, None, False))
+        for cid in self.channels_min:
+            peers.append((cid, 0, True, False, None, False))
+        for cid in self._chats:
+            peers.append((cid, 0, False, True, None, False))
+        for cid, ah in self._communities.items():
+            peers.append((cid, ah, False, False, None, True))
+        min_peers = [(uid, peer_id, msg_id) for uid, (peer_id, msg_id) in self.min_contexts.items()]
+        return peers, min_peers
+
+    def load_persisted(self, peers: list[tuple], min_peers: list[tuple]) -> None:
+        """Seed this cache from `DcConnection.get_persisted_peers()` output,
+        called once right after connect() so peers resolved in a previous
+        run don't need re-resolving. Does not touch `dirty`."""
+        for id_, access_hash, is_channel, is_chat, _kind, is_community in peers:
+            if is_chat:
+                self._chats.add(id_)
+            elif is_community:
+                self._communities[id_] = access_hash
+            elif is_channel:
+                if access_hash:
+                    self._channels[id_] = access_hash
+                else:
+                    self.channels_min.add(id_)
+            else:
+                self._users[id_] = access_hash
+        for uid, peer_id, msg_id in min_peers:
+            self.min_contexts[uid] = (peer_id, msg_id)
 
     def get_user(self, user_id: int) -> int | None:
         return self._users.get(user_id)

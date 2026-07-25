@@ -631,6 +631,12 @@ class Client(_RichMixin):
         self._transfer_semaphore      = asyncio.Semaphore(self._transfer_limits.max_tcp_connections)
         self._conn: DcConnection | None = None
         self._frame_pump_task: asyncio.Task | None = None
+        # Periodic flush of the peer access-hash cache to the session file.
+        # Mirrors the Rust core's dirty-flag + 60s interval snapshot saver:
+        # the cache changes far more often than it's worth hitting disk for,
+        # so writes are batched instead of happening on every new peer.
+        self._peer_cache_save_task: asyncio.Task | None = None
+        self._peer_cache_save_interval = 60
         self._dc_id: int = 0
         # DCs we've already bound a worker connection's auth key to via
         # auth.importAuthorization this process run (export tokens are
@@ -950,22 +956,30 @@ class Client(_RichMixin):
             for _ in range(self._workers)
         ]
         try:
-            # Seed pts/qts/date/seq. MessageBox.set_state is only valid
-            # while empty, so this only ever runs once per MessageBox
-            # lifetime (i.e. not again after a DC migration - the box
-            # already has state by then).
+            # Seed pts/qts/date/seq. seed_state() re-checks emptiness and
+            # writes atomically in one lock acquisition on the Rust side, so
+            # a real update landing during the getState RPC below (this box
+            # is bound to the live connection) can't race the write and
+            # trip MessageBox's is-empty invariant - it just means seeding
+            # is skipped because the live update already got there first.
             if await self._message_box.is_empty():
                 try:
                     state = await self._rpc({"_": "updates.getState"})
-                    await self._message_box.set_state(
+                    seeded = await self._message_box.seed_state(
                         state.get("pts", 0), state.get("qts", 0),
                         state.get("date", 0), state.get("seq", 0),
                     )
-                    self._log.debug(
-                        "seeded state: pts=%s qts=%s date=%s seq=%s",
-                        state.get("pts", 0), state.get("qts", 0),
-                        state.get("date", 0), state.get("seq", 0),
-                    )
+                    if seeded:
+                        self._log.debug(
+                            "seeded state: pts=%s qts=%s date=%s seq=%s",
+                            state.get("pts", 0), state.get("qts", 0),
+                            state.get("date", 0), state.get("seq", 0),
+                        )
+                    else:
+                        self._log.debug(
+                            "getState returned but message_box was already "
+                            "seeded by a live update in the meantime; skipped"
+                        )
                 except Exception as e:
                     self._log.warning("getState failed: %s", e)
 
@@ -1372,6 +1386,98 @@ class Client(_RichMixin):
         for ch in obj.get("chats") or []:
             self._peer_cache.store_chat_entity(ch)
 
+    async def _load_persisted_update_state(self) -> None:
+        """If `catch_up=True`, restore `MessageBox` from whatever
+        pts/qts/date/seq state was persisted last run, so `getDifference`
+        resumes from the pre-shutdown position instead of jumping straight
+        to the current server state and silently skipping whatever came in
+        while disconnected. No-op when `catch_up` is off, or when nothing
+        has been saved yet (first run, fresh session) - the existing
+        `MessageBox()` in `__init__` is left as-is and gets seeded from a
+        fresh `updates.getState` at the start of `_run_updates()`, same as
+        before."""
+        if not self.catch_up:
+            return
+        conn = self._require_conn()
+        pts, qts, date, seq, channels = await conn.get_persisted_update_state()
+        if pts <= 0:
+            self._log.debug(
+                "catch_up requested but no saved update state; starting fresh"
+            )
+            return
+        self._message_box = MessageBox.load(pts, qts, date, seq, channels)
+        self._log.debug(
+            "update state restored: pts=%d, qts=%d, seq=%d, %d channels tracked",
+            pts, qts, seq, len(channels),
+        )
+
+    async def _flush_update_state(self) -> None:
+        """Push the current pts/qts/date/seq snapshot into the Rust
+        binding's in-memory session record and persist it, so a future
+        `catch_up=True` run has something real to load. Cheap enough to
+        call unconditionally on every autosave tick and on shutdown -
+        unlike the peer cache there's no dirty flag, since pts advances on
+        essentially every update."""
+        conn = self._conn
+        if conn is None:
+            return
+        pts, qts, date, seq, channels = await self._message_box.session_state()
+        if pts <= 0:
+            return
+        await conn.sync_persisted_update_state(pts, qts, date, seq, channels)
+        await conn.save_session()
+
+    async def _load_persisted_peer_cache(self) -> None:
+        """Seed `self._peer_cache` from whatever the session file already
+        has, right after connect() and before the first RPC. Without this,
+        every peer has to be re-resolved from scratch each run even though
+        the Rust binding already persisted them - see
+        `DcConnection.get_persisted_peers()`."""
+        conn = self._require_conn()
+        peers, min_peers = await conn.get_persisted_peers()
+        self._peer_cache.load_persisted(peers, min_peers)
+        cache = self._peer_cache
+        self._log.debug(
+            "peer cache restored: %d users, %d channels, %d communities, "
+            "%d chats, %d channels_min, %d min-peer contexts",
+            len(cache._users),
+            len(cache._channels),
+            len(cache._communities),
+            len(cache._chats),
+            len(cache.channels_min),
+            len(cache.min_contexts),
+        )
+
+    async def _flush_peer_cache(self) -> None:
+        """Push the current peer cache into the Rust binding's in-memory
+        snapshot and persist it. Safe to call even when nothing changed -
+        callers should check `self._peer_cache.dirty` first to avoid
+        needless disk writes on the autosave interval."""
+        conn = self._conn
+        if conn is None:
+            return
+        peers, min_peers = self._peer_cache.to_persisted()
+        await conn.sync_persisted_peers(peers, min_peers)
+        await conn.save_session()
+        self._peer_cache.dirty = False
+
+    async def _peer_cache_autosave_loop(self) -> None:
+        try:
+            while True:
+                await asyncio.sleep(self._peer_cache_save_interval)
+                if self._peer_cache.dirty:
+                    try:
+                        await self._flush_peer_cache()
+                    except Exception as exc:
+                        self._log.warning("peer cache autosave failed: %s", exc)
+                try:
+                    await self._flush_update_state()
+                except Exception as exc:
+                    self._log.warning("update state autosave failed: %s", exc)
+        except asyncio.CancelledError:
+            pass
+
+
 
     async def start(
         self,
@@ -1422,7 +1528,10 @@ class Client(_RichMixin):
         self._dc_id = self._conn.dc_id
         self._log.extra["client"] = f"{_session_tag(self.session, self.session_string)} dc{self._dc_id}"
         self._log.info("connected to DC%d in %dms", self._dc_id, connect_ms)
+        await self._load_persisted_update_state()
         self._conn.bind_message_box(self._message_box)
+        await self._load_persisted_peer_cache()
+        self._peer_cache_save_task = asyncio.create_task(self._peer_cache_autosave_loop())
         if self._future_auth_token is not None:
             # Don't clobber a real token the session already persisted
             # from a previous sign_out() with a stale constructor value.
@@ -1485,10 +1594,26 @@ class Client(_RichMixin):
         print("\nPlease ensure your usage complies with Telegram's API Terms of Service.")
 
     async def stop(self) -> None:
+        """Disconnect and persist final state. Does NOT log the account out
+        of Telegram - the auth key and session stay valid for next start().
+        Call `sign_out()` yourself first if you actually want to deauthorize."""
         if self._conn:
-            await self.sign_out()
+            if self._peer_cache_save_task is not None:
+                self._peer_cache_save_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await self._peer_cache_save_task
+                self._peer_cache_save_task = None
+            with suppress(Exception):
+                # Final unconditional flush so nothing learned since the
+                # last autosave tick is lost - mirrors the Rust core's
+                # save-on-shutdown in its own snapshot saver task.
+                await self._flush_peer_cache()
+            with suppress(Exception):
+                await self._flush_update_state()
+            with suppress(Exception):
+                await self._conn.save_session()
             self._conn = None
-            self._log.info("signed out")
+            self._log.info("disconnected")
 
     async def run_until_disconnected(self) -> None:
         await self.start()
@@ -1502,6 +1627,15 @@ class Client(_RichMixin):
                 self._frame_pump_task.cancel()
                 with suppress(asyncio.CancelledError):
                     await self._frame_pump_task
+            if self._peer_cache_save_task is not None:
+                self._peer_cache_save_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await self._peer_cache_save_task
+                self._peer_cache_save_task = None
+            with suppress(Exception):
+                await self._flush_peer_cache()
+            with suppress(Exception):
+                await self._flush_update_state()
 
     def run(self) -> None:
         try:
@@ -1513,8 +1647,7 @@ class Client(_RichMixin):
         return await self.start()
 
     async def __aexit__(self, *_: Any) -> None:
-        if self._conn:
-            self._conn = None
+        await self.stop()
 
 
     async def is_authorized(self) -> bool:

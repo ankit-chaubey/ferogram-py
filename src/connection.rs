@@ -16,7 +16,10 @@ use ferogram_msgbox::MessageBoxes;
 use ferogram_mtsender::{
     AutoSleep, DcConnection as RustConn, FrameEvent, RetryLoop, RpcEnqueue, spawn_sender_task,
 };
-use ferogram_session::{DcEntry, PersistedSession, SessionBackend, default_dc_addresses};
+use ferogram_session::{
+    CachedMinPeer, CachedPeer, ChannelKind, DcEntry, PersistedSession, SessionBackend,
+    UpdatesStateSnap, default_dc_addresses,
+};
 use ferogram_tl_types::Deserializable;
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -731,6 +734,139 @@ impl DcConnection {
                 .await
                 .map_err(py_err)?
                 .map_err(py_err)?;
+            Ok(())
+        })
+    }
+
+    /// Persisted update-sequence state (pts/qts/date/seq/channels), if any.
+    ///
+    /// Same tuple shape as `MessageBox.session_state()` / `MessageBox.load()`,
+    /// so callers round-trip directly:
+    ///
+    ///     pts, qts, date, seq, channels = await conn.get_persisted_update_state()
+    ///     msg_box = MessageBox.load(pts, qts, date, seq, channels) if pts > 0 else MessageBox()
+    ///
+    /// `pts == 0` means no update state has ever been saved for this session.
+    #[allow(clippy::type_complexity)]
+    fn get_persisted_update_state<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let persisted = Arc::clone(&self.persisted);
+        future_into_py(py, async move {
+            let p = persisted.lock().await;
+            let us = &p.updates_state;
+            let channels: Vec<(i64, i32)> = us.channels.clone();
+            Ok((us.pts, us.qts, us.date, us.seq, channels))
+        })
+    }
+
+    /// Store an update-sequence snapshot (from `MessageBox.session_state()`)
+    /// into the in-memory session record. Updates memory only - pair with
+    /// `save_session()` to persist to disk, same pattern as
+    /// `sync_persisted_peers()`.
+    fn sync_persisted_update_state<'py>(
+        &self,
+        py: Python<'py>,
+        pts: i32,
+        qts: i32,
+        date: i32,
+        seq: i32,
+        channels: Vec<(i64, i32)>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let persisted = Arc::clone(&self.persisted);
+        future_into_py(py, async move {
+            let mut p = persisted.lock().await;
+            p.updates_state = UpdatesStateSnap {
+                pts,
+                qts,
+                date,
+                seq,
+                channels,
+            };
+            Ok(())
+        })
+    }
+
+    /// Peer access-hash cache loaded from the session file, if any.
+    ///
+    /// Returns `(peers, min_peers)`:
+    /// - `peers`: `(id, access_hash, is_channel, is_chat, channel_kind, is_community)`
+    ///   tuples. `channel_kind` is `0`=broadcast, `1`=megagroup, `2`=gigagroup,
+    ///   or `None` for users, chats, communities, and channels saved before
+    ///   kind tracking existed.
+    /// - `min_peers`: `(user_id, peer_id, msg_id)` tuples - users seen with
+    ///   `min=true`, addressable only via `InputPeerUserFromMessage` using
+    ///   the peer and message where they appeared.
+    ///
+    /// Call this once after `connect()` to seed the Python-side peer cache
+    /// so previously-resolved peers survive a restart instead of needing
+    /// re-resolution on first use.
+    #[allow(clippy::type_complexity)]
+    fn get_persisted_peers<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let persisted = Arc::clone(&self.persisted);
+        future_into_py(py, async move {
+            let p = persisted.lock().await;
+            let peers: Vec<(i64, i64, bool, bool, Option<u8>, bool)> = p
+                .peers
+                .iter()
+                .map(|c| {
+                    (
+                        c.id,
+                        c.access_hash,
+                        c.is_channel,
+                        c.is_chat,
+                        c.channel_kind.map(ChannelKind::to_byte),
+                        c.is_community,
+                    )
+                })
+                .collect();
+            let min_peers: Vec<(i64, i64, i32)> = p
+                .min_peers
+                .iter()
+                .map(|m| (m.user_id, m.peer_id, m.msg_id))
+                .collect();
+            Ok((peers, min_peers))
+        })
+    }
+
+    /// Replace the in-memory peer cache snapshot from Python's `PeerCache`.
+    ///
+    /// Same tuple shapes as [`Self::get_persisted_peers`]. Updates memory
+    /// only - does not touch disk. Pair with periodic or shutdown-time
+    /// `save_session()` calls, mirroring the Rust core's dirty-flag +
+    /// interval flush (see `Client`'s full-session snapshot saver): the
+    /// peer cache changes far more often than it's worth writing to disk,
+    /// so batching the writes avoids hammering the session backend on
+    /// every single new peer.
+    #[allow(clippy::type_complexity)]
+    fn sync_persisted_peers<'py>(
+        &self,
+        py: Python<'py>,
+        peers: Vec<(i64, i64, bool, bool, Option<u8>, bool)>,
+        min_peers: Vec<(i64, i64, i32)>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let persisted = Arc::clone(&self.persisted);
+        future_into_py(py, async move {
+            let mut p = persisted.lock().await;
+            p.peers = peers
+                .into_iter()
+                .map(
+                    |(id, access_hash, is_channel, is_chat, kind_byte, is_community)| CachedPeer {
+                        id,
+                        access_hash,
+                        is_channel,
+                        is_chat,
+                        channel_kind: kind_byte.and_then(ChannelKind::from_byte),
+                        is_community,
+                    },
+                )
+                .collect();
+            p.min_peers = min_peers
+                .into_iter()
+                .map(|(user_id, peer_id, msg_id)| CachedMinPeer {
+                    user_id,
+                    peer_id,
+                    msg_id,
+                })
+                .collect();
             Ok(())
         })
     }
