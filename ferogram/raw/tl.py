@@ -14,6 +14,7 @@
 
 
 from __future__ import annotations
+import re
 import struct
 from typing import Any
 
@@ -106,7 +107,7 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
             pass
 
     cid, fields = schema[name]
-    out = _pack_uint32(cid)
+    chunks: list[bytes] = [_pack_uint32(cid)]
 
     # Gather all flag groups present in this constructor and compute their words.
     # Iteration order: we need the flag words written in the order their first
@@ -135,16 +136,16 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
             group, bit = flag
             # Emit this group's flag word on its first appearance in field order.
             if group not in emitted:
-                out += _pack_uint32(flag_words.get(group, 0))
+                chunks.append(_pack_uint32(flag_words.get(group, 0)))
                 emitted.add(group)
             if not (flag_words.get(group, 0) & (1 << bit)):
                 continue
         val = obj.get(fname)
         if val is None:
             continue
-        out += _serialize_field(val, ftype, schema)
+        chunks.append(_serialize_field(val, ftype, schema))
 
-    return out
+    return b"".join(chunks)
 
 
 # constructor name -> generated class; populated lazily on first serialize call.
@@ -187,17 +188,20 @@ def _ensure_serialize_dispatch() -> dict[str, type]:
     return _NAME_TO_CLASS
 
 
+_LONG_TYPES   = {"long", "int64"}
+_INT128_TYPES = {"int128"}
+_INT256_TYPES = {"int256"}
+_TRUE_TYPES   = {"true", "True"}
+
+
 def _serialize_field(val: Any, ftype: str, schema: dict) -> bytes:
-    LONG_TYPES   = {"long", "int64"}
-    INT128_TYPES = {"int128"}
-    INT256_TYPES = {"int256"}
-    if ftype in LONG_TYPES:
+    if ftype in _LONG_TYPES:
         return _pack_int64(val)
-    if ftype in INT128_TYPES:
+    if ftype in _INT128_TYPES:
         return val.to_bytes(16, "little", signed=False)
-    if ftype in INT256_TYPES:
+    if ftype in _INT256_TYPES:
         return val.to_bytes(32, "little", signed=False)
-    if ftype in ("true", "True"):
+    if ftype in _TRUE_TYPES:
         return b""
     return serialize(val, schema)
 
@@ -390,9 +394,21 @@ def _html_unescape(s: str) -> str:
 
 def _attr(tag_raw: str, name: str) -> str:
     """Extract an attribute value from a raw tag string."""
-    import re
     m = re.search(rf'{re.escape(name)}=["\']([^"\']*)["\']', tag_raw)
     return m.group(1) if m else ""
+
+
+_HTML_TAG_MAP: dict[str, str] = {
+    "b": "messageEntityBold", "strong": "messageEntityBold",
+    "i": "messageEntityItalic", "em": "messageEntityItalic",
+    "u": "messageEntityUnderline", "ins": "messageEntityUnderline",
+    "s": "messageEntityStrike", "strike": "messageEntityStrike", "del": "messageEntityStrike",
+    "code": "messageEntityCode",
+    "pre": "messageEntityPre",
+    "mark": "messageEntitySpoiler",
+    "tg-spoiler": "messageEntitySpoiler",
+    "blockquote": "messageEntityBlockquote",
+}
 
 
 def parse_html(text: str) -> tuple[str, list]:
@@ -413,35 +429,42 @@ def parse_html(text: str) -> tuple[str, list]:
       <a href="...">                     text URL / mailto / tel / tg://user
       <tg-time unix="..." format="...">  formatted date
     """
-    import re
-    TAG_MAP: dict[str, str] = {
-        "b": "messageEntityBold", "strong": "messageEntityBold",
-        "i": "messageEntityItalic", "em": "messageEntityItalic",
-        "u": "messageEntityUnderline", "ins": "messageEntityUnderline",
-        "s": "messageEntityStrike", "strike": "messageEntityStrike", "del": "messageEntityStrike",
-        "code": "messageEntityCode",
-        "pre": "messageEntityPre",
-        "mark": "messageEntitySpoiler",
-        "tg-spoiler": "messageEntitySpoiler",
-        "blockquote": "messageEntityBlockquote",
-    }
+    TAG_MAP = _HTML_TAG_MAP
     entities: list = []
     plain_parts: list[str] = []
     stack: list[tuple[str, int, dict]] = []
 
+    # Running offset kept in sync with plain_parts instead of recomputed via
+    # sum(len(p) for p in plain_parts) on every tag boundary - that sum() was
+    # O(n) against a list that (with the old char-by-char text loop) could
+    # also grow one entry per character, giving quadratic blowup on long
+    # formatted text. All appends to plain_parts must go through _emit()
+    # so offset stays correct.
+    offset = 0
+
     def cur_offset() -> int:
-        return sum(len(p) for p in plain_parts)
+        return offset
+
+    def _emit(s: str) -> None:
+        nonlocal offset
+        if s:
+            plain_parts.append(s)
+            offset += len(s)
 
     i = 0
     src = text
     while i < len(src):
         if src[i] != "<":
-            plain_parts.append(src[i])
-            i += 1
+            # Batch the whole run of plain text up to the next "<" (or end
+            # of string) into a single append, instead of one char at a time.
+            next_lt = src.find("<", i)
+            run_end = next_lt if next_lt != -1 else len(src)
+            _emit(src[i:run_end])
+            i = run_end
             continue
         end = src.find(">", i)
         if end == -1:
-            plain_parts.append(src[i])
+            _emit(src[i])
             i += 1
             continue
         tag_full = src[i + 1:end]
@@ -468,7 +491,7 @@ def parse_html(text: str) -> tuple[str, list]:
                     off = cur_offset()
                     alt = _attr(attrs_raw, "alt")
                     char = alt or "\U0001f44d"
-                    plain_parts.append(char)
+                    _emit(char)
                     entities.append({
                         "_": "messageEntityCustomEmoji",
                         "offset": off,
@@ -499,8 +522,8 @@ def parse_html(text: str) -> tuple[str, list]:
             elif href.startswith("tel:"):
                 etype = "messageEntityPhone"
                 extra_d = {"_tag": "a", "url": href}
-            elif re.match(r'tg://user\?id=(\d+)', href):
-                uid = int(re.match(r'tg://user\?id=(\d+)', href).group(1))
+            elif (m_uid := re.match(r'tg://user\?id=(\d+)', href)):
+                uid = int(m_uid.group(1))
                 etype = "messageEntityMentionName"
                 extra_d = {"_tag": "a", "user_id": uid}
             elif href.startswith("#"):
@@ -558,6 +581,27 @@ def parse_html(text: str) -> tuple[str, list]:
     return plain, entities
 
 
+_MARKDOWN_INLINE = re.compile(
+    r'(?s)'
+    r'(\x00PRE\x00([^\x00]*)\x00(.*?)(?=\n\x00|\Z))'
+    r'|(\x00MATH\x00([^\n]*))'
+    r'|(\x00QUOTE\x00([^\n]*))'
+    r'|(\|\|(.+?)\|\|)'
+    r'|(==(.+?)==)'
+    r'|(\$\$(.+?)\$\$)'
+    r'|(\$([^$\s][^$\n]*?)\$)'
+    r'|(\*\*(.+?)\*\*)'
+    r'|(__(.+?)__)'
+    r'|(\*([^*\n]+?)\*)'
+    r'|(_([^_\n]+?)_)'
+    r'|(~~(.+?)~~)'
+    r'|(```([a-zA-Z0-9]*)\n(.*?)```)'
+    r'|(`([^`\n]+?)`)'
+    r'|(\[(\^[^\]]+)\](?!\())'
+    r'|(!?\[([^\]]*)\]\(([^)]+)\))'
+)
+
+
 def parse_markdown(text: str) -> tuple[str, list]:
     """Parse Telegram-style rich Markdown into (plain_text, MessageEntity list).
 
@@ -575,16 +619,27 @@ def parse_markdown(text: str) -> tuple[str, list]:
       # Heading lines (kept as plain text)
       [^id] footnote refs (stripped)
     """
-    import re
     entities: list = []
     plain_parts: list[str] = []
 
+    # Same O(1)-offset pattern as parse_html: a running counter kept in sync
+    # via _emit(), instead of an O(n) sum(len(p) for p in plain_parts) on
+    # every match. Less severe here since text is already batched by regex
+    # spans rather than char-by-char, but still avoidable O(n) work per match.
+    offset = 0
+
     def cur_offset() -> int:
-        return sum(len(p) for p in plain_parts)
+        return offset
+
+    def _emit(s: str) -> None:
+        nonlocal offset
+        if s:
+            plain_parts.append(s)
+            offset += len(s)
 
     def push(fragment: str, etype: str, extra: dict | None = None) -> None:
         off = cur_offset()
-        plain_parts.append(fragment)
+        _emit(fragment)
         ent: dict = {"_": etype, "offset": off, "length": len(fragment)}
         if extra:
             ent.update(extra)
@@ -616,9 +671,8 @@ def parse_markdown(text: str) -> tuple[str, list]:
             continue
 
         # block math $$...$$ on its own line
-        if re.match(r'^\$\$(.+)\$\$$', s):
-            formula = re.match(r'^\$\$(.+)\$\$$', s).group(1)
-            processed.append("\x00MATH\x00" + formula)
+        if (m_math := re.match(r'^\$\$(.+)\$\$$', s)):
+            processed.append("\x00MATH\x00" + m_math.group(1))
             continue
 
         # blockquote
@@ -647,29 +701,9 @@ def parse_markdown(text: str) -> tuple[str, list]:
 
     src = "\n".join(processed)
 
-    INLINE = re.compile(
-        r'(?s)'
-        r'(\x00PRE\x00([^\x00]*)\x00(.*?)(?=\n\x00|\Z))'
-        r'|(\x00MATH\x00([^\n]*))'
-        r'|(\x00QUOTE\x00([^\n]*))'
-        r'|(\|\|(.+?)\|\|)'
-        r'|(==(.+?)==)'
-        r'|(\$\$(.+?)\$\$)'
-        r'|(\$([^$\s][^$\n]*?)\$)'
-        r'|(\*\*(.+?)\*\*)'
-        r'|(__(.+?)__)'
-        r'|(\*([^*\n]+?)\*)'
-        r'|(_([^_\n]+?)_)'
-        r'|(~~(.+?)~~)'
-        r'|(```([a-zA-Z0-9]*)\n(.*?)```)'
-        r'|(`([^`\n]+?)`)'
-        r'|(\[(\^[^\]]+)\](?!\())'
-        r'|(!?\[([^\]]*)\]\(([^)]+)\))'
-    )
-
     pos = 0
-    for m in INLINE.finditer(src):
-        plain_parts.append(src[pos:m.start()])
+    for m in _MARKDOWN_INLINE.finditer(src):
+        _emit(src[pos:m.start()])
         pos = m.end()
         g = m.groups()
 
@@ -680,7 +714,7 @@ def parse_markdown(text: str) -> tuple[str, list]:
         elif g[5] is not None:
             content = g[6] or ""
             off = cur_offset()
-            plain_parts.append(content)
+            _emit(content)
             if content:
                 entities.append({"_": "messageEntityBlockquote", "offset": off, "length": len(content)})
         elif g[7] is not None:
@@ -718,19 +752,19 @@ def parse_markdown(text: str) -> tuple[str, list]:
                     push(label or "\U0001f44d", "messageEntityCustomEmoji",
                          {"document_id": int(me.group(1))})
                 elif label:
-                    plain_parts.append(label)
+                    _emit(label)
             else:
                 if url.startswith("mailto:"):
                     push(label, "messageEntityEmail", {"url": url})
                 elif url.startswith("tel:"):
                     push(label, "messageEntityPhone", {"url": url})
-                elif re.match(r'tg://user\?id=(\d+)', url):
-                    uid = int(re.match(r'tg://user\?id=(\d+)', url).group(1))
+                elif (m_uid := re.match(r'tg://user\?id=(\d+)', url)):
+                    uid = int(m_uid.group(1))
                     push(label, "messageEntityMentionName", {"user_id": uid})
                 else:
                     push(label, "messageEntityTextUrl", {"url": url})
 
-    plain_parts.append(src[pos:])
+    _emit(src[pos:])
     plain = "".join(plain_parts)
     # strip any unmatched sentinels
     plain = re.sub(r'\x00[A-Z]+\x00[^\x00]*\x00?', '', plain)
