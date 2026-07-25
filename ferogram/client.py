@@ -644,6 +644,11 @@ class Client(_RichMixin):
         self._handlers: dict[str, dict[int, list[_Handler]]] = {
             e: {} for e in _ALL_EVENTS
         }
+        # _dispatch() runs on every incoming update and needs handler groups
+        # in ascending order; handlers are registered once at startup but
+        # dispatched at update-rate, so cache the sort instead of redoing
+        # it per update. Invalidated in _add_handler().
+        self._handler_groups_sorted: dict[str, list[int]] = {}
         self._update_queue: asyncio.Queue | None = None
         self._peer_cache = PeerCache()
         # Owns pts/qts/date/seq + per-channel pts and does the actual gap
@@ -677,6 +682,7 @@ class Client(_RichMixin):
         if group not in self._handlers[event_type]:
             self._handlers[event_type][group] = []
         self._handlers[event_type][group].append((func, filters))
+        self._handler_groups_sorted.pop(event_type, None)
 
     def on_message(self, *filters: Callable, group: int = 0) -> Callable:
         def decorator(func: Callable) -> Callable:
@@ -795,7 +801,10 @@ class Client(_RichMixin):
 
 
     async def _dispatch(self, event_type: str, update: Any) -> None:
-        groups = sorted(self._handlers.get(event_type, {}).keys())
+        groups = self._handler_groups_sorted.get(event_type)
+        if groups is None:
+            groups = sorted(self._handlers.get(event_type, {}).keys())
+            self._handler_groups_sorted[event_type] = groups
         for g in groups:
             for func, fltrs in self._handlers[event_type][g]:
                 if not all(f(update) for f in fltrs):
@@ -859,42 +868,46 @@ class Client(_RichMixin):
                 self._update_queue.task_done()
 
 
+    # Update-type routing, split into three buckets: the two that need
+    # unwrapping ("message" lives inside the update, or falls back to the
+    # update itself for short forms) and everything else, which is a plain
+    # 1:1 type->event_type mapping. _route_update runs on every incoming
+    # update, so this trades ~15 sequential string comparisons for a couple
+    # of set/dict lookups.
+    _MESSAGE_WRAP_TYPES = frozenset((
+        "updateNewMessage", "updateNewChannelMessage",
+        "updateNewScheduledMessage", "updateShortMessage",
+    ))
+    _EDITED_WRAP_TYPES = frozenset(("updateEditMessage", "updateEditChannelMessage"))
+    _SIMPLE_ROUTE_MAP = {
+        "updateDeleteMessages":        "message_deleted",
+        "updateBotCallbackQuery":      "callback_query",
+        "updateInlineBotCallbackQuery": "callback_query",
+        "updateBotInlineQuery":        "inline_query",
+        "updateBotInlineSend":         "inline_send",
+        "updateUserStatus":            "user_status",
+        "updateUserTyping":            "chat_action",
+        "updateChatUserTyping":        "chat_action",
+        "updateChannelUserTyping":     "chat_action",
+        "updateChannelParticipant":    "participant_update",
+        "updateBotJoinRequest":        "join_request",
+        "updateMessageReactions":      "message_reaction",
+        "updateMessagePoll":           "poll_vote",
+        "updateBotStopped":            "bot_stopped",
+        "updateBotShippingQuery":      "shipping_query",
+        "updateBotPrecheckoutQuery":   "pre_checkout_query",
+        "updateBotChatBoost":          "chat_boost",
+    }
+
     def _route_update(self, upd: dict) -> tuple[str, Any] | None:
         t = upd.get("_", "")
-        if t in ("updateNewMessage", "updateNewChannelMessage",
-                  "updateNewScheduledMessage", "updateShortMessage"):
-            msg = upd.get("message") or upd
-            return ("message", msg)
-        if t in ("updateEditMessage", "updateEditChannelMessage"):
+        if t in self._MESSAGE_WRAP_TYPES:
+            return ("message", upd.get("message") or upd)
+        if t in self._EDITED_WRAP_TYPES:
             return ("edited_message", upd.get("message") or upd)
-        if t == "updateDeleteMessages":
-            return ("message_deleted", upd)
-        if t in ("updateBotCallbackQuery", "updateInlineBotCallbackQuery"):
-            return ("callback_query", upd)
-        if t == "updateBotInlineQuery":
-            return ("inline_query", upd)
-        if t == "updateBotInlineSend":
-            return ("inline_send", upd)
-        if t == "updateUserStatus":
-            return ("user_status", upd)
-        if t in ("updateUserTyping", "updateChatUserTyping", "updateChannelUserTyping"):
-            return ("chat_action", upd)
-        if t == "updateChannelParticipant":
-            return ("participant_update", upd)
-        if t == "updateBotJoinRequest":
-            return ("join_request", upd)
-        if t == "updateMessageReactions":
-            return ("message_reaction", upd)
-        if t == "updateMessagePoll":
-            return ("poll_vote", upd)
-        if t == "updateBotStopped":
-            return ("bot_stopped", upd)
-        if t == "updateBotShippingQuery":
-            return ("shipping_query", upd)
-        if t == "updateBotPrecheckoutQuery":
-            return ("pre_checkout_query", upd)
-        if t == "updateBotChatBoost":
-            return ("chat_boost", upd)
+        event_type = self._SIMPLE_ROUTE_MAP.get(t)
+        if event_type is not None:
+            return (event_type, upd)
         # everything else goes to raw_update
         return ("raw_update", upd)
 
