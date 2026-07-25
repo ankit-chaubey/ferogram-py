@@ -281,8 +281,8 @@ async def _resolve_str_peer(client: Any, peer: str) -> dict:
         # A community is addressed on the wire exactly like a channel (there
         # is no `peerCommunity`), so this branch also covers usernames that
         # resolve to a community. The actual `Chat` entry in `result.chats`
-        # tells us whether it's a channel or a community so it's cached in
-        # the right bucket - mirrors the comment in ferogram's resolve.rs.
+        # tells us whether it's a channel or a community, so it's cached in
+        # the right bucket.
         cid = found_peer.get("channel_id", 0)
         for ch in result.get("chats") or []:
             if ch.get("id") == cid:

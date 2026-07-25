@@ -974,10 +974,9 @@ class Client(_RichMixin):
                 if conn is None:
                     return
 
-                # MessageBox is the single authority on timing now: it
-                # reports 0.0 the instant a diff is actually owed (gap
-                # detected, or the no-updates deadline elapsed), and a
-                # longer wait otherwise. Replaces the old fixed 0.3s poll.
+                # MessageBox is the single authority on timing: it reports
+                # 0.0 the instant a diff is actually owed (gap detected, or
+                # the no-updates deadline elapsed), and a longer wait otherwise.
                 delay = await self._message_box.check_deadline_secs()
                 if delay > 0:
                     # Cap the sleep so cancellation/shutdown stays responsive
@@ -3277,8 +3276,8 @@ class Client(_RichMixin):
                     if part:
                         fh.write(part)
         else:
-            # Sequential path: unknown size or single worker. Still uses the
-            # media's actual DC, not blindly the home connection.
+            # Sequential path: unknown size or single worker. Uses the
+            # media's actual DC, not the home connection.
             conn = await open_conn_for(media_dc_id)
             offset = 0
             with open(path, "wb") as fh:

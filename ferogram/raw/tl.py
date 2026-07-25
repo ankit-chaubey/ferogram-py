@@ -113,7 +113,7 @@ def serialize_object(obj: dict, schema: dict) -> bytes:
     # Iteration order: we need the flag words written in the order their first
     # conditional field appears in the field list, which matches the wire format.
     # We pre-compute all group words up front, then emit each word lazily on
-    # first encounter (same lazy pattern as before, now generalised).
+    # first encounter.
     flag_words: dict[str, int] = {}
     for fname, ftype, flag in fields:
         if flag is None:
@@ -434,12 +434,9 @@ def parse_html(text: str) -> tuple[str, list]:
     plain_parts: list[str] = []
     stack: list[tuple[str, int, dict]] = []
 
-    # Running offset kept in sync with plain_parts instead of recomputed via
-    # sum(len(p) for p in plain_parts) on every tag boundary - that sum() was
-    # O(n) against a list that (with the old char-by-char text loop) could
-    # also grow one entry per character, giving quadratic blowup on long
-    # formatted text. All appends to plain_parts must go through _emit()
-    # so offset stays correct.
+    # offset tracks the length of everything emitted to plain_parts so far,
+    # updated in O(1) by _emit(). All appends to plain_parts must go through
+    # _emit() so offset stays correct.
     offset = 0
 
     def cur_offset() -> int:
@@ -456,7 +453,7 @@ def parse_html(text: str) -> tuple[str, list]:
     while i < len(src):
         if src[i] != "<":
             # Batch the whole run of plain text up to the next "<" (or end
-            # of string) into a single append, instead of one char at a time.
+            # of string) into a single append.
             next_lt = src.find("<", i)
             run_end = next_lt if next_lt != -1 else len(src)
             _emit(src[i:run_end])
@@ -622,10 +619,9 @@ def parse_markdown(text: str) -> tuple[str, list]:
     entities: list = []
     plain_parts: list[str] = []
 
-    # Same O(1)-offset pattern as parse_html: a running counter kept in sync
-    # via _emit(), instead of an O(n) sum(len(p) for p in plain_parts) on
-    # every match. Less severe here since text is already batched by regex
-    # spans rather than char-by-char, but still avoidable O(n) work per match.
+    # offset tracks the length of everything emitted to plain_parts so far,
+    # updated in O(1) by _emit(). All appends to plain_parts must go through
+    # _emit() so offset stays correct.
     offset = 0
 
     def cur_offset() -> int:

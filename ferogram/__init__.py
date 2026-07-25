@@ -35,7 +35,7 @@ from ._ferogram import (
     SqliteSession, LibSqlSession, CustomSession,
 )
 
-# All types now pure Python
+# Types are pure Python
 from .types import User, Message, Chat, Dialog, ChatMember, UserFull
 from .types import Authorization, ForumTopic, BotInfo
 from .types import InviteLinkMember, ReadParticipant, AdminLogEvent

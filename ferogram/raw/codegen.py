@@ -230,9 +230,8 @@ def _emit_read_body(c: Constructor) -> list[str]:
     # Emit each flag group's word read at its true schema position (the
     # marker's index into c.fields), not always hoisted to the front.
     # Groups whose marker sits at index 0 (the overwhelmingly common case)
-    # still get read first, same as before; a marker declared after N data
-    # fields (e.g. poll#966e2dbf id:long flags:# ...) reads those N fields
-    # first, matching real wire order.
+    # read first; a marker declared after N data fields (e.g. poll#966e2dbf
+    # id:long flags:# ...) reads those N fields first, matching real wire order.
     markers = c.flag_markers
 
     def _emit_group_read(grp: str) -> None:
@@ -415,10 +414,10 @@ def _emit_serialize_body(c: Constructor) -> list[str]:
         word_expr = " | ".join(parts) if parts else "0"
         lines.append(f"{I}_{grp}_word = {word_expr}")
 
-    # Emit each flag word at its true schema position (mirrors the
-    # deserializer fix: a marker at index 0 still writes first, but a
-    # mid-sequence marker, e.g. poll/wallPaper's "flags" after "id", now
-    # writes after the fields that precede it in the schema text).
+    # Emit each flag word at its true schema position: a marker at index 0
+    # writes first, but a mid-sequence marker, e.g. poll/wallPaper's "flags"
+    # after "id", writes after the fields that precede it in the schema text.
+    # Matches how the reader positions each flag word (see _emit_read_fields).
     markers = c.flag_markers
 
     def _emit_group_write(grp: str) -> None:
