@@ -128,96 +128,6 @@ impl SqliteSession {
     }
 }
 
-/// libSQL / Turso session backend.
-///
-/// Supports local files, in-process memory, remote Turso databases, and
-/// embedded replicas (local file + remote sync).
-///
-/// Usage::
-///
-///     # Local file
-///     LibSqlSession.local("my_account.db")
-///
-///     # Remote Turso
-///     LibSqlSession.remote("libsql://db.turso.io", "my-token")
-///
-///     # Embedded replica (local cache + remote sync)
-///     LibSqlSession.replica("local.db", "libsql://db.turso.io", "my-token")
-///
-///     # In-memory (ephemeral)
-///     LibSqlSession.memory()
-#[pyclass(frozen)]
-pub struct LibSqlSession {
-    pub kind: LibSqlKind,
-}
-
-#[derive(Clone)]
-pub enum LibSqlKind {
-    Local(String),
-    Memory,
-    Remote {
-        url: String,
-        token: String,
-    },
-    Replica {
-        path: String,
-        url: String,
-        token: String,
-    },
-}
-
-#[pymethods]
-impl LibSqlSession {
-    #[staticmethod]
-    fn local(path: String) -> Self {
-        let path = if std::path::Path::new(&path).extension().is_none() {
-            format!("{path}.db")
-        } else {
-            path
-        };
-        Self {
-            kind: LibSqlKind::Local(path),
-        }
-    }
-
-    #[staticmethod]
-    fn memory() -> Self {
-        Self {
-            kind: LibSqlKind::Memory,
-        }
-    }
-
-    #[staticmethod]
-    fn remote(url: String, token: String) -> Self {
-        Self {
-            kind: LibSqlKind::Remote { url, token },
-        }
-    }
-
-    #[staticmethod]
-    fn replica(path: String, url: String, token: String) -> Self {
-        let path = if std::path::Path::new(&path).extension().is_none() {
-            format!("{path}.db")
-        } else {
-            path
-        };
-        Self {
-            kind: LibSqlKind::Replica { path, url, token },
-        }
-    }
-
-    fn __repr__(&self) -> String {
-        match &self.kind {
-            LibSqlKind::Local(p) => format!("LibSqlSession.local({p:?})"),
-            LibSqlKind::Memory => "LibSqlSession.memory()".into(),
-            LibSqlKind::Remote { url, .. } => format!("LibSqlSession.remote({url:?}, ...)"),
-            LibSqlKind::Replica { path, url, .. } => {
-                format!("LibSqlSession.replica({path:?}, {url:?}, ...)")
-            }
-        }
-    }
-}
-
 /// Wrap any Python object as a session backend.
 ///
 /// The Python object must implement:
@@ -248,13 +158,13 @@ impl LibSqlSession {
 ///     client = Client(session=CustomSession(RedisSession("my_key")), ...)
 #[pyclass(frozen)]
 pub struct CustomSession {
-    pub obj: PyObject,
+    pub obj: Py<PyAny>,
 }
 
 #[pymethods]
 impl CustomSession {
     #[new]
-    fn new(obj: PyObject) -> Self {
+    fn new(obj: Py<PyAny>) -> Self {
         Self { obj }
     }
 
@@ -272,14 +182,14 @@ impl CustomSession {
 
 /// `SessionBackend` adapter that calls back into the Python object.
 struct PythonBackend {
-    obj: PyObject,
+    obj: Py<PyAny>,
     label: String,
 }
 
 impl SessionBackend for PythonBackend {
     fn save(&self, session: &PersistedSession) -> io::Result<()> {
         let bytes = session.to_bytes();
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let b = PyBytes::new(py, &bytes);
             self.obj
                 .call_method1(py, "save", (b,))
@@ -289,7 +199,7 @@ impl SessionBackend for PythonBackend {
     }
 
     fn load(&self) -> io::Result<Option<PersistedSession>> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let result = self
                 .obj
                 .call_method0(py, "load")
@@ -297,15 +207,15 @@ impl SessionBackend for PythonBackend {
             if result.is_none(py) {
                 return Ok(None);
             }
-            let bytes: Vec<u8> = result
-                .extract(py)
+            let bytes = result
+                .extract::<Vec<u8>>(py)
                 .map_err(|e| io::Error::other(e.to_string()))?;
             PersistedSession::from_bytes(&bytes).map(Some)
         })
     }
 
     fn delete(&self) -> io::Result<()> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             self.obj
                 .call_method0(py, "delete")
                 .map_err(|e| io::Error::other(e.to_string()))?;
@@ -322,46 +232,30 @@ impl SessionBackend for PythonBackend {
 ///
 /// Accepts any of the session classes above, or a plain `str` path
 /// (treated as `FileSession` for backward compat).
-pub fn resolve_session(py: Python<'_>, obj: &PyObject) -> PyResult<Arc<dyn SessionBackend>> {
+pub fn resolve_session(py: Python<'_>, obj: &Py<PyAny>) -> PyResult<Arc<dyn SessionBackend>> {
     // FileSession
-    if let Ok(s) = obj.downcast_bound::<FileSession>(py) {
+    if let Ok(s) = obj.cast_bound::<FileSession>(py) {
         return Ok(Arc::new(BinaryFileBackend::new(s.get().path.clone())));
     }
 
     // MemorySession
-    if obj.downcast_bound::<MemorySession>(py).is_ok() {
+    if obj.cast_bound::<MemorySession>(py).is_ok() {
         return Ok(Arc::new(InMemoryBackend::new()));
     }
 
     // StringSession
-    if let Ok(s) = obj.downcast_bound::<StringSession>(py) {
+    if let Ok(s) = obj.cast_bound::<StringSession>(py) {
         return Ok(Arc::new(StringSessionBackend::new(s.get().data.clone())));
     }
 
     // SqliteSession
-    if let Ok(s) = obj.downcast_bound::<SqliteSession>(py) {
+    if let Ok(s) = obj.cast_bound::<SqliteSession>(py) {
         let backend = ferogram_session::SqliteBackend::open(&s.get().path).map_err(py_err)?;
         return Ok(Arc::new(backend));
     }
 
-    // LibSqlSession
-    if let Ok(s) = obj.downcast_bound::<LibSqlSession>(py) {
-        use ferogram_session::LibSqlBackend;
-        let backend = match &s.get().kind {
-            LibSqlKind::Local(path) => LibSqlBackend::open_local(path).map_err(py_err)?,
-            LibSqlKind::Memory => LibSqlBackend::in_memory().map_err(py_err)?,
-            LibSqlKind::Remote { url, token } => {
-                LibSqlBackend::open_remote(url, token).map_err(py_err)?
-            }
-            LibSqlKind::Replica { path, url, token } => {
-                LibSqlBackend::open_replica(path, url, token).map_err(py_err)?
-            }
-        };
-        return Ok(Arc::new(backend));
-    }
-
     // CustomSession - wrap Python object in PythonBackend
-    if let Ok(s) = obj.downcast_bound::<CustomSession>(py) {
+    if let Ok(s) = obj.cast_bound::<CustomSession>(py) {
         let inner = s.get().obj.clone_ref(py);
         let label = inner
             .bind(py)
@@ -392,6 +286,6 @@ pub fn resolve_session(py: Python<'_>, obj: &PyObject) -> PyResult<Arc<dyn Sessi
 
     Err(py_err(
         "session must be FileSession, MemorySession, StringSession, \
-         SqliteSession, LibSqlSession, CustomSession, or a str path",
+         SqliteSession, CustomSession, or a str path",
     ))
 }

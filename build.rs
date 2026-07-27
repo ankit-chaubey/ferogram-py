@@ -25,6 +25,7 @@ fn main() {
 
     // Use the exact Python interpreter maturin chose (handles venvs, conda,
     // pyenv, and explicit PYO3_PYTHON overrides alike).
+    #[allow(deprecated)]
     let python = match pyo3_build_config::get().executable.clone() {
         Some(py) => py,
         None => {

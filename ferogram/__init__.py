@@ -32,7 +32,7 @@ from . import filters
 # Session classes stay in Rust
 from ._ferogram import (
     FileSession, MemorySession, StringSession,
-    SqliteSession, LibSqlSession, CustomSession,
+    SqliteSession, CustomSession,
 )
 
 # Types are pure Python
@@ -63,7 +63,7 @@ __all__ = [
     "TransferHandle", "TransferCancelled", "TransferLimits", "available_qualities",
     # Session (Rust)
     "FileSession", "MemorySession", "StringSession",
-    "SqliteSession", "LibSqlSession", "CustomSession",
+    "SqliteSession", "CustomSession",
     # Entity types
     "User", "UserFull", "Message", "Chat", "Dialog", "ChatMember",
     "Authorization", "ForumTopic", "BotInfo",

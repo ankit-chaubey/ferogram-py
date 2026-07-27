@@ -199,7 +199,7 @@ impl DcConnection {
     #[allow(clippy::too_many_arguments)]
     fn connect<'py>(
         py: Python<'py>,
-        session: PyObject,
+        session: Py<PyAny>,
         api_id: i32,
         api_hash: String,
         dc_id: i16,

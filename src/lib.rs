@@ -110,7 +110,6 @@ fn _ferogram(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<session::MemorySession>()?;
     m.add_class::<session::StringSession>()?;
     m.add_class::<session::SqliteSession>()?;
-    m.add_class::<session::LibSqlSession>()?;
     m.add_class::<session::CustomSession>()?;
     m.add_function(wrap_pyfunction!(srp::srp_calculate, m)?)?;
     m.add_function(wrap_pyfunction!(reset_logging_cache, m)?)?;

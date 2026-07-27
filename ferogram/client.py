@@ -30,7 +30,7 @@ from typing import Any, Callable
 from ._ferogram import DcConnection, MessageBox, srp_calculate
 from ._ferogram import (
     FileSession, MemorySession, StringSession,
-    SqliteSession, LibSqlSession, CustomSession,
+    SqliteSession, CustomSession,
 )
 from .raw import tl as _tl
 from .rich import _RichMixin
@@ -524,7 +524,7 @@ _STICKER_MIME = "image/webp"
 class Client(_RichMixin):
     def __init__(
         self,
-        session: "str | FileSession | MemorySession | StringSession | SqliteSession | LibSqlSession | CustomSession" = "ferogram",
+        session: "str | FileSession | MemorySession | StringSession | SqliteSession | CustomSession" = "ferogram",
         *,
         api_id: int | None = None,
         api_hash: str | None = None,

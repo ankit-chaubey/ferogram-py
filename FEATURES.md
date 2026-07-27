@@ -98,7 +98,6 @@ from ferogram import (
     MemorySession,
     StringSession,
     SqliteSession,
-    LibSqlSession,
     CustomSession,
 )
 ```
@@ -110,10 +109,6 @@ Client(session=FileSession("mybot"), ...)
 Client(session=SqliteSession("mybot"), ...)
 Client(session=MemorySession(), ...)
 Client(session=StringSession("base64_session"), ...)
-Client(session=LibSqlSession.local("mybot"), ...)
-Client(session=LibSqlSession.remote("libsql://db.turso.io", "token"), ...)
-Client(session=LibSqlSession.replica("local.db", "libsql://db.turso.io", "token"), ...)
-Client(session=LibSqlSession.memory(), ...)
 ```
 
 `CustomSession` accepts any Python object with `save`, `load`, and `delete` methods.
