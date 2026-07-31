@@ -1,22 +1,26 @@
 [package]
-name        = "ferogram-py"
-version     = "0.5.3"
-edition     = "2024"
-description = "Python MTProto client based on ferogram (Rust MTProto)"
-build       = "build.rs"
-license     = "MIT OR Apache-2.0"
+name            = "ferogram-py"
+version         = "0.5.4"
+edition         = "2024"
+description.    = "Python MTProto client based on ferogram (Rust MTProto)"
+documentation   = "https://python.ferogram.dev"
+homepage        = "https://ferogram.dev"
+repository      = "https://github.com/ankit-chaubey/ferogram-py"
+readme          = "README.md"
+build           = "build.rs"
+license         = "MIT OR Apache-2.0"
 
 [lib]
-name       = "_ferogram"
-crate-type = ["cdylib"]
+name            = "_ferogram"
+crate-type      = ["cdylib"]
 
 [dependencies]
-ferogram-mtsender   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "bf716ce" }
-ferogram-session    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "bf716ce", features = ["sqlite-session"] }
-ferogram-connect    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "bf716ce", features = ["socks5"] }
-ferogram-tl-types   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "bf716ce" }
-ferogram-crypto     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "bf716ce" }
-ferogram-msgbox     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "bf716ce" }
+ferogram-mtsender   = { version = "0.6.5" }
+ferogram-session    = { version = "0.6.5", features = ["sqlite-session"] }
+ferogram-connect    = { version = "0.6.5", features = ["socks5"] }
+ferogram-tl-types   = { version = "0.6.5" }
+ferogram-crypto     = { version = "0.6.5" }
+ferogram-msgbox     = { version = "0.6.5" }
 getrandom           = "0.4"
 base64              = "0.23"
 pyo3                = { version = "0.29", features = ["extension-module", "abi3-py39"] }
