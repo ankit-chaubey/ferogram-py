@@ -2,7 +2,7 @@
 name            = "ferogram-py"
 version         = "0.5.4"
 edition         = "2024"
-description.    = "Python MTProto client based on ferogram (Rust MTProto)"
+description     = "Python MTProto client based on ferogram (Rust MTProto)"
 documentation   = "https://python.ferogram.dev"
 homepage        = "https://ferogram.dev"
 repository      = "https://github.com/ankit-chaubey/ferogram-py"
