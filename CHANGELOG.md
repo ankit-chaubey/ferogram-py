@@ -1,3 +1,21 @@
+## 0.5.4 (01-08-2026)
+
+> Recommend upgrading.
+
+### Changed
+- Dependencies (`ferogram-mtsender`, `ferogram-session`, `ferogram-connect`, `ferogram-tl-types`, `ferogram-crypto`, `ferogram-msgbox`) bumped to `0.6.5`, now pulled from crates.io instead of a pinned git commit.
+- `Documentation` URL in `pyproject.toml` changed to `https://python.ferogram.dev`.
+- Promoted out of beta: `0.5.3b2` → `0.5.4`.
+
+### Fixed
+- `stop()` no longer signs out on shutdown, preserving sessions.
+- `MessageBox` state seeding and startup race conditions.
+
+### Added
+- Update state (pts/qts/date) is now persisted and restored, enabling catch-up.
+- `catch_up` wired through the client startup flow.
+- Improved logging for restored peer cache.
+
 ## 0.5.3 (2026-07-25)
 
 - Added `Chat.is_community` and `Dialog.community_id`/`Dialog.is_community` for community support.
