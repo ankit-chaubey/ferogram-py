@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name        = "ferogram"
-version     = "0.5.3b2"
+version     = "0.5.4"
 description = "A modern, elegant, asynchronous MTProto framework for building Telegram clients and bots in Python."
 readme      = "README.md"
 license     = { text = "MIT OR Apache-2.0" }
@@ -22,9 +22,9 @@ classifiers = [
 requires-python = ">=3.9"
 
 [project.urls]
-Homepage      = "https://github.com/ankit-chaubey/ferogram-py"
+Homepage      = "https://ferogram.dev"
 Source        = "https://github.com/ankit-chaubey/ferogram-py"
-Documentation = "https://github.com/ankit-chaubey/ferogram-py#readme"
+Documentation = "https://python.ferogram.dev"
 Tracker       = "https://github.com/ankit-chaubey/ferogram-py/issues"
 Author        = "https://github.com/ankit-chaubey"
 
