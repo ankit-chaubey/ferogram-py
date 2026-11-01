@@ -28,7 +28,27 @@ Documentation = "https://python.ferogram.dev"
 Tracker       = "https://github.com/ankit-chaubey/ferogram-py/issues"
 Author        = "https://github.com/ankit-chaubey"
 
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
 [tool.maturin]
+python-source = "python"
 module-name   = "ferogram._ferogram"
 features      = ["pyo3/extension-module"]
-include       = ["ferogram/raw/generated/**/*"]
+include       = [
+    "python/ferogram/raw/generated/**/*",
+    { path = "schema/**/*", format = "sdist" },
+    { path = "tools/**/*", format = "sdist" },
+]
+
+[tool.pytest.ini_options]
+testpaths  = ["tests"]
+pythonpath = ["python"]
+
+[tool.ruff]
+target-version = "py39"
+extend-exclude = ["python/ferogram/raw/generated"]
+
+[tool.ruff.lint]
+# Real-bug rules only (pyflakes + syntax errors). Style rules are not enforced.
+select = ["F", "E9"]

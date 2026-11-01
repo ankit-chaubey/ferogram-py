@@ -1,3 +1,33 @@
+## Unreleased
+
+### Changed
+- Layer upgrade to 232 (from 228). `schema/api.tl` and `python/ferogram/raw/generated/` regenerated.
+- Keyboards follow the layer 229 schema split: inline buttons are now `keyboardInlineButton` with an `inlineButtonType*` payload, reply buttons are `keyboardButton` with a `buttonType*` payload, and inline rows use `keyboardInlineButtonRow`.
+- Dependencies (`ferogram-mtsender`, `ferogram-session`, `ferogram-connect`, `ferogram-tl-types`, `ferogram-crypto`, `ferogram-msgbox`) must be a ferogram release built on layer 232 so the Rust side parses the same layer the Python side sends.
+- Repository layout: the Python package moved to `python/ferogram/` (maturin `python-source`), the TL schema to `schema/api.tl`, and the code generator to `tools/codegen.py`, so neither ships in the wheel. Import paths are unchanged.
+- `client.py` is split by domain. `Client` is now composed of method groups in `ferogram/methods/` (`auth`, `users`, `messages`, `dialogs`, `chats`, `participants`, `invites`, `media`, `bots`); shared helpers moved to `ferogram/_internal.py` and `ferogram/transfer.py`. Every name that was importable from `ferogram.client` still is, and no method body changed.
+- Tests moved to `tests/unit/` and now run under one `pytest` invocation. A stub stands in for the Rust extension when it is not built.
+- `pyproject.toml` gained the `dev` extra (`make test` referenced it but it did not exist) plus pytest and ruff settings. `make clean` no longer deletes the committed generated code.
+
+### Removed
+- `InlineButton.mini_app_simple()`. Layer 229 only offers the simple web view for reply keyboards, so it moved to `ReplyButton.mini_app_simple(label, url)`.
+
+### Fixed
+- `filters.command(...)` raised `IndexError` on a message that was only the prefix (`/`).
+- A peer passed into a field of another peer type (for example an `inputPeerChannel` for `channels.leaveChannel`'s `InputChannel`) was serialized with the peer's own constructor id. The serializer now rewrites `inputPeer*`, `inputUser*` and `inputChannel*` values to the constructor the field's declared type needs, for plain fields and `Vector<...>` fields. This covers every method that hands a resolved peer straight to a `channels.*` or `users.*` request.
+- Requests built by hand no longer drift from the schema (all 15 known mismatches fixed):
+  - Forum topics use `messages.getForumTopics`, `createForumTopic`, `editForumTopic` and `deleteTopicHistory` with a `peer`. `toggle_forum` sends a real `inputChannel` and gained a `tabs` argument (default `False`).
+  - `transfer_chat_ownership` uses `messages.editChatCreator` and takes an optional `password`. Telegram requires the account's 2FA password for this call.
+  - `answer_inline_query` and `answer_inline_query_articles` send `is_personal` as the `private` flag. `answer_inline_query` now works with `InlineArticle`, `InlinePhoto`, `InlineDocument` and short tuples (it used to fail on every dataclass). Photo and document results are URL based and sent with `inputBotInlineMessageMediaAuto`; this mapping is not yet verified against live Telegram.
+  - `edit_inline_message` accepts the `inline_message_id` dict from inline updates and builds complete `inputBotInlineMessageID` / `inputBotInlineMessageID64` values (it used to omit `owner_id` and `access_hash`).
+  - `send_poll` sends the required `hash`, now honours `shuffle_answers` and `hide_results_until_close`, ignores `multiple_choice` for quizzes, and sends `correct_answers` as indexes, not bytes (same as the Rust crate). `get_poll_results` forwards `poll_hash`. `get_poll_stats` uses the current `stats.getMessagePublicForwards` request.
+- `true` flags passed as `False` were sent as set, in both the generated `to_bytes()` and the generic serializer. This made `unpin_dialog()` pin, `hide_join_request(approve=False)` approve, `get_dialogs()` exclude pinned chats, every callback button carry `requires_password`, `InlineButton.switch_elsewhere()` behave like `switch_inline()`, and `ReplyKeyboard` default flags (`resize`, `single_use`, `selective`, `persistent`) always on. `False` now means the flag is absent.
+
+### Added
+- Tests: `test_filters.py`, `test_types.py`, `test_updates.py`, `test_tl_primitives.py`, `test_public_api.py`, `test_schema_usage.py` (checks every hand-built TL dict against the schema), `test_method_requests.py` (requests built by the fixed methods) and `test_codegen_up_to_date.py` (fails if the generated code is stale).
+- CI workflow `tests.yml` (ruff and pytest on Python 3.9, 3.12 and 3.13, plus clippy), `CONTRIBUTING.md`, `examples/README.md`, `.gitignore`.
+- `tests/unit/test_keyboards.py`: checks every button kind against the schema and round-trips it through the serializer, without needing the Rust extension.
+
 ## 0.5.4 (01-08-2026)
 
 > Recommend upgrading.

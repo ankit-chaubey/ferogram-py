@@ -1,4 +1,4 @@
-// build.rs - regenerate ferogram/raw/generated/ from ferogram/api.tl
+// build.rs - regenerate python/ferogram/raw/generated/ from schema/api.tl
 //
 // Runs at `maturin develop` / `pip install .` time. Requires Python 3.9+ on
 // PATH (the same interpreter maturin is already using to build the extension).
@@ -10,8 +10,8 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    println!("cargo:rerun-if-changed=ferogram/api.tl");
-    println!("cargo:rerun-if-changed=ferogram/raw/codegen.py");
+    println!("cargo:rerun-if-changed=schema/api.tl");
+    println!("cargo:rerun-if-changed=tools/codegen.py");
     println!("cargo:rerun-if-changed=build.rs");
 
     if std::env::var("FEROGRAM_SKIP_CODEGEN").is_ok() {
@@ -19,9 +19,9 @@ fn main() {
     }
 
     let manifest = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-    let tl_path = Path::new(&manifest).join("ferogram/api.tl");
-    let out_dir = Path::new(&manifest).join("ferogram/raw/generated");
-    let codegen = Path::new(&manifest).join("ferogram/raw/codegen.py");
+    let tl_path = Path::new(&manifest).join("schema/api.tl");
+    let out_dir = Path::new(&manifest).join("python/ferogram/raw/generated");
+    let codegen = Path::new(&manifest).join("tools/codegen.py");
 
     // Use the exact Python interpreter maturin chose (handles venvs, conda,
     // pyenv, and explicit PYO3_PYTHON overrides alike).

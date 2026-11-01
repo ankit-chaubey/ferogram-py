@@ -329,7 +329,6 @@ Available inline button constructors:
 - `InlineButton.switch_elsewhere(text, query)`
 - `InlineButton.copy_text(text, copy_text)`
 - `InlineButton.mini_app(text, url)`
-- `InlineButton.mini_app_simple(text, url)`
 - `InlineButton.game(text)`
 - `InlineButton.buy(text)`
 
@@ -352,6 +351,7 @@ Reply button constructors:
 - `ReplyButton.request_geo(label)`
 - `ReplyButton.request_poll(label)`
 - `ReplyButton.request_quiz(label)`
+- `ReplyButton.mini_app_simple(label, url)`
 
 ### Remove keyboard / force reply
 
@@ -429,7 +429,7 @@ await client.answer_callback_query(query_id, text=None, alert=False)
 
 ### Answer inline queries
 
-Use `InlineArticle`, `InlinePhoto`, or `InlineDocument`.
+Use `InlineArticle`, `InlinePhoto` or `InlineDocument`. Photo and document results are URL based: the file is referenced by `photo_url` / `document_url` and `message_text` is sent as its caption.
 
 ```python
 await client.answer_inline_query(
@@ -471,7 +471,7 @@ await client.edit_inline_message(
 )
 ```
 
-`edit_inline_message` also accepts a `(dc_id, id_bytes)` tuple.
+`edit_inline_message` also accepts the `inline_message_id` dict that inline updates deliver (used as is), and a `(dc_id, id_bytes)` tuple. `id_bytes` is the decoded inline message id without its leading `dc_id`: 16 bytes for the old layout (`id:long, access_hash:long`) or 20 bytes for the 64-bit layout (`owner_id:long, id:int, access_hash:long`).
 
 ## Participants
 
@@ -484,6 +484,7 @@ await client.ban_participant_until(peer, user, until_date)
 await client.promote_participant(peer, user, rights=None)
 await client.demote_participant(peer, user)
 await client.get_admins_with_invites(peer)
+await client.transfer_chat_ownership(peer, new_owner_id, password="your 2FA password")
 ```
 
 ## Chats and groups
@@ -511,7 +512,7 @@ await client.get_pinned_dialogs(folder_id=0)
 ## Forum topics
 
 ```python
-await client.toggle_forum(peer, enabled=True)
+await client.toggle_forum(peer, enabled=True, tabs=False)   # tabs: show topics as tabs
 await client.get_forum_topics(peer, limit=100)
 await client.create_forum_topic(peer, title, icon_color=None, icon_emoji_id=None)
 await client.edit_forum_topic(peer, topic_id, title=None, closed=None, hidden=None)

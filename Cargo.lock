@@ -199,9 +199,8 @@ checksum = "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a"
 
 [[package]]
 name = "ferogram-connect"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39f19213a1162209d44cbc73d119fbb392491d1a62c0bc355ada29258ecd671f"
+version = "0.6.6"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=5d35446#5d35446aba1768cc6c6fab12cc6f62355d5d61f1"
 dependencies = [
  "ferogram-crypto",
  "ferogram-mtproto",
@@ -215,9 +214,8 @@ dependencies = [
 
 [[package]]
 name = "ferogram-crypto"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef4e31311564bf7bcc31526ce7219a4452c347d30522b24e86d4829b63dd1004"
+version = "0.6.6"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=5d35446#5d35446aba1768cc6c6fab12cc6f62355d5d61f1"
 dependencies = [
  "aes",
  "ctr",
@@ -233,9 +231,8 @@ dependencies = [
 
 [[package]]
 name = "ferogram-msgbox"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "410fc209878f7f1a15f706f3e7346fa30b10da1c978b7ebe36eae858138c7754"
+version = "0.6.6"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=5d35446#5d35446aba1768cc6c6fab12cc6f62355d5d61f1"
 dependencies = [
  "ferogram-tl-types",
  "tracing",
@@ -243,9 +240,8 @@ dependencies = [
 
 [[package]]
 name = "ferogram-mtproto"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2e56c331c36045c83d2745d7e63ecbaf3d9058b64c1019cad8a0fb973baa1d1"
+version = "0.6.6"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=5d35446#5d35446aba1768cc6c6fab12cc6f62355d5d61f1"
 dependencies = [
  "ferogram-crypto",
  "ferogram-tl-types",
@@ -256,9 +252,8 @@ dependencies = [
 
 [[package]]
 name = "ferogram-mtsender"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbebaffacc8c90e610bd89d388dabdb4cdea991388ebd5a98839b0c83be0f653"
+version = "0.6.6"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=5d35446#5d35446aba1768cc6c6fab12cc6f62355d5d61f1"
 dependencies = [
  "ferogram-connect",
  "ferogram-crypto",
@@ -291,9 +286,8 @@ dependencies = [
 
 [[package]]
 name = "ferogram-session"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06b68fcb8822b887f6e005bffaf3c5744c14277d45da0c927739041b230fd518"
+version = "0.6.6"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=5d35446#5d35446aba1768cc6c6fab12cc6f62355d5d61f1"
 dependencies = [
  "base64",
  "rusqlite",
@@ -303,24 +297,21 @@ dependencies = [
 
 [[package]]
 name = "ferogram-tl-gen"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d1119d896885e5a79b79c8c3e794e3bbfc34ead625c9080b77a68311f65ff56"
+version = "0.6.6"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=5d35446#5d35446aba1768cc6c6fab12cc6f62355d5d61f1"
 dependencies = [
  "ferogram-tl-parser",
 ]
 
 [[package]]
 name = "ferogram-tl-parser"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3c9e3455ebf163dc214b59b53e5a33e6eb914774a6b6f3f19bfd6674556c7d9"
+version = "0.6.6"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=5d35446#5d35446aba1768cc6c6fab12cc6f62355d5d61f1"
 
 [[package]]
 name = "ferogram-tl-types"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "128fe732a157f16b5260f27ccc999eda342991abbc1a2ca1a0910916f2986e95"
+version = "0.6.6"
+source = "git+https://github.com/ankit-chaubey/ferogram?rev=5d35446#5d35446aba1768cc6c6fab12cc6f62355d5d61f1"
 dependencies = [
  "ferogram-tl-gen",
  "ferogram-tl-parser",
@@ -956,7 +947,6 @@ version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100"
 dependencies = [
- "log",
  "pin-project-lite",
  "tracing-attributes",
  "tracing-core",
