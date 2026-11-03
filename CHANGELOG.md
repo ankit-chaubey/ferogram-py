@@ -1,4 +1,4 @@
-## Unreleased
+### 0.5.5 (03-11-2026)
 
 ### Changed
 - Layer upgrade to 232 (from 228). `schema/api.tl` and `python/ferogram/raw/generated/` regenerated.
