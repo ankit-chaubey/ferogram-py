@@ -1,9 +1,21 @@
+# Rust
 /target/
-*.so
-*.pyd
-dist/
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
 .venv/
-ferogram.session
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# Compiled extension (built by maturin)
+python/ferogram/*.so
+python/ferogram/*.pyd
+
+# Sessions and local secrets
 *.session
+*.session-journal
+.env

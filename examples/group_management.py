@@ -13,7 +13,6 @@
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
 
-import asyncio
 import os
 from ferogram import Client, filters
 

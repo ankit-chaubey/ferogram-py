@@ -1,0 +1,3 @@
+import support
+
+support.install()
