@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name        = "ferogram"
-version     = "0.5.4"
+version     = "0.5.5b1"
 description = "A modern, elegant, asynchronous MTProto framework for building Telegram clients and bots in Python."
 readme      = "README.md"
 license     = { text = "MIT OR Apache-2.0" }
