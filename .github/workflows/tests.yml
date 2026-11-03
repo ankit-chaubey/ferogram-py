@@ -8,7 +8,9 @@ on:
 jobs:
   python:
     name: Python ${{ matrix.python }}
-    runs-on: ubuntu-latest
+    # ubuntu-latest is now 26.04, which actions/setup-python has no Python 3.9 build for.
+    # 24.04 has 3.9, 3.12 and 3.13.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
