@@ -512,7 +512,7 @@ await client.get_pinned_dialogs(folder_id=0)
 ## Forum topics
 
 ```python
-await client.toggle_forum(peer, enabled=True, tabs=False)   # tabs: show topics as tabs
+await client.toggle_forum(peer, enabled=True, tabs=False, sidebar=False)   # tabs and sidebar are the Bool args of channels.toggleForum
 await client.get_forum_topics(peer, limit=100)
 await client.create_forum_topic(peer, title, icon_color=None, icon_emoji_id=None)
 await client.edit_forum_topic(peer, topic_id, title=None, closed=None, hidden=None)

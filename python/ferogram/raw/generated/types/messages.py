@@ -3639,3 +3639,106 @@ class ComposedRichMessageWithAI:
 
     def __repr__(self) -> str:
         return f"ComposedRichMessageWithAI(result={self.result!r})"
+
+class BotWidgetQueryAnswer:
+    _CID = 0x95b73023
+
+    def __init__(
+        self,
+        result: str | None = None,
+    ) -> None:
+        self.result = result
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.botWidgetQueryAnswer", **{
+            "result": _tl._resolve(self.result),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'#0\xb7\x95'
+        _flags_word = (0 if self.result is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.result)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.botWidgetQueryAnswer"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["result"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"BotWidgetQueryAnswer(result={self.result!r})"
+
+class WidgetPublicDataNotModified:
+    _CID = 0xb9196e57
+
+    def __init__(
+        self,
+        period: int,
+    ) -> None:
+        self.period = period
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.widgetPublicDataNotModified", **{
+            "period": _tl._resolve(self.period),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'Wn\x19\xb9'
+        out += _struct.pack('<i', self.period)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.widgetPublicDataNotModified"}
+        obj["period"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WidgetPublicDataNotModified(period={self.period!r})"
+
+class WidgetPublicData:
+    _CID = 0x04493bff
+
+    def __init__(
+        self,
+        hash: int,
+        data: str,
+        period: int,
+    ) -> None:
+        self.hash = hash
+        self.data = data
+        self.period = period
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.widgetPublicData", **{
+            "hash": _tl._resolve(self.hash),
+            "data": _tl._resolve(self.data),
+            "period": _tl._resolve(self.period),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xff;I\x04'
+        out += _struct.pack('<q', self.hash)
+        out += _tl._pack_string(self.data)
+        out += _struct.pack('<i', self.period)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.widgetPublicData"}
+        obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["period"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WidgetPublicData(hash={self.hash!r}, data={self.data!r}, period={self.period!r})"

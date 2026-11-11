@@ -11151,3 +11151,330 @@ class GetShareThemeBackdrops:
 
     def __repr__(self) -> str:
         return f"GetShareThemeBackdrops(hash={self.hash!r})"
+
+class GetBotWidgetQueryAnswer:
+    _CID = 0x5c550579
+
+    def __init__(
+        self,
+        peer: Any,
+        msg_id: int,
+        query_type: Any,
+        data: bytes,
+    ) -> None:
+        self.peer = peer
+        self.msg_id = msg_id
+        self.query_type = query_type
+        self.data = data
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.getBotWidgetQueryAnswer", **{
+            "peer": _tl._resolve(self.peer),
+            "msg_id": _tl._resolve(self.msg_id),
+            "query_type": _tl._resolve(self.query_type),
+            "data": _tl._resolve(self.data),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'y\x05U\\'
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<i', self.msg_id)
+        out += _tl.serialize(_tl._resolve(self.query_type), _SCHEMA)
+        out += _tl._pack_bytes(self.data)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.getBotWidgetQueryAnswer"}
+        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["query_type"], pos = _tl._read_typed(data, pos, "WidgetQueryType", _SCHEMA_BY_CID)
+        obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"GetBotWidgetQueryAnswer(peer={self.peer!r}, msg_id={self.msg_id!r}, query_type={self.query_type!r}, data={self.data!r})"
+
+class SetBotWidgetQueryAnswer:
+    _CID = 0xf8cdec6a
+
+    def __init__(
+        self,
+        query_id: int,
+        result: str | None = None,
+    ) -> None:
+        self.query_id = query_id
+        self.result = result
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.setBotWidgetQueryAnswer", **{
+            "query_id": _tl._resolve(self.query_id),
+            "result": _tl._resolve(self.result),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'j\xec\xcd\xf8'
+        _flags_word = (0 if self.result is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.query_id)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.result)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.setBotWidgetQueryAnswer"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 0):
+            obj["result"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"SetBotWidgetQueryAnswer(query_id={self.query_id!r}, result={self.result!r})"
+
+class EditMessageWidgetData:
+    _CID = 0xf624bc1e
+
+    def __init__(
+        self,
+        peer: Any,
+        id: int,
+        public_data: str | None = None,
+        chat_data: str | None = None,
+    ) -> None:
+        self.peer = peer
+        self.id = id
+        self.public_data = public_data
+        self.chat_data = chat_data
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.editMessageWidgetData", **{
+            "peer": _tl._resolve(self.peer),
+            "id": _tl._resolve(self.id),
+            "public_data": _tl._resolve(self.public_data),
+            "chat_data": _tl._resolve(self.chat_data),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x1e\xbc$\xf6'
+        _flags_word = (0 if self.public_data is None else (1 << 0)) | (0 if self.chat_data is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<i', self.id)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.public_data)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.chat_data)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.editMessageWidgetData"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"EditMessageWidgetData(peer={self.peer!r}, id={self.id!r}, public_data={self.public_data!r}, chat_data={self.chat_data!r})"
+
+class EditInlineBotMessageWidgetData:
+    _CID = 0x6396ce2b
+
+    def __init__(
+        self,
+        id: Any,
+        public_data: str | None = None,
+        chat_data: str | None = None,
+    ) -> None:
+        self.id = id
+        self.public_data = public_data
+        self.chat_data = chat_data
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.editInlineBotMessageWidgetData", **{
+            "id": _tl._resolve(self.id),
+            "public_data": _tl._resolve(self.public_data),
+            "chat_data": _tl._resolve(self.chat_data),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'+\xce\x96c'
+        _flags_word = (0 if self.public_data is None else (1 << 0)) | (0 if self.chat_data is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.public_data)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.chat_data)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.editInlineBotMessageWidgetData"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["id"], pos = _tl._read_typed(data, pos, "InputBotInlineMessageID", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"EditInlineBotMessageWidgetData(id={self.id!r}, public_data={self.public_data!r}, chat_data={self.chat_data!r})"
+
+class EditWidgetData:
+    _CID = 0xeac343c0
+
+    def __init__(
+        self,
+        widget_id: int,
+        public_data: str,
+        cache_time: int | None = None,
+    ) -> None:
+        self.widget_id = widget_id
+        self.public_data = public_data
+        self.cache_time = cache_time
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.editWidgetData", **{
+            "widget_id": _tl._resolve(self.widget_id),
+            "public_data": _tl._resolve(self.public_data),
+            "cache_time": _tl._resolve(self.cache_time),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xc0C\xc3\xea'
+        _flags_word = (0 if self.cache_time is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.widget_id)
+        out += _tl._pack_string(self.public_data)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<i', self.cache_time)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.editWidgetData"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["widget_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"EditWidgetData(widget_id={self.widget_id!r}, public_data={self.public_data!r}, cache_time={self.cache_time!r})"
+
+class GetWidgetPublicData:
+    _CID = 0x6fc53181
+
+    def __init__(
+        self,
+        peer: Any,
+        msg_id: int,
+        hash: int,
+    ) -> None:
+        self.peer = peer
+        self.msg_id = msg_id
+        self.hash = hash
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.getWidgetPublicData", **{
+            "peer": _tl._resolve(self.peer),
+            "msg_id": _tl._resolve(self.msg_id),
+            "hash": _tl._resolve(self.hash),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x811\xc5o'
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<iq', self.msg_id, self.hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.getWidgetPublicData"}
+        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["msg_id"], obj["hash"], = _struct.unpack_from('<iq', data, pos)
+        pos += 12
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"GetWidgetPublicData(peer={self.peer!r}, msg_id={self.msg_id!r}, hash={self.hash!r})"
+
+class TranscribeAudioFile:
+    _CID = 0x072d2ef7
+
+    def __init__(
+        self,
+        file: Any,
+    ) -> None:
+        self.file = file
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.transcribeAudioFile", **{
+            "file": _tl._resolve(self.file),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xf7.-\x07'
+        out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.transcribeAudioFile"}
+        obj["file"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"TranscribeAudioFile(file={self.file!r})"
+
+class GetTranscriptionLangs:
+    _CID = 0xba6cd9aa
+
+    def __init__(
+        self,
+        peer: Any | None = None,
+    ) -> None:
+        self.peer = peer
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.getTranscriptionLangs", **{
+            "peer": _tl._resolve(self.peer),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xaa\xd9l\xba'
+        _flags_word = (0 if self.peer is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.getTranscriptionLangs"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"GetTranscriptionLangs(peer={self.peer!r})"

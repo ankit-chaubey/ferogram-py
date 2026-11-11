@@ -1,3 +1,15 @@
+### Unreleased
+
+### Changed
+- Layer upgrade to 233 (from 232). `schema/api.tl` and `python/ferogram/raw/generated/` regenerated from the schema in ferogram v0.6.7.
+- Rust dependencies (`ferogram-mtsender`, `ferogram-session`, `ferogram-connect`, `ferogram-tl-types`, `ferogram-crypto`, `ferogram-msgbox`) now point at ferogram v0.6.7 (`099f9a0`), which is built on layer 233. `Cargo.lock` updated to match.
+- `toggle_forum()` takes a new `sidebar` argument (default `False`). Layer 233 made `sidebar` a required field of `channels.toggleForum`.
+
+### Added
+- Layer 233 types and functions in `ferogram.raw`: the widget types and `messages.*Widget*` requests, `messages.transcribeAudioFile`, `messages.getTranscriptionLangs`, and the `updateEditForumTopic` update.
+- `user` gained `bot_forum_sidebar` and `channel` gained `forum_sidebar`.
+- Test for the `sidebar` argument of `toggle_forum()`.
+
 ### 0.5.5 (03-11-2026)
 
 ### Changed

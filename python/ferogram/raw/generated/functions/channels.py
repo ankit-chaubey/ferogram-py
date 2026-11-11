@@ -1513,30 +1513,34 @@ class DeactivateAllUsernames:
         return f"DeactivateAllUsernames(channel={self.channel!r})"
 
 class ToggleForum:
-    _CID = 0x3ff75734
+    _CID = 0xa2952b54
 
     def __init__(
         self,
         channel: Any,
         enabled: bool,
         tabs: bool,
+        sidebar: bool,
     ) -> None:
         self.channel = channel
         self.enabled = enabled
         self.tabs = tabs
+        self.sidebar = sidebar
 
     def to_dict(self) -> dict:
         return {"_": "channels.toggleForum", **{
             "channel": _tl._resolve(self.channel),
             "enabled": _tl._resolve(self.enabled),
             "tabs": _tl._resolve(self.tabs),
+            "sidebar": _tl._resolve(self.sidebar),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'4W\xf7?'
+        out = b'T+\x95\xa2'
         out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         out += _tl._pack_bool(self.tabs)
+        out += _tl._pack_bool(self.sidebar)
         return out
 
     @classmethod
@@ -1545,10 +1549,11 @@ class ToggleForum:
         obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
         obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
         obj["tabs"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["sidebar"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"ToggleForum(channel={self.channel!r}, enabled={self.enabled!r}, tabs={self.tabs!r})"
+        return f"ToggleForum(channel={self.channel!r}, enabled={self.enabled!r}, tabs={self.tabs!r}, sidebar={self.sidebar!r})"
 
 class ToggleAntiSpam:
     _CID = 0x68f3e4eb

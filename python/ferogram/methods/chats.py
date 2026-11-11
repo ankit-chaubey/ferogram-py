@@ -193,13 +193,14 @@ class ChatMethods:
             allowed = {"_": "chatReactionsSome", "reactions": [{"_": "reactionEmoji", "emoticon": e} for e in emojis]}
         await self._rpc({"_": "messages.setChatAvailableReactions", "peer": input_peer, "available_reactions": allowed})
 
-    async def toggle_forum(self, peer: str, enabled: bool, tabs: bool = False) -> None:
+    async def toggle_forum(self, peer: str, enabled: bool, tabs: bool = False, sidebar: bool = False) -> None:
         input_peer = await self._resolve_peer(peer)
         await self._rpc({
             "_": "channels.toggleForum",
             "channel": _as_input_channel(input_peer, "toggle_forum"),
             "enabled": enabled,
             "tabs": tabs,
+            "sidebar": sidebar,
         })
 
     async def get_forum_topics(self, peer: str, limit: int = 100) -> list[dict]:

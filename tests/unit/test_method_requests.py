@@ -62,13 +62,20 @@ def test_toggle_forum_sends_an_input_channel():
     req = c.calls[0]
     assert req["_"] == "channels.toggleForum"
     assert req["channel"] == {"_": "inputChannel", "channel_id": 5, "access_hash": 9}
-    assert req["enabled"] is True and req["tabs"] is False
+    assert req["enabled"] is True and req["tabs"] is False and req["sidebar"] is False
 
 
 def test_toggle_forum_tabs_changes_the_bytes():
     c = make_client()
     run(c.toggle_forum("x", True))
     run(c.toggle_forum("x", True, tabs=True))
+    assert wire(c.calls[0]) != wire(c.calls[1])
+
+
+def test_toggle_forum_sidebar_changes_the_bytes():
+    c = make_client()
+    run(c.toggle_forum("x", True))
+    run(c.toggle_forum("x", True, sidebar=True))
     assert wire(c.calls[0]) != wire(c.calls[1])
 
 

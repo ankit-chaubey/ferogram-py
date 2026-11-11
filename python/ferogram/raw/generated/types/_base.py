@@ -1619,6 +1619,111 @@ class InputMediaStakeDice:
     def __repr__(self) -> str:
         return f"InputMediaStakeDice(game_hash={self.game_hash!r}, ton_amount={self.ton_amount!r}, client_seed={self.client_seed!r})"
 
+class InputMediaWidget:
+    _CID = 0x44f6c04e
+
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        html: str,
+        allow_queries: bool | None = None,
+        shared_widget: bool | None = None,
+        public_data: str | None = None,
+        chat_data: str | None = None,
+    ) -> None:
+        self.allow_queries = allow_queries
+        self.shared_widget = shared_widget
+        self.width = width
+        self.height = height
+        self.html = html
+        self.public_data = public_data
+        self.chat_data = chat_data
+
+    def to_dict(self) -> dict:
+        return {"_": "inputMediaWidget", **{
+            "allow_queries": _tl._resolve(self.allow_queries),
+            "shared_widget": _tl._resolve(self.shared_widget),
+            "width": _tl._resolve(self.width),
+            "height": _tl._resolve(self.height),
+            "html": _tl._resolve(self.html),
+            "public_data": _tl._resolve(self.public_data),
+            "chat_data": _tl._resolve(self.chat_data),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'N\xc0\xf6D'
+        _flags_word = ((1 << 0) if self.allow_queries else 0) | ((1 << 1) if self.shared_widget else 0) | (0 if self.public_data is None else (1 << 2)) | (0 if self.chat_data is None else (1 << 3))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<ii', self.width, self.height)
+        out += _tl._pack_string(self.html)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_string(self.public_data)
+        if _flags_word & (1 << 3):
+            out += _tl._pack_string(self.chat_data)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "inputMediaWidget"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["allow_queries"] = True
+        if _flags_word & (1 << 1):
+            obj["shared_widget"] = True
+        obj["width"], obj["height"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        obj["html"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InputMediaWidget(allow_queries={self.allow_queries!r}, shared_widget={self.shared_widget!r}, width={self.width!r}, height={self.height!r})"
+
+class InputMediaWidgetId:
+    _CID = 0x7c855cb5
+
+    def __init__(
+        self,
+        widget_id: int,
+        chat_data: str | None = None,
+    ) -> None:
+        self.widget_id = widget_id
+        self.chat_data = chat_data
+
+    def to_dict(self) -> dict:
+        return {"_": "inputMediaWidgetId", **{
+            "widget_id": _tl._resolve(self.widget_id),
+            "chat_data": _tl._resolve(self.chat_data),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xb5\\\x85|'
+        _flags_word = (0 if self.chat_data is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.widget_id)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.chat_data)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "inputMediaWidgetId"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["widget_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 0):
+            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InputMediaWidgetId(widget_id={self.widget_id!r}, chat_data={self.chat_data!r})"
+
 class InputChatPhotoEmpty:
     _CID = 0x1ca48f57
 
@@ -2395,6 +2500,7 @@ class User:
         bot_can_manage_bots: bool | None = None,
         bot_guestchat: bool | None = None,
         bot_guard: bool | None = None,
+        bot_forum_sidebar: bool | None = None,
         access_hash: int | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
@@ -2446,6 +2552,7 @@ class User:
         self.bot_can_manage_bots = bot_can_manage_bots
         self.bot_guestchat = bot_guestchat
         self.bot_guard = bot_guard
+        self.bot_forum_sidebar = bot_forum_sidebar
         self.id = id
         self.access_hash = access_hash
         self.first_name = first_name
@@ -2500,6 +2607,7 @@ class User:
             "bot_can_manage_bots": _tl._resolve(self.bot_can_manage_bots),
             "bot_guestchat": _tl._resolve(self.bot_guestchat),
             "bot_guard": _tl._resolve(self.bot_guard),
+            "bot_forum_sidebar": _tl._resolve(self.bot_forum_sidebar),
             "id": _tl._resolve(self.id),
             "access_hash": _tl._resolve(self.access_hash),
             "first_name": _tl._resolve(self.first_name),
@@ -2526,7 +2634,7 @@ class User:
     def to_bytes(self) -> bytes:
         out = b'\x83\xcc\xb8\xb1'
         _flags_word = ((1 << 10) if self.self_ else 0) | ((1 << 11) if self.contact else 0) | ((1 << 12) if self.mutual_contact else 0) | ((1 << 13) if self.deleted else 0) | ((1 << 14) if self.bot else 0) | ((1 << 15) if self.bot_chat_history else 0) | ((1 << 16) if self.bot_nochats else 0) | ((1 << 17) if self.verified else 0) | ((1 << 18) if self.restricted else 0) | ((1 << 20) if self.min else 0) | ((1 << 21) if self.bot_inline_geo else 0) | ((1 << 23) if self.support else 0) | ((1 << 24) if self.scam else 0) | ((1 << 25) if self.apply_min_photo else 0) | ((1 << 26) if self.fake else 0) | ((1 << 27) if self.bot_attach_menu else 0) | ((1 << 28) if self.premium else 0) | ((1 << 29) if self.attach_menu_enabled else 0) | (0 if self.access_hash is None else (1 << 0)) | (0 if self.first_name is None else (1 << 1)) | (0 if self.last_name is None else (1 << 2)) | (0 if self.username is None else (1 << 3)) | (0 if self.phone is None else (1 << 4)) | (0 if self.photo is None else (1 << 5)) | (0 if self.status is None else (1 << 6)) | (0 if self.bot_info_version is None else (1 << 14)) | (0 if self.restriction_reason is None else (1 << 18)) | (0 if self.bot_inline_placeholder is None else (1 << 19)) | (0 if self.lang_code is None else (1 << 22)) | (0 if self.emoji_status is None else (1 << 30))
-        _flags2_word = ((1 << 1) if self.bot_can_edit else 0) | ((1 << 2) if self.close_friend else 0) | ((1 << 3) if self.stories_hidden else 0) | ((1 << 4) if self.stories_unavailable else 0) | ((1 << 10) if self.contact_require_premium else 0) | ((1 << 11) if self.bot_business else 0) | ((1 << 13) if self.bot_has_main_app else 0) | ((1 << 16) if self.bot_forum_view else 0) | ((1 << 17) if self.bot_forum_can_manage_topics else 0) | ((1 << 18) if self.bot_can_manage_bots else 0) | ((1 << 19) if self.bot_guestchat else 0) | ((1 << 20) if self.bot_guard else 0) | (0 if self.usernames is None else (1 << 0)) | (0 if self.stories_max_id is None else (1 << 5)) | (0 if self.color is None else (1 << 8)) | (0 if self.profile_color is None else (1 << 9)) | (0 if self.bot_active_users is None else (1 << 12)) | (0 if self.bot_verification_icon is None else (1 << 14)) | (0 if self.send_paid_messages_stars is None else (1 << 15)) | (0 if self.linked_community_id is None else (1 << 21))
+        _flags2_word = ((1 << 1) if self.bot_can_edit else 0) | ((1 << 2) if self.close_friend else 0) | ((1 << 3) if self.stories_hidden else 0) | ((1 << 4) if self.stories_unavailable else 0) | ((1 << 10) if self.contact_require_premium else 0) | ((1 << 11) if self.bot_business else 0) | ((1 << 13) if self.bot_has_main_app else 0) | ((1 << 16) if self.bot_forum_view else 0) | ((1 << 17) if self.bot_forum_can_manage_topics else 0) | ((1 << 18) if self.bot_can_manage_bots else 0) | ((1 << 19) if self.bot_guestchat else 0) | ((1 << 20) if self.bot_guard else 0) | ((1 << 22) if self.bot_forum_sidebar else 0) | (0 if self.usernames is None else (1 << 0)) | (0 if self.stories_max_id is None else (1 << 5)) | (0 if self.color is None else (1 << 8)) | (0 if self.profile_color is None else (1 << 9)) | (0 if self.bot_active_users is None else (1 << 12)) | (0 if self.bot_verification_icon is None else (1 << 14)) | (0 if self.send_paid_messages_stars is None else (1 << 15)) | (0 if self.linked_community_id is None else (1 << 21))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<I', _flags2_word)
         out += _struct.pack('<q', self.id)
@@ -2639,6 +2747,8 @@ class User:
             obj["bot_guestchat"] = True
         if _flags2_word & (1 << 20):
             obj["bot_guard"] = True
+        if _flags2_word & (1 << 22):
+            obj["bot_forum_sidebar"] = True
         obj["id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 0):
@@ -3153,6 +3263,7 @@ class Channel:
         monoforum: bool | None = None,
         forum_tabs: bool | None = None,
         in_news: bool | None = None,
+        forum_sidebar: bool | None = None,
         access_hash: int | None = None,
         username: str | None = None,
         restriction_reason: list[Any] | None = None,
@@ -3202,6 +3313,7 @@ class Channel:
         self.monoforum = monoforum
         self.forum_tabs = forum_tabs
         self.in_news = in_news
+        self.forum_sidebar = forum_sidebar
         self.id = id
         self.access_hash = access_hash
         self.title = title
@@ -3257,6 +3369,7 @@ class Channel:
             "monoforum": _tl._resolve(self.monoforum),
             "forum_tabs": _tl._resolve(self.forum_tabs),
             "in_news": _tl._resolve(self.in_news),
+            "forum_sidebar": _tl._resolve(self.forum_sidebar),
             "id": _tl._resolve(self.id),
             "access_hash": _tl._resolve(self.access_hash),
             "title": _tl._resolve(self.title),
@@ -3285,7 +3398,7 @@ class Channel:
     def to_bytes(self) -> bytes:
         out = b'@R\xd1z'
         _flags_word = ((1 << 0) if self.creator else 0) | ((1 << 2) if self.left else 0) | ((1 << 5) if self.broadcast else 0) | ((1 << 7) if self.verified else 0) | ((1 << 8) if self.megagroup else 0) | ((1 << 9) if self.restricted else 0) | ((1 << 11) if self.signatures else 0) | ((1 << 12) if self.min else 0) | ((1 << 19) if self.scam else 0) | ((1 << 20) if self.has_link else 0) | ((1 << 21) if self.has_geo else 0) | ((1 << 22) if self.slowmode_enabled else 0) | ((1 << 23) if self.call_active else 0) | ((1 << 24) if self.call_not_empty else 0) | ((1 << 25) if self.fake else 0) | ((1 << 26) if self.gigagroup else 0) | ((1 << 27) if self.noforwards else 0) | ((1 << 28) if self.join_to_send else 0) | ((1 << 29) if self.join_request else 0) | ((1 << 30) if self.forum else 0) | (0 if self.access_hash is None else (1 << 13)) | (0 if self.username is None else (1 << 6)) | (0 if self.restriction_reason is None else (1 << 9)) | (0 if self.admin_rights is None else (1 << 14)) | (0 if self.banned_rights is None else (1 << 15)) | (0 if self.default_banned_rights is None else (1 << 18)) | (0 if self.participants_count is None else (1 << 17))
-        _flags2_word = ((1 << 1) if self.stories_hidden else 0) | ((1 << 2) if self.stories_hidden_min else 0) | ((1 << 3) if self.stories_unavailable else 0) | ((1 << 12) if self.signature_profiles else 0) | ((1 << 15) if self.autotranslation else 0) | ((1 << 16) if self.broadcast_messages_allowed else 0) | ((1 << 17) if self.monoforum else 0) | ((1 << 19) if self.forum_tabs else 0) | ((1 << 21) if self.in_news else 0) | (0 if self.usernames is None else (1 << 0)) | (0 if self.stories_max_id is None else (1 << 4)) | (0 if self.color is None else (1 << 7)) | (0 if self.profile_color is None else (1 << 8)) | (0 if self.emoji_status is None else (1 << 9)) | (0 if self.level is None else (1 << 10)) | (0 if self.subscription_until_date is None else (1 << 11)) | (0 if self.bot_verification_icon is None else (1 << 13)) | (0 if self.send_paid_messages_stars is None else (1 << 14)) | (0 if self.linked_monoforum_id is None else (1 << 18)) | (0 if self.linked_community_id is None else (1 << 20)) | (0 if self.pinned_msg_id is None else (1 << 22))
+        _flags2_word = ((1 << 1) if self.stories_hidden else 0) | ((1 << 2) if self.stories_hidden_min else 0) | ((1 << 3) if self.stories_unavailable else 0) | ((1 << 12) if self.signature_profiles else 0) | ((1 << 15) if self.autotranslation else 0) | ((1 << 16) if self.broadcast_messages_allowed else 0) | ((1 << 17) if self.monoforum else 0) | ((1 << 19) if self.forum_tabs else 0) | ((1 << 21) if self.in_news else 0) | ((1 << 23) if self.forum_sidebar else 0) | (0 if self.usernames is None else (1 << 0)) | (0 if self.stories_max_id is None else (1 << 4)) | (0 if self.color is None else (1 << 7)) | (0 if self.profile_color is None else (1 << 8)) | (0 if self.emoji_status is None else (1 << 9)) | (0 if self.level is None else (1 << 10)) | (0 if self.subscription_until_date is None else (1 << 11)) | (0 if self.bot_verification_icon is None else (1 << 13)) | (0 if self.send_paid_messages_stars is None else (1 << 14)) | (0 if self.linked_monoforum_id is None else (1 << 18)) | (0 if self.linked_community_id is None else (1 << 20)) | (0 if self.pinned_msg_id is None else (1 << 22))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<I', _flags2_word)
         out += _struct.pack('<q', self.id)
@@ -3397,6 +3510,8 @@ class Channel:
             obj["forum_tabs"] = True
         if _flags2_word & (1 << 21):
             obj["in_news"] = True
+        if _flags2_word & (1 << 23):
+            obj["forum_sidebar"] = True
         obj["id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 13):
@@ -6135,6 +6250,92 @@ class MessageMediaVideoStream:
 
     def __repr__(self) -> str:
         return f"MessageMediaVideoStream(rtmp_stream={self.rtmp_stream!r}, call={self.call!r})"
+
+class MessageMediaWidget:
+    _CID = 0x2238f214
+
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        payload: bytes,
+        is_copy: bool | None = None,
+        can_query: bool | None = None,
+        background_query: bool | None = None,
+        public_data: str | None = None,
+        public_data_hash: int | None = None,
+        chat_data: str | None = None,
+        widget_id: int | None = None,
+    ) -> None:
+        self.is_copy = is_copy
+        self.can_query = can_query
+        self.background_query = background_query
+        self.width = width
+        self.height = height
+        self.payload = payload
+        self.public_data = public_data
+        self.public_data_hash = public_data_hash
+        self.chat_data = chat_data
+        self.widget_id = widget_id
+
+    def to_dict(self) -> dict:
+        return {"_": "messageMediaWidget", **{
+            "is_copy": _tl._resolve(self.is_copy),
+            "can_query": _tl._resolve(self.can_query),
+            "background_query": _tl._resolve(self.background_query),
+            "width": _tl._resolve(self.width),
+            "height": _tl._resolve(self.height),
+            "payload": _tl._resolve(self.payload),
+            "public_data": _tl._resolve(self.public_data),
+            "public_data_hash": _tl._resolve(self.public_data_hash),
+            "chat_data": _tl._resolve(self.chat_data),
+            "widget_id": _tl._resolve(self.widget_id),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x14\xf28"'
+        _flags_word = ((1 << 0) if self.is_copy else 0) | ((1 << 1) if self.can_query else 0) | ((1 << 2) if self.background_query else 0) | (0 if self.public_data is None else (1 << 3)) | (0 if self.public_data_hash is None else (1 << 3)) | (0 if self.chat_data is None else (1 << 4)) | (0 if self.widget_id is None else (1 << 5))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<ii', self.width, self.height)
+        out += _tl._pack_bytes(self.payload)
+        if _flags_word & (1 << 3):
+            out += _tl._pack_string(self.public_data)
+        if _flags_word & (1 << 3):
+            out += _struct.pack('<q', self.public_data_hash)
+        if _flags_word & (1 << 4):
+            out += _tl._pack_string(self.chat_data)
+        if _flags_word & (1 << 5):
+            out += _struct.pack('<q', self.widget_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messageMediaWidget"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["is_copy"] = True
+        if _flags_word & (1 << 1):
+            obj["can_query"] = True
+        if _flags_word & (1 << 2):
+            obj["background_query"] = True
+        obj["width"], obj["height"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        obj["payload"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["public_data_hash"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 4):
+            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 5):
+            obj["widget_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"MessageMediaWidget(is_copy={self.is_copy!r}, can_query={self.can_query!r}, background_query={self.background_query!r}, width={self.width!r})"
 
 class MessageActionEmpty:
     _CID = 0xb6aef7b0
@@ -17994,6 +18195,410 @@ class UpdateWalletTonConnectPendingDisconnect:
     def __repr__(self) -> str:
         return f"UpdateWalletTonConnectPendingDisconnect(session_ids={self.session_ids!r})"
 
+class UpdateEditForumTopic:
+    _CID = 0x2366665c
+
+    def __init__(
+        self,
+        peer: Any,
+        topic_id: int,
+        title: str | None = None,
+        icon_emoji_id: int | None = None,
+        closed: bool | None = None,
+        hidden: bool | None = None,
+    ) -> None:
+        self.peer = peer
+        self.topic_id = topic_id
+        self.title = title
+        self.icon_emoji_id = icon_emoji_id
+        self.closed = closed
+        self.hidden = hidden
+
+    def to_dict(self) -> dict:
+        return {"_": "updateEditForumTopic", **{
+            "peer": _tl._resolve(self.peer),
+            "topic_id": _tl._resolve(self.topic_id),
+            "title": _tl._resolve(self.title),
+            "icon_emoji_id": _tl._resolve(self.icon_emoji_id),
+            "closed": _tl._resolve(self.closed),
+            "hidden": _tl._resolve(self.hidden),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\\ff#'
+        _flags_word = (0 if self.title is None else (1 << 0)) | (0 if self.icon_emoji_id is None else (1 << 1)) | (0 if self.closed is None else (1 << 2)) | (0 if self.hidden is None else (1 << 3))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<i', self.topic_id)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.title)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<q', self.icon_emoji_id)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_bool(self.closed)
+        if _flags_word & (1 << 3):
+            out += _tl._pack_bool(self.hidden)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateEditForumTopic"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+        obj["topic_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["icon_emoji_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 2):
+            obj["closed"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["hidden"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateEditForumTopic(peer={self.peer!r}, topic_id={self.topic_id!r}, title={self.title!r}, icon_emoji_id={self.icon_emoji_id!r})"
+
+class UpdateBotWidgetQuery:
+    _CID = 0xb373fe68
+
+    def __init__(
+        self,
+        query_id: int,
+        query_type: Any,
+        user_id: int,
+        peer: Any,
+        msg_id: int,
+        chat_instance: int,
+        chat_type: str,
+        data: bytes,
+        widget_id: int | None = None,
+        wallet_card: Any | None = None,
+    ) -> None:
+        self.query_id = query_id
+        self.query_type = query_type
+        self.user_id = user_id
+        self.peer = peer
+        self.msg_id = msg_id
+        self.chat_instance = chat_instance
+        self.chat_type = chat_type
+        self.data = data
+        self.widget_id = widget_id
+        self.wallet_card = wallet_card
+
+    def to_dict(self) -> dict:
+        return {"_": "updateBotWidgetQuery", **{
+            "query_id": _tl._resolve(self.query_id),
+            "query_type": _tl._resolve(self.query_type),
+            "user_id": _tl._resolve(self.user_id),
+            "peer": _tl._resolve(self.peer),
+            "msg_id": _tl._resolve(self.msg_id),
+            "chat_instance": _tl._resolve(self.chat_instance),
+            "chat_type": _tl._resolve(self.chat_type),
+            "data": _tl._resolve(self.data),
+            "widget_id": _tl._resolve(self.widget_id),
+            "wallet_card": _tl._resolve(self.wallet_card),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'h\xfes\xb3'
+        _flags_word = (0 if self.widget_id is None else (1 << 0)) | (0 if self.wallet_card is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.query_id)
+        out += _tl.serialize(_tl._resolve(self.query_type), _SCHEMA)
+        out += _struct.pack('<q', self.user_id)
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<iq', self.msg_id, self.chat_instance)
+        out += _tl._pack_string(self.chat_type)
+        out += _tl._pack_bytes(self.data)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.widget_id)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.wallet_card), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateBotWidgetQuery"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["query_type"], pos = _tl._read_typed(data, pos, "WidgetQueryType", _SCHEMA_BY_CID)
+        obj["user_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+        obj["msg_id"], obj["chat_instance"], = _struct.unpack_from('<iq', data, pos)
+        pos += 12
+        obj["chat_type"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["widget_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 1):
+            obj["wallet_card"], pos = _tl._read_typed(data, pos, "wallet.Card", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateBotWidgetQuery(query_id={self.query_id!r}, query_type={self.query_type!r}, user_id={self.user_id!r}, peer={self.peer!r})"
+
+class UpdateInlineBotWidgetQuery:
+    _CID = 0xa5f07e08
+
+    def __init__(
+        self,
+        query_id: int,
+        query_type: Any,
+        user_id: int,
+        inline_message_id: Any,
+        chat_instance: int,
+        chat_type: str,
+        data: bytes,
+        widget_id: int | None = None,
+        wallet_card: Any | None = None,
+    ) -> None:
+        self.query_id = query_id
+        self.query_type = query_type
+        self.user_id = user_id
+        self.inline_message_id = inline_message_id
+        self.chat_instance = chat_instance
+        self.chat_type = chat_type
+        self.data = data
+        self.widget_id = widget_id
+        self.wallet_card = wallet_card
+
+    def to_dict(self) -> dict:
+        return {"_": "updateInlineBotWidgetQuery", **{
+            "query_id": _tl._resolve(self.query_id),
+            "query_type": _tl._resolve(self.query_type),
+            "user_id": _tl._resolve(self.user_id),
+            "inline_message_id": _tl._resolve(self.inline_message_id),
+            "chat_instance": _tl._resolve(self.chat_instance),
+            "chat_type": _tl._resolve(self.chat_type),
+            "data": _tl._resolve(self.data),
+            "widget_id": _tl._resolve(self.widget_id),
+            "wallet_card": _tl._resolve(self.wallet_card),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x08~\xf0\xa5'
+        _flags_word = (0 if self.widget_id is None else (1 << 0)) | (0 if self.wallet_card is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.query_id)
+        out += _tl.serialize(_tl._resolve(self.query_type), _SCHEMA)
+        out += _struct.pack('<q', self.user_id)
+        out += _tl.serialize(_tl._resolve(self.inline_message_id), _SCHEMA)
+        out += _struct.pack('<q', self.chat_instance)
+        out += _tl._pack_string(self.chat_type)
+        out += _tl._pack_bytes(self.data)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.widget_id)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.wallet_card), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateInlineBotWidgetQuery"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["query_type"], pos = _tl._read_typed(data, pos, "WidgetQueryType", _SCHEMA_BY_CID)
+        obj["user_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["inline_message_id"], pos = _tl._read_typed(data, pos, "InputBotInlineMessageID", _SCHEMA_BY_CID)
+        obj["chat_instance"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["chat_type"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["widget_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 1):
+            obj["wallet_card"], pos = _tl._read_typed(data, pos, "wallet.Card", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateInlineBotWidgetQuery(query_id={self.query_id!r}, query_type={self.query_type!r}, user_id={self.user_id!r}, inline_message_id={self.inline_message_id!r})"
+
+class UpdateBotWidgetCopyQuery:
+    _CID = 0xfa89bef7
+
+    def __init__(
+        self,
+        query_id: int,
+        query_type: Any,
+        user_id: int,
+        data: bytes,
+        widget_id: int,
+        wallet_card: Any | None = None,
+    ) -> None:
+        self.query_id = query_id
+        self.query_type = query_type
+        self.user_id = user_id
+        self.data = data
+        self.widget_id = widget_id
+        self.wallet_card = wallet_card
+
+    def to_dict(self) -> dict:
+        return {"_": "updateBotWidgetCopyQuery", **{
+            "query_id": _tl._resolve(self.query_id),
+            "query_type": _tl._resolve(self.query_type),
+            "user_id": _tl._resolve(self.user_id),
+            "data": _tl._resolve(self.data),
+            "widget_id": _tl._resolve(self.widget_id),
+            "wallet_card": _tl._resolve(self.wallet_card),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xf7\xbe\x89\xfa'
+        _flags_word = (0 if self.wallet_card is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.query_id)
+        out += _tl.serialize(_tl._resolve(self.query_type), _SCHEMA)
+        out += _struct.pack('<q', self.user_id)
+        out += _tl._pack_bytes(self.data)
+        out += _struct.pack('<q', self.widget_id)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.wallet_card), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateBotWidgetCopyQuery"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["query_type"], pos = _tl._read_typed(data, pos, "WidgetQueryType", _SCHEMA_BY_CID)
+        obj["user_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["widget_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 1):
+            obj["wallet_card"], pos = _tl._read_typed(data, pos, "wallet.Card", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateBotWidgetCopyQuery(query_id={self.query_id!r}, query_type={self.query_type!r}, user_id={self.user_id!r}, data={self.data!r})"
+
+class UpdateMessageWidgetData:
+    _CID = 0xbbb078dd
+
+    def __init__(
+        self,
+        peer: Any,
+        msg_id: int,
+        pts: int,
+        pts_count: int,
+        public_data: str | None = None,
+        public_data_hash: int | None = None,
+        chat_data: str | None = None,
+    ) -> None:
+        self.peer = peer
+        self.msg_id = msg_id
+        self.public_data = public_data
+        self.public_data_hash = public_data_hash
+        self.chat_data = chat_data
+        self.pts = pts
+        self.pts_count = pts_count
+
+    def to_dict(self) -> dict:
+        return {"_": "updateMessageWidgetData", **{
+            "peer": _tl._resolve(self.peer),
+            "msg_id": _tl._resolve(self.msg_id),
+            "public_data": _tl._resolve(self.public_data),
+            "public_data_hash": _tl._resolve(self.public_data_hash),
+            "chat_data": _tl._resolve(self.chat_data),
+            "pts": _tl._resolve(self.pts),
+            "pts_count": _tl._resolve(self.pts_count),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xddx\xb0\xbb'
+        _flags_word = (0 if self.public_data is None else (1 << 0)) | (0 if self.public_data_hash is None else (1 << 0)) | (0 if self.chat_data is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _struct.pack('<i', self.msg_id)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.public_data)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.public_data_hash)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.chat_data)
+        out += _struct.pack('<ii', self.pts, self.pts_count)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateMessageWidgetData"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+        obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["public_data_hash"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 1):
+            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["pts"], obj["pts_count"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateMessageWidgetData(peer={self.peer!r}, msg_id={self.msg_id!r}, public_data={self.public_data!r}, public_data_hash={self.public_data_hash!r})"
+
+class UpdateTranscribedAudioFile:
+    _CID = 0x734c2e7b
+
+    def __init__(
+        self,
+        transcription_id: int,
+        text: str,
+        pending: bool | None = None,
+    ) -> None:
+        self.pending = pending
+        self.transcription_id = transcription_id
+        self.text = text
+
+    def to_dict(self) -> dict:
+        return {"_": "updateTranscribedAudioFile", **{
+            "pending": _tl._resolve(self.pending),
+            "transcription_id": _tl._resolve(self.transcription_id),
+            "text": _tl._resolve(self.text),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'{.Ls'
+        _flags_word = ((1 << 0) if self.pending else 0)
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.transcription_id)
+        out += _tl._pack_string(self.text)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "updateTranscribedAudioFile"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["pending"] = True
+        obj["transcription_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["text"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UpdateTranscribedAudioFile(pending={self.pending!r}, transcription_id={self.transcription_id!r}, text={self.text!r})"
+
 class UpdatesTooLong:
     _CID = 0xe317af7e
 
@@ -25574,6 +26179,159 @@ class InputBotInlineMessageRichMessage:
     def __repr__(self) -> str:
         return f"InputBotInlineMessageRichMessage(reply_markup={self.reply_markup!r}, rich_message={self.rich_message!r})"
 
+class InputBotInlineMessageWidget:
+    _CID = 0xf597a3f0
+
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        html: str,
+        message: str,
+        allow_queries: bool | None = None,
+        shared_widget: bool | None = None,
+        invert_media: bool | None = None,
+        public_data: str | None = None,
+        chat_data: str | None = None,
+        reply_markup: Any | None = None,
+        entities: list[Any] | None = None,
+    ) -> None:
+        self.allow_queries = allow_queries
+        self.shared_widget = shared_widget
+        self.invert_media = invert_media
+        self.width = width
+        self.height = height
+        self.html = html
+        self.public_data = public_data
+        self.chat_data = chat_data
+        self.reply_markup = reply_markup
+        self.message = message
+        self.entities = entities
+
+    def to_dict(self) -> dict:
+        return {"_": "inputBotInlineMessageWidget", **{
+            "allow_queries": _tl._resolve(self.allow_queries),
+            "shared_widget": _tl._resolve(self.shared_widget),
+            "invert_media": _tl._resolve(self.invert_media),
+            "width": _tl._resolve(self.width),
+            "height": _tl._resolve(self.height),
+            "html": _tl._resolve(self.html),
+            "public_data": _tl._resolve(self.public_data),
+            "chat_data": _tl._resolve(self.chat_data),
+            "reply_markup": _tl._resolve(self.reply_markup),
+            "message": _tl._resolve(self.message),
+            "entities": _tl._resolve(self.entities),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xf0\xa3\x97\xf5'
+        _flags_word = ((1 << 0) if self.allow_queries else 0) | ((1 << 1) if self.shared_widget else 0) | ((1 << 6) if self.invert_media else 0) | (0 if self.public_data is None else (1 << 2)) | (0 if self.chat_data is None else (1 << 3)) | (0 if self.reply_markup is None else (1 << 4)) | (0 if self.entities is None else (1 << 5))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<ii', self.width, self.height)
+        out += _tl._pack_string(self.html)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_string(self.public_data)
+        if _flags_word & (1 << 3):
+            out += _tl._pack_string(self.chat_data)
+        if _flags_word & (1 << 4):
+            out += _tl.serialize(_tl._resolve(self.reply_markup), _SCHEMA)
+        out += _tl._pack_string(self.message)
+        if _flags_word & (1 << 5):
+            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "inputBotInlineMessageWidget"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["allow_queries"] = True
+        if _flags_word & (1 << 1):
+            obj["shared_widget"] = True
+        if _flags_word & (1 << 6):
+            obj["invert_media"] = True
+        obj["width"], obj["height"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        obj["html"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 4):
+            obj["reply_markup"], pos = _tl._read_typed(data, pos, "ReplyMarkup", _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 5):
+            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InputBotInlineMessageWidget(allow_queries={self.allow_queries!r}, shared_widget={self.shared_widget!r}, invert_media={self.invert_media!r}, width={self.width!r})"
+
+class InputBotInlineMessageWidgetId:
+    _CID = 0xfe8b792b
+
+    def __init__(
+        self,
+        widget_id: int,
+        message: str,
+        invert_media: bool | None = None,
+        chat_data: str | None = None,
+        reply_markup: Any | None = None,
+        entities: list[Any] | None = None,
+    ) -> None:
+        self.invert_media = invert_media
+        self.widget_id = widget_id
+        self.chat_data = chat_data
+        self.reply_markup = reply_markup
+        self.message = message
+        self.entities = entities
+
+    def to_dict(self) -> dict:
+        return {"_": "inputBotInlineMessageWidgetId", **{
+            "invert_media": _tl._resolve(self.invert_media),
+            "widget_id": _tl._resolve(self.widget_id),
+            "chat_data": _tl._resolve(self.chat_data),
+            "reply_markup": _tl._resolve(self.reply_markup),
+            "message": _tl._resolve(self.message),
+            "entities": _tl._resolve(self.entities),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'+y\x8b\xfe'
+        _flags_word = ((1 << 3) if self.invert_media else 0) | (0 if self.chat_data is None else (1 << 0)) | (0 if self.reply_markup is None else (1 << 1)) | (0 if self.entities is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.widget_id)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.chat_data)
+        if _flags_word & (1 << 1):
+            out += _tl.serialize(_tl._resolve(self.reply_markup), _SCHEMA)
+        out += _tl._pack_string(self.message)
+        if _flags_word & (1 << 2):
+            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "inputBotInlineMessageWidgetId"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 3):
+            obj["invert_media"] = True
+        obj["widget_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 0):
+            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["reply_markup"], pos = _tl._read_typed(data, pos, "ReplyMarkup", _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InputBotInlineMessageWidgetId(invert_media={self.invert_media!r}, widget_id={self.widget_id!r}, chat_data={self.chat_data!r}, reply_markup={self.reply_markup!r})"
+
 class InputBotInlineResult:
     _CID = 0x88bf9319
 
@@ -26267,6 +27025,101 @@ class BotInlineMessageRichMessage:
 
     def __repr__(self) -> str:
         return f"BotInlineMessageRichMessage(reply_markup={self.reply_markup!r}, rich_message={self.rich_message!r})"
+
+class BotInlineMessageWidget:
+    _CID = 0xbaa17834
+
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        payload: bytes,
+        message: str,
+        invert_media: bool | None = None,
+        public_data: str | None = None,
+        public_data_hash: int | None = None,
+        chat_data: str | None = None,
+        reply_markup: Any | None = None,
+        widget_id: int | None = None,
+        entities: list[Any] | None = None,
+    ) -> None:
+        self.invert_media = invert_media
+        self.width = width
+        self.height = height
+        self.payload = payload
+        self.public_data = public_data
+        self.public_data_hash = public_data_hash
+        self.chat_data = chat_data
+        self.reply_markup = reply_markup
+        self.widget_id = widget_id
+        self.message = message
+        self.entities = entities
+
+    def to_dict(self) -> dict:
+        return {"_": "botInlineMessageWidget", **{
+            "invert_media": _tl._resolve(self.invert_media),
+            "width": _tl._resolve(self.width),
+            "height": _tl._resolve(self.height),
+            "payload": _tl._resolve(self.payload),
+            "public_data": _tl._resolve(self.public_data),
+            "public_data_hash": _tl._resolve(self.public_data_hash),
+            "chat_data": _tl._resolve(self.chat_data),
+            "reply_markup": _tl._resolve(self.reply_markup),
+            "widget_id": _tl._resolve(self.widget_id),
+            "message": _tl._resolve(self.message),
+            "entities": _tl._resolve(self.entities),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'4x\xa1\xba'
+        _flags_word = ((1 << 5) if self.invert_media else 0) | (0 if self.public_data is None else (1 << 0)) | (0 if self.public_data_hash is None else (1 << 0)) | (0 if self.chat_data is None else (1 << 1)) | (0 if self.reply_markup is None else (1 << 2)) | (0 if self.widget_id is None else (1 << 3)) | (0 if self.entities is None else (1 << 4))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<ii', self.width, self.height)
+        out += _tl._pack_bytes(self.payload)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.public_data)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.public_data_hash)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.chat_data)
+        if _flags_word & (1 << 2):
+            out += _tl.serialize(_tl._resolve(self.reply_markup), _SCHEMA)
+        if _flags_word & (1 << 3):
+            out += _struct.pack('<q', self.widget_id)
+        out += _tl._pack_string(self.message)
+        if _flags_word & (1 << 4):
+            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "botInlineMessageWidget"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 5):
+            obj["invert_media"] = True
+        obj["width"], obj["height"], = _struct.unpack_from('<ii', data, pos)
+        pos += 8
+        obj["payload"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["public_data_hash"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 1):
+            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 2):
+            obj["reply_markup"], pos = _tl._read_typed(data, pos, "ReplyMarkup", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["widget_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 4):
+            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"BotInlineMessageWidget(invert_media={self.invert_media!r}, width={self.width!r}, height={self.height!r}, payload={self.payload!r})"
 
 class BotInlineResult:
     _CID = 0x11965f3a
@@ -56477,3 +57330,153 @@ class InputWalletCardSticker:
 
     def __repr__(self) -> str:
         return f"InputWalletCardSticker(coordinates={self.coordinates!r}, nft_address={self.nft_address!r})"
+
+class UserWallet:
+    _CID = 0x454d2737
+
+    def __init__(
+        self,
+        address: str,
+        balance: int,
+        public_key: bytes | None = None,
+        state_init: bytes | None = None,
+    ) -> None:
+        self.address = address
+        self.balance = balance
+        self.public_key = public_key
+        self.state_init = state_init
+
+    def to_dict(self) -> dict:
+        return {"_": "userWallet", **{
+            "address": _tl._resolve(self.address),
+            "balance": _tl._resolve(self.balance),
+            "public_key": _tl._resolve(self.public_key),
+            "state_init": _tl._resolve(self.state_init),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b"7'ME"
+        _flags_word = (0 if self.public_key is None else (1 << 0)) | (0 if self.state_init is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.address)
+        out += _struct.pack('<q', self.balance)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_bytes(self.public_key)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_bytes(self.state_init)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "userWallet"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["address"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["balance"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 0):
+            obj["public_key"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["state_init"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"UserWallet(address={self.address!r}, balance={self.balance!r}, public_key={self.public_key!r}, state_init={self.state_init!r})"
+
+class WidgetQueryTypeData:
+    _CID = 0x16d8cf0b
+
+    def __init__(
+        self,
+        with_wallet: bool | None = None,
+    ) -> None:
+        self.with_wallet = with_wallet
+
+    def to_dict(self) -> dict:
+        return {"_": "widgetQueryTypeData", **{
+            "with_wallet": _tl._resolve(self.with_wallet),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x0b\xcf\xd8\x16'
+        _flags_word = ((1 << 0) if self.with_wallet else 0)
+        out += _struct.pack('<I', _flags_word)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "widgetQueryTypeData"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["with_wallet"] = True
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WidgetQueryTypeData(with_wallet={self.with_wallet!r})"
+
+class WidgetQueryTypeSignData:
+    _CID = 0x192047dc
+
+    def __init__(
+        self,
+        wallet: Any,
+        sign_data: Any,
+    ) -> None:
+        self.wallet = wallet
+        self.sign_data = sign_data
+
+    def to_dict(self) -> dict:
+        return {"_": "widgetQueryTypeSignData", **{
+            "wallet": _tl._resolve(self.wallet),
+            "sign_data": _tl._resolve(self.sign_data),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xdcG \x19'
+        out += _tl.serialize(_tl._resolve(self.wallet), _SCHEMA)
+        out += _tl.serialize(_tl._resolve(self.sign_data), _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "widgetQueryTypeSignData"}
+        obj["wallet"], pos = _tl._read_typed(data, pos, "UserWallet", _SCHEMA_BY_CID)
+        obj["sign_data"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WidgetQueryTypeSignData(wallet={self.wallet!r}, sign_data={self.sign_data!r})"
+
+class WidgetQueryTypeSentTransaction:
+    _CID = 0xff3b33b4
+
+    def __init__(
+        self,
+        wallet: Any,
+        msg_hash: str,
+    ) -> None:
+        self.wallet = wallet
+        self.msg_hash = msg_hash
+
+    def to_dict(self) -> dict:
+        return {"_": "widgetQueryTypeSentTransaction", **{
+            "wallet": _tl._resolve(self.wallet),
+            "msg_hash": _tl._resolve(self.msg_hash),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xb43;\xff'
+        out += _tl.serialize(_tl._resolve(self.wallet), _SCHEMA)
+        out += _tl._pack_string(self.msg_hash)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "widgetQueryTypeSentTransaction"}
+        obj["wallet"], pos = _tl._read_typed(data, pos, "UserWallet", _SCHEMA_BY_CID)
+        obj["msg_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WidgetQueryTypeSentTransaction(wallet={self.wallet!r}, msg_hash={self.msg_hash!r})"
