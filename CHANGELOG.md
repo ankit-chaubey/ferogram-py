@@ -1,21 +1,10 @@
-### Unreleased
+### 0.5.5 (12-11-2026)
 
 ### Changed
-- Layer upgrade to 233 (from 232). `schema/api.tl` and `python/ferogram/raw/generated/` regenerated from the schema in ferogram v0.6.7.
-- Rust dependencies (`ferogram-mtsender`, `ferogram-session`, `ferogram-connect`, `ferogram-tl-types`, `ferogram-crypto`, `ferogram-msgbox`) now point at ferogram v0.6.7 (`099f9a0`), which is built on layer 233. `Cargo.lock` updated to match.
-- `toggle_forum()` takes a new `sidebar` argument (default `False`). Layer 233 made `sidebar` a required field of `channels.toggleForum`.
-
-### Added
-- Layer 233 types and functions in `ferogram.raw`: the widget types and `messages.*Widget*` requests, `messages.transcribeAudioFile`, `messages.getTranscriptionLangs`, and the `updateEditForumTopic` update.
-- `user` gained `bot_forum_sidebar` and `channel` gained `forum_sidebar`.
-- Test for the `sidebar` argument of `toggle_forum()`.
-
-### 0.5.5 (03-11-2026)
-
-### Changed
-- Layer upgrade to 232 (from 228). `schema/api.tl` and `python/ferogram/raw/generated/` regenerated.
+- Layer upgrade to 233 (from 228). `schema/api.tl` and `python/ferogram/raw/generated/` regenerated from the schema in ferogram v0.6.7.
 - Keyboards follow the layer 229 schema split: inline buttons are now `keyboardInlineButton` with an `inlineButtonType*` payload, reply buttons are `keyboardButton` with a `buttonType*` payload, and inline rows use `keyboardInlineButtonRow`.
-- Dependencies (`ferogram-mtsender`, `ferogram-session`, `ferogram-connect`, `ferogram-tl-types`, `ferogram-crypto`, `ferogram-msgbox`) must be a ferogram release built on layer 232 so the Rust side parses the same layer the Python side sends.
+- Rust dependencies (`ferogram-mtsender`, `ferogram-session`, `ferogram-connect`, `ferogram-tl-types`, `ferogram-crypto`, `ferogram-msgbox`) now come from crates.io at 0.6.7, which is built on layer 233, instead of a pinned git revision. `Cargo.lock` has no git sources left.
+- `toggle_forum()` takes a new `sidebar` argument (default `False`). Layer 233 made `sidebar` a required field of `channels.toggleForum`.
 - Repository layout: the Python package moved to `python/ferogram/` (maturin `python-source`), the TL schema to `schema/api.tl`, and the code generator to `tools/codegen.py`, so neither ships in the wheel. Import paths are unchanged.
 - `client.py` is split by domain. `Client` is now composed of method groups in `ferogram/methods/` (`auth`, `users`, `messages`, `dialogs`, `chats`, `participants`, `invites`, `media`, `bots`); shared helpers moved to `ferogram/_internal.py` and `ferogram/transfer.py`. Every name that was importable from `ferogram.client` still is, and no method body changed.
 - Tests moved to `tests/unit/` and now run under one `pytest` invocation. A stub stands in for the Rust extension when it is not built.
@@ -25,6 +14,7 @@
 - `InlineButton.mini_app_simple()`. Layer 229 only offers the simple web view for reply keyboards, so it moved to `ReplyButton.mini_app_simple(label, url)`.
 
 ### Fixed
+- Docstrings of `join_chat()` and `_resolve_chat_invite_join_result()` no longer cite a layer number or describe the WebView result beyond what the schema shows.
 - `filters.command(...)` raised `IndexError` on a message that was only the prefix (`/`).
 - A peer passed into a field of another peer type (for example an `inputPeerChannel` for `channels.leaveChannel`'s `InputChannel`) was serialized with the peer's own constructor id. The serializer now rewrites `inputPeer*`, `inputUser*` and `inputChannel*` values to the constructor the field's declared type needs, for plain fields and `Vector<...>` fields. This covers every method that hands a resolved peer straight to a `channels.*` or `users.*` request.
 - Requests built by hand no longer drift from the schema (all 15 known mismatches fixed):
@@ -36,6 +26,8 @@
 - `true` flags passed as `False` were sent as set, in both the generated `to_bytes()` and the generic serializer. This made `unpin_dialog()` pin, `hide_join_request(approve=False)` approve, `get_dialogs()` exclude pinned chats, every callback button carry `requires_password`, `InlineButton.switch_elsewhere()` behave like `switch_inline()`, and `ReplyKeyboard` default flags (`resize`, `single_use`, `selective`, `persistent`) always on. `False` now means the flag is absent.
 
 ### Added
+- Layer 233 types and functions in `ferogram.raw`: the widget types and `messages.*Widget*` requests, `messages.transcribeAudioFile`, `messages.getTranscriptionLangs`, and the `updateEditForumTopic` update. `user` gained `bot_forum_sidebar` and `channel` gained `forum_sidebar`.
+- Test for the `sidebar` argument of `toggle_forum()`.
 - Tests: `test_filters.py`, `test_types.py`, `test_updates.py`, `test_tl_primitives.py`, `test_public_api.py`, `test_schema_usage.py` (checks every hand-built TL dict against the schema), `test_method_requests.py` (requests built by the fixed methods) and `test_codegen_up_to_date.py` (fails if the generated code is stale).
 - CI workflow `tests.yml` (ruff and pytest on Python 3.9, 3.12 and 3.13, plus clippy), `CONTRIBUTING.md`, `examples/README.md`, `.gitignore`.
 - `tests/unit/test_keyboards.py`: checks every button kind against the schema and round-trips it through the serializer, without needing the Rust extension.

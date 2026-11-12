@@ -18,14 +18,45 @@ on:
           - android-termux
           - sdist
       publish:
-        description: "Upload to PyPI after build"
+        description: "Upload to PyPI after build. Only runs from a v* tag with job=all."
         required: false
         default: false
         type: boolean
 
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
 
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Tag matches pyproject.toml version
+        id: version
+        run: python .github/scripts/check_release.py version
+      - name: Version is not on PyPI yet
+        if: github.ref_type == 'tag' && (github.event_name == 'push' || (inputs.publish == true && inputs.job == 'all'))
+        run: python .github/scripts/check_release.py version --check-pypi
+
+  tests:
+    needs: check
+    if: github.event_name == 'push' || inputs.job == 'all'
+    uses: ./.github/workflows/tests.yml
+
   linux:
+    needs: check
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'linux'
     runs-on: ubuntu-latest
     strategy:
@@ -35,15 +66,17 @@ jobs:
           - x86_64-unknown-linux-gnu
           - aarch64-unknown-linux-gnu
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.13"
       - name: Cache Rust build artifacts
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           key: ${{ matrix.target }}
-      - uses: PyO3/maturin-action@v1
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         # ring's build.rs compiles ARM assembly via cc-rs using the manylinux
         # cross-compiler, which doesn't define __ARM_ARCH. Explicitly set it.
         env:
@@ -52,12 +85,14 @@ jobs:
           target: ${{ matrix.target }}
           args: --release --out dist
           manylinux: auto
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: wheels-linux-${{ matrix.target }}
           path: dist
+          if-no-files-found: error
 
   macos:
+    needs: check
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'macos'
     runs-on: macos-latest
     strategy:
@@ -67,40 +102,47 @@ jobs:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.13"
       - name: Cache Rust build artifacts
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           key: ${{ matrix.target }}
-      - uses: PyO3/maturin-action@v1
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           target: ${{ matrix.target }}
           args: --release --out dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: wheels-macos-${{ matrix.target }}
           path: dist
+          if-no-files-found: error
 
   windows:
+    needs: check
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'windows'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.13"
       - name: Cache Rust build artifacts
-        uses: Swatinem/rust-cache@v2
-      - uses: PyO3/maturin-action@v1
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           args: --release --out dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: wheels-windows
           path: dist
+          if-no-files-found: error
 
   # Builds for Termux (the terminal app), not for embedding inside a
   # general Android APK. This links against Termux's own Python package
@@ -109,6 +151,7 @@ jobs:
   # app-embedded interpreters like Chaquopy or python-for-android; those
   # bundle their own CPython and need a separate build target entirely.
   android-termux:
+    needs: check
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'android-termux'
     runs-on: ubuntu-latest
     strategy:
@@ -128,21 +171,23 @@ jobs:
             api: 24
             arch: x86
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.13"
 
       - name: Setup Android NDK r26d (cross-compiler for the Termux target)
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
         id: ndk
         with:
           ndk-version: r26d
           link-to-sdk: true
 
       - name: Cache Rust build artifacts
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           key: ${{ matrix.target }}
 
@@ -257,43 +302,161 @@ jobs:
             rm -rf "$workdir"
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: wheels-android-termux-${{ matrix.target }}
           path: dist
+          if-no-files-found: error
 
   sdist:
+    needs: check
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'sdist'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: PyO3/maturin-action@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           command: sdist
           args: --out dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: wheels-sdist
           path: dist
+          if-no-files-found: error
 
-  publish:
-    needs: [linux, macos, windows, android-termux, sdist]
-    if: |
-      always() &&
-      (github.event_name == 'push' || inputs.publish == true) &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled')
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
+  smoke:
+    name: Smoke test (Python ${{ matrix.python }})
+    needs: [check, linux]
+    if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'linux'
+    # ubuntu-latest has no Python 3.9 build for actions/setup-python, see tests.yml
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.13"]
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wheels-linux-x86_64-unknown-linux-gnu
+          path: dist
+      - name: Install the wheel and import it
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          python -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/venv/bin/python" - <<'EOF'
+          import os
+          from importlib.metadata import version
+
+          import ferogram
+          from ferogram import _ferogram
+          from ferogram.raw.generated._tl_schema import LAYER
+
+          installed = version("ferogram")
+          assert installed == os.environ["VERSION"], (installed, os.environ["VERSION"])
+          print("imported ferogram", installed, "on TL layer", LAYER)
+          EOF
+
+  collect:
+    needs: [check, tests, smoke, linux, macos, windows, android-termux, sdist]
+    if: github.event_name == 'push' || inputs.job == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: "wheels-*"
           merge-multiple: true
           path: dist
-      - uses: PyO3/maturin-action@v1
+      - name: Release holds exactly the expected distributions
+        run: python .github/scripts/check_release.py dists dist "${{ needs.check.outputs.version }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          command: upload
-          args: --non-interactive --skip-existing dist/*
+          name: dist
+          path: dist
+          if-no-files-found: error
+
+  # The only job with id-token: write. It downloads the checked files and runs
+  # the PyPA action, nothing else. Maturin builds, it does not upload.
+  publish:
+    needs: [check, collect]
+    if: github.ref_type == 'tag' && (github.event_name == 'push' || (inputs.publish == true && inputs.job == 'all'))
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ferogram/${{ needs.check.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist
+      - name: Upload to PyPI with PEP 740 attestations
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: dist
+          attestations: true
+          skip-existing: false
+      # The action writes <file>.publish.attestation next to each distribution
+      # before it uploads. If attestations were silently turned off, none exist.
+      - name: Every distribution has an attestation
+        run: |
+          shopt -s nullglob
+          dists=(dist/*.whl dist/*.tar.gz)
+          echo "${#dists[@]} distributions"
+          [ "${#dists[@]}" -gt 0 ]
+          missing=0
+          for d in "${dists[@]}"; do
+            if [ ! -f "$d.publish.attestation" ]; then
+              echo "::error::no attestation was generated for $d"
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: attestations
+          path: dist/*.publish.attestation
+          if-no-files-found: error
+
+  verify:
+    needs: [check, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist
+      - name: Files and provenance on PyPI match what was uploaded
+        run: |
+          python .github/scripts/verify_provenance.py ferogram "${{ needs.check.outputs.version }}" \
+            --dist-dir dist \
+            --repository "$GITHUB_REPOSITORY" \
+            --workflow publish.yml \
+            --environment pypi \
+            --files-out "$RUNNER_TEMP/files.txt"
+      - name: Verify the attestation signatures
+        run: |
+          python -m pip install pypi-attestations==0.0.31
+          while read -r f; do
+            pypi-attestations verify pypi --repository "https://github.com/$GITHUB_REPOSITORY" "pypi:$f"
+          done < "$RUNNER_TEMP/files.txt"

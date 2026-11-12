@@ -72,18 +72,16 @@ class ChatMethods:
     def _resolve_chat_invite_join_result(self, result: Any) -> dict | None:
         """Normalize a `messages.ChatInviteJoinResult` into a resolved InputPeer.
 
-        `messages.importChatInvite` and `channels.joinChannel` no longer
-        return a bare `Updates` object (layer 232) - they return this union:
+        `messages.importChatInvite` and `channels.joinChannel` return
+        `messages.ChatInviteJoinResult`, not a bare `Updates`. It has two
+        constructors:
 
           - `chatInviteJoinResultOk` wraps `updates: Updates`. The joined
             chat/channel/community is pulled out of the embedded
             users/chats and cached.
-          - `chatInviteJoinResultWebView` carries only `bot_id`/`query_id`/
-            `users`, with no Updates at all. Telegram hasn't actually
-            completed the join here - the client needs to drive an
-            interactive bot webview flow to finish it. That flow isn't
-            implemented, so this returns None instead of pretending the
-            join succeeded.
+          - `chatInviteJoinResultWebView` carries only `bot_id`, `query_id`
+            and `users`, with no Updates. Handling it is not implemented,
+            so this returns None instead of reporting a completed join.
         """
         if not isinstance(result, dict):
             return None
@@ -110,8 +108,7 @@ class ChatMethods:
         """Join a chat, channel, or community by username/link.
 
         Returns the joined chat's InputPeer on success, or None if Telegram
-        responded with a WebView join result - meaning the join requires an
-        interactive bot flow that hasn't completed yet (see
+        answered with `chatInviteJoinResultWebView` (see
         `_resolve_chat_invite_join_result`).
         """
         if peer.startswith("+") or "/+" in peer:
