@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "ferogram-py"
-version = "0.5.5"
+version = "0.5.5-beta.3"
 dependencies = [
  "base64",
  "ferogram-connect",
