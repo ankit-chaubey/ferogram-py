@@ -12,6 +12,7 @@
 import argparse
 import fnmatch
 import os
+import re
 import sys
 import tomllib
 import urllib.error
@@ -50,6 +51,22 @@ def read_versions(root: Path) -> tuple[str, str]:
     return pyproject["project"]["version"], cargo["package"]["version"]
 
 
+def pep440_to_semver(version: str) -> str:
+    """Spell a PEP 440 version the way Cargo.toml has to write it."""
+    m = re.fullmatch(r"(\d+\.\d+\.\d+)(?:(a|b|rc)(\d+))?(?:\.post(\d+))?(?:\.dev(\d+))?", version)
+    if not m:
+        return version
+    base, kind, num, post, dev = m.groups()
+    parts = []
+    if kind:
+        parts.append(f"{ {'a': 'alpha', 'b': 'beta', 'rc': 'rc'}[kind] }.{num}")
+    if post:
+        parts.append(f"post.{post}")
+    if dev:
+        parts.append(f"dev.{dev}")
+    return base + ("-" + ".".join(parts) if parts else "")
+
+
 def on_pypi(project: str, version: str) -> bool:
     url = f"https://pypi.org/pypi/{project}/{version}/json"
     try:
@@ -75,10 +92,11 @@ def cmd_version(args: argparse.Namespace) -> int:
     else:
         print("Not a tag run, skipping the tag comparison.")
 
-    if cargo_version != version:
+    if cargo_version != pep440_to_semver(version):
         warning(
             f"Cargo.toml version {cargo_version} differs from pyproject.toml "
-            f"version {version}. The wheels use the pyproject.toml version."
+            f"version {version} (expected {pep440_to_semver(version)}). "
+            "The wheels use the pyproject.toml version."
         )
 
     if args.check_pypi and on_pypi(PROJECT, version):
