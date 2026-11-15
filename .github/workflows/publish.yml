@@ -474,7 +474,6 @@ jobs:
             --dist-dir dist \
             --repository "$GITHUB_REPOSITORY" \
             --workflow publish.yml \
-            --environment pypi \
             --files-out "$RUNNER_TEMP/files.txt"
       - name: Verify the attestation signatures
         run: |
