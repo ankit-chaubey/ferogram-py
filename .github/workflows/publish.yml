@@ -282,7 +282,7 @@ jobs:
             --compatibility off \
             --out dist
 
-      - name: Rewrite libpython dependency to be version-agnostic
+      - name: Link wheel to libpython3.so (stable ABI)
         run: |
           which patchelf >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y patchelf)
           for whl in dist/*.whl; do
@@ -294,8 +294,30 @@ jobs:
               echo "::error::No _ferogram*.so found inside $whl"
               exit 1
             fi
-            patchelf --replace-needed "libpython${TERMUX_PYVER}.so" "libpython3.so" "$so_file"
-            echo "Patched $so_file: DT_NEEDED libpython${TERMUX_PYVER}.so -> libpython3.so"
+
+            # pyo3 with extension-module does not always leave a libpython
+            # entry in the .so, so renaming one is not enough. Drop any
+            # versioned entry and add the stable ABI one explicitly.
+            for n in $(readelf -d "$so_file" | sed -nE 's/.*NEEDED.*\[(libpython3\.[0-9]+\.so[^]]*)\].*/\1/p'); do
+              patchelf --remove-needed "$n" "$so_file"
+            done
+            patchelf --add-needed libpython3.so "$so_file"
+
+            needed=$(readelf -d "$so_file")
+            echo "$needed" | grep -q "NEEDED.*\[libpython3.so\]" || {
+              echo "::error::libpython3.so missing from DT_NEEDED after patch"
+              exit 1
+            }
+            if echo "$needed" | grep -qE "NEEDED.*\[libpython3\.[0-9]+"; then
+              echo "::error::versioned libpython still in DT_NEEDED"
+              exit 1
+            fi
+            echo "$needed" | grep -qE "(RPATH|RUNPATH).*/data/data/com.termux/files/usr/lib" || {
+              echo "::error::termux rpath missing from $so_file"
+              exit 1
+            }
+            echo "Checked $so_file:"
+            echo "$needed" | grep -E "NEEDED|RPATH|RUNPATH"
 
             rm -f "$whl_abs"
             (cd "$workdir" && zip -qr "$whl_abs" .)
