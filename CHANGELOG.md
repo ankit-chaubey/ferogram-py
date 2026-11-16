@@ -1,4 +1,4 @@
-### 0.5.5 (12-11-2026)
+## 0.5.5 (16-11-2026)
 
 ### Changed
 - Layer upgrade to 233 (from 228). `schema/api.tl` and `python/ferogram/raw/generated/` regenerated from the schema in ferogram v0.6.7.
@@ -9,11 +9,16 @@
 - `client.py` is split by domain. `Client` is now composed of method groups in `ferogram/methods/` (`auth`, `users`, `messages`, `dialogs`, `chats`, `participants`, `invites`, `media`, `bots`); shared helpers moved to `ferogram/_internal.py` and `ferogram/transfer.py`. Every name that was importable from `ferogram.client` still is, and no method body changed.
 - Tests moved to `tests/unit/` and now run under one `pytest` invocation. A stub stands in for the Rust extension when it is not built.
 - `pyproject.toml` gained the `dev` extra (`make test` referenced it but it did not exist) plus pytest and ruff settings. `make clean` no longer deletes the committed generated code.
+- Release workflow: the Android (Termux) wheels are now linked to `libpython3.so`, and the build fails if that entry or the Termux rpath is missing from the extension.
+- GitHub Actions: `checkout`, `setup-python`, `upload-artifact` and `download-artifact` moved to Node 24 releases, and every Ubuntu job is pinned to `ubuntu-24.04` instead of `ubuntu-latest`.
+- `check_release.py` compares the `Cargo.toml` version with the semver form of the `pyproject.toml` version (`0.5.5b2` becomes `0.5.5-beta.2`), so a pre-release no longer triggers a version mismatch warning.
+- The provenance check after publishing no longer requires an environment name on the PyPI publisher record. It still checks the repository and workflow, and the attestation signatures are verified as before.
 
 ### Removed
 - `InlineButton.mini_app_simple()`. Layer 229 only offers the simple web view for reply keyboards, so it moved to `ReplyButton.mini_app_simple(label, url)`.
 
 ### Fixed
+- Android (Termux) wheels failed on import with `cannot locate symbol "_Py_NoneStruct"`. The extension had no libpython dependency, so the loader could not resolve the Python C API symbols.
 - Docstrings of `join_chat()` and `_resolve_chat_invite_join_result()` no longer cite a layer number or describe the WebView result beyond what the schema shows.
 - `filters.command(...)` raised `IndexError` on a message that was only the prefix (`/`).
 - A peer passed into a field of another peer type (for example an `inputPeerChannel` for `channels.leaveChannel`'s `InputChannel`) was serialized with the peer's own constructor id. The serializer now rewrites `inputPeer*`, `inputUser*` and `inputChannel*` values to the constructor the field's declared type needs, for plain fields and `Vector<...>` fields. This covers every method that hands a resolved peer straight to a `channels.*` or `users.*` request.
