@@ -454,42 +454,6 @@ jobs:
           path: dist/*.publish.attestation
           if-no-files-found: error
 
-  # Copies the files that were just published to the GitHub release for the tag.
-  # Separate from publish so that only that job holds id-token: write.
-  github-release:
-    needs: [check, publish]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    env:
-      TAG: ${{ github.ref_name }}
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: dist
-          path: dist
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: attestations
-          path: dist
-      - name: Attach to the GitHub release
-        run: |
-          version="${{ needs.check.outputs.version }}"
-          python3 .github/scripts/release_notes.py "$version" > notes.md
-          flags=""
-          if [[ "$version" =~ (a|b|rc)[0-9]+$ ]]; then
-            flags="--prerelease"
-          fi
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/* --clobber
-          else
-            gh release create "$TAG" dist/* --title "$TAG" --notes-file notes.md --verify-tag $flags
-          fi
-
   verify:
     needs: [check, publish]
     runs-on: ubuntu-24.04
