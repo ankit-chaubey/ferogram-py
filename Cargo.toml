@@ -1,6 +1,6 @@
 [package]
 name            = "ferogram-py"
-version         = "0.5.5"
+version         = "0.5.5-b5"
 edition         = "2024"
 description     = "Python MTProto client based on ferogram (Rust MTProto)"
 documentation   = "https://python.ferogram.dev"
