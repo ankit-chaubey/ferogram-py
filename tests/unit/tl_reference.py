@@ -1,4 +1,4 @@
-import re, struct, zlib, random, collections
+import re, struct, zlib, collections
 
 LINE = re.compile(r"^([\w.]+)#([0-9a-fA-F]+)\s*(.*?)\s*=\s*([\w.<>%]+)\s*;\s*$")
 PRIM = {"int", "long", "double", "string", "bytes", "Bool", "int128", "int256", "true", "True", "#"}
