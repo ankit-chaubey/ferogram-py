@@ -34,7 +34,15 @@ class UserMethods:
     async def get_me(self) -> dict:
         result = await self._rpc({"_": "users.getUsers", "id": [{"_": "inputUserSelf"}]})
         users = result if isinstance(result, list) else []
-        return users[0] if users else {}
+        me = users[0] if users else {}
+        username = me.get("username")
+        if not username:
+            for u in me.get("usernames") or []:
+                if u.get("active") and not u.get("editable"):
+                    username = u.get("username")
+                    break
+        self._me_username = username.lower() if username else None
+        return me
 
     async def get_users_by_id(self, user_ids: list[int]) -> list[dict | None]:
         ids = [{"_": "inputUser", "user_id": uid, "access_hash": self._peer_cache.get_user(uid) or 0}

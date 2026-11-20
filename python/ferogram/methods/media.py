@@ -20,9 +20,8 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import os
-import random
 from collections import deque
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, suppress
 from typing import TYPE_CHECKING, Any, Callable
 
 from .._ferogram import DcConnection
@@ -32,6 +31,7 @@ from ..types import (
     Message,
 )
 from .._internal import (
+    _rand_i64,
     _parse_migrate,
 )
 from ..transfer import (
@@ -45,6 +45,16 @@ from ..transfer import (
 
 if TYPE_CHECKING:
     pass
+
+
+def _photo_size_bytes(size: dict) -> int:
+    n = size.get("size")
+    if isinstance(n, int):
+        return n
+    parts = size.get("sizes")
+    if isinstance(parts, list) and parts:
+        return max(parts)
+    return 0
 
 
 class MediaMethods:
@@ -69,7 +79,7 @@ class MediaMethods:
             "peer": input_peer,
             "media": {"_": "inputMediaUploadedPhoto", "file": file_input},
             "message": plain_cap,
-            "random_id": random.randint(-(2**63), 2**63 - 1),
+            "random_id": _rand_i64(),
         }
         if cap_entities:
             req["entities"] = cap_entities
@@ -108,7 +118,7 @@ class MediaMethods:
                 "attributes": [{"_": "documentAttributeFilename", "file_name": os.path.basename(path)}],
             },
             "message": plain_cap,
-            "random_id": random.randint(-(2**63), 2**63 - 1),
+            "random_id": _rand_i64(),
         }
         if cap_entities:
             req["entities"] = cap_entities
@@ -155,10 +165,8 @@ class MediaMethods:
         else:
             ps = 512 * 1024
         total_parts = (file_size + ps - 1) // ps
-        if total_parts > 4000:
-            ps = (file_size + 3999) // 4000
-            ps = ((ps + 511) // 512) * 512
-            total_parts = (file_size + ps - 1) // ps
+        if total_parts > 8000:
+            raise ValueError(f"file of {file_size} bytes exceeds the maximum upload size of {8000 * ps} bytes")
         return ps, total_parts
 
     def _upload_worker_count(self, file_size: int) -> int:
@@ -216,48 +224,40 @@ class MediaMethods:
                 header = fh.read(64)
         except OSError:
             pass
-        # Magic byte detection for common types
+        if header[:4] == b"RIFF" and len(header) >= 12:
+            riff = {b"WEBP": "image/webp", b"WAVE": "audio/wav", b"AVI ": "video/x-msvideo"}.get(header[8:12])
+            if riff:
+                return riff
+        if header[4:8] == b"ftyp":
+            brand = header[8:12]
+            if brand in (b"M4A ", b"M4B "):
+                return "audio/mp4"
+            if brand == b"qt  ":
+                return "video/quicktime"
+            if brand in (b"heic", b"heix", b"mif1"):
+                return "image/heic"
+            return "video/mp4"
         sigs: list[tuple[bytes, str]] = [
-            (b"\x89PNG",           "image/png"),
-            (b"\xff\xd8\xff",      "image/jpeg"),
-            (b"GIF8",              "image/gif"),
-            (b"RIFF",              "video/webm"),    # may also be WAV; refined below
+            (b"\x89PNG",          "image/png"),
+            (b"\xff\xd8\xff",     "image/jpeg"),
+            (b"GIF8",             "image/gif"),
             (b"\x1aE\xdf\xa3",    "video/webm"),
-            (b"ftyp",              "video/mp4"),     # at offset 4
-            (b"\x00\x00\x00\x18ftyp", "video/mp4"),
-            (b"\x00\x00\x00\x1cftyp", "video/mp4"),
-            (b"OggS",              "video/ogg"),
-            (b"ID3",               "audio/mpeg"),
+            (b"OggS",             "audio/ogg"),
+            (b"ID3",              "audio/mpeg"),
             (b"\xff\xfb",         "audio/mpeg"),
             (b"\xff\xf3",         "audio/mpeg"),
-            (b"OggS",              "audio/ogg"),
             (b"fLaC",             "audio/flac"),
-            (b"WAVE",              "audio/wav"),     # RIFF....WAVE
-            (b"%PDF",              "application/pdf"),
+            (b"%PDF",             "application/pdf"),
             (b"PK\x03\x04",       "application/zip"),
             (b"\x1f\x8b",         "application/gzip"),
-            (b"BZh",               "application/x-bzip2"),
+            (b"BZh",              "application/x-bzip2"),
             (b"\xfd7zXZ",         "application/x-xz"),
             (b"7z\xbc\xaf'\x1c", "application/x-7z-compressed"),
-            (b"Rar!",              "application/x-rar-compressed"),
-            (b"\x89PNG",          "image/png"),
-            (b"WEBP",              "image/webp"),    # RIFF....WEBP at offset 8
+            (b"Rar!",             "application/x-rar-compressed"),
         ]
         for sig, mime in sigs:
             if header.startswith(sig):
-                # Distinguish RIFF WAV vs WebM/WebP
-                if sig == b"RIFF" and len(header) >= 12:
-                    sub = header[8:12]
-                    if sub == b"WEBP":
-                        return "image/webp"
-                    if sub == b"WAVE":
-                        return "audio/wav"
                 return mime
-            if sig == b"ftyp" and len(header) >= 8 and header[4:8] == b"ftyp":
-                return "video/mp4"
-        # RIFF with unknown sub-type - check extension
-        if header[8:12] == b"WAVE":
-            return "audio/wav"
         # Extension fallback
         guessed, _ = mimetypes.guess_type(path)
         return guessed or "application/octet-stream"
@@ -291,7 +291,7 @@ class MediaMethods:
         is_big    = file_size >= BIG_THRESHOLD
         part_size, total_parts = self._upload_part_size(file_size)
         n_workers  = max(1, min(self._upload_worker_count(file_size), total_parts))
-        file_id    = random.randint(-(2**63), 2**63 - 1)
+        file_id    = _rand_i64()
         md5        = hashlib.md5() if not is_big else None
 
         if handle is not None:
@@ -373,7 +373,7 @@ class MediaMethods:
                     if attempt == MAX_ATTEMPTS - 1:
                         raise
                     self._log.warning(
-                        "upload_file: part %d failed (attempt %d/%d): %s — retrying in %.1fs",
+                        "upload_file: part %d failed (attempt %d/%d): %s, retrying in %.1fs",
                         part_idx, attempt + 1, MAX_ATTEMPTS, e, delay,
                     )
                     await asyncio.sleep(delay)
@@ -524,12 +524,12 @@ class MediaMethods:
                 raise ValueError("Photo has no sizes")
             best = max(
                 (s for s in sizes if isinstance(s, dict)),
-                key=lambda s: s.get("size", 0),
+                key=_photo_size_bytes,
                 default=None,
             )
             if best is None:
                 raise ValueError("Photo has no valid size entry")
-            file_size = best.get("size", 0)
+            file_size = _photo_size_bytes(best)
             media_dc_id = photo.get("dc_id") or self._dc_id
             location = {
                 "_": "inputPhotoFileLocation",
@@ -569,204 +569,226 @@ class MediaMethods:
                 return self._require_conn()
             return await self._open_worker_conn(dc_id)
 
-        if total_parts is not None and total_parts > 1 and n_workers > 1:
-            n_workers = min(n_workers, total_parts)
+        out_path = path + ".part"
+        try:
+            if total_parts is not None and total_parts > 1 and n_workers > 1:
+                n_workers = min(n_workers, total_parts)
 
-            # Open independent worker connections directly on the DC the
-            # media lives on (sequentially -- see _open_worker_conn), each
-            # holding a `max_tcp_connections` permit for the life of this
-            # download.
-            conns: list[DcConnection] = []
-            dl_stack = AsyncExitStack()
-            for _ in range(n_workers):
-                try:
-                    conns.append(await dl_stack.enter_async_context(self._worker_slot(media_dc_id)))
-                except Exception as e:
-                    self._log.warning(
-                        "download: worker connection to DC%d failed, continuing with %d worker(s): %s",
-                        media_dc_id, max(len(conns), 1), e,
-                    )
-                    break
-            # Same reasoning as upload_file: only conns opened here are
-            # dedicated sockets safe to hand off to a PipelinedSender. The
-            # fallback reuses the shared home connection and must stay on
-            # the one-at-a-time path.
-            dl_dedicated = bool(conns)
-            if not conns:
-                conns = [await open_conn_for(media_dc_id)]
-
-            parts_buf: list[bytes | None] = [None] * total_parts
-            next_part = 0
-            next_part_lock = asyncio.Lock()
-
-            async def fetch_part_on(conn: "DcConnection", part_idx: int) -> "DcConnection":
-                offset = part_idx * chunk_size
-                MAX_ATTEMPTS = 5
-                delay = 1.0
-                attempt = 0
-                while True:
-                    if handle is not None:
-                        await handle._poll_pause_cancel()
+                # Open independent worker connections directly on the DC the
+                # media lives on (sequentially -- see _open_worker_conn), each
+                # holding a `max_tcp_connections` permit for the life of this
+                # download.
+                conns: list[DcConnection] = []
+                dl_stack = AsyncExitStack()
+                for _ in range(n_workers):
                     try:
+                        conns.append(await dl_stack.enter_async_context(self._worker_slot(media_dc_id)))
+                    except Exception as e:
+                        self._log.warning(
+                            "download: worker connection to DC%d failed, continuing with %d worker(s): %s",
+                            media_dc_id, max(len(conns), 1), e,
+                        )
+                        break
+                # Same reasoning as upload_file: only conns opened here are
+                # dedicated sockets safe to hand off to a PipelinedSender. The
+                # fallback reuses the shared home connection and must stay on
+                # the one-at-a-time path.
+                dl_dedicated = bool(conns)
+                if not conns:
+                    conns = [await open_conn_for(media_dc_id)]
+
+                fh = open(out_path, "wb")
+
+                def expected_len(idx: int) -> int:
+                    return chunk_size if idx < total_parts - 1 else file_size - idx * chunk_size
+
+                def store_part(idx: int, data: bytes) -> None:
+                    if len(data) != expected_len(idx):
+                        raise RuntimeError(
+                            f"download part {idx}: received {len(data)} bytes, expected {expected_len(idx)}"
+                        )
+                    fh.seek(idx * chunk_size)
+                    fh.write(data)
+
+                next_part = 0
+                next_part_lock = asyncio.Lock()
+
+                async def fetch_part_on(conn: "DcConnection", part_idx: int) -> "DcConnection":
+                    offset = part_idx * chunk_size
+                    MAX_ATTEMPTS = 5
+                    delay = 1.0
+                    attempt = 0
+                    while True:
+                        if handle is not None:
+                            await handle._poll_pause_cancel()
+                        try:
+                            req_bytes = _tl.serialize({
+                                "_": "upload.getFile",
+                                "location": location,
+                                "offset": offset,
+                                "limit": chunk_size,
+                            }, _SCHEMA)
+                            resp_bytes = await conn.rpc_call(req_bytes)
+                            result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+                            data = result.get("bytes", b"") if isinstance(result, dict) else b""
+                            store_part(part_idx, data)
+                            if handle is not None:
+                                handle._add_bytes(len(data))
+                            return conn
+                        except Exception as e:
+                            new_dc = _parse_migrate(str(e)) if isinstance(e, RuntimeError) else None
+                            if new_dc is not None:
+                                self._log.info(
+                                    "download: FILE_MIGRATE_%d for part %d, reopening worker on new DC",
+                                    new_dc, part_idx,
+                                )
+                                conn = await self._open_worker_conn(new_dc)
+                                continue  # migrate redirects don't consume a retry attempt
+                            attempt += 1
+                            if attempt >= MAX_ATTEMPTS:
+                                raise
+                            self._log.warning(
+                                "download: part %d failed (attempt %d/%d): %s, retrying in %.1fs",
+                                part_idx, attempt, MAX_ATTEMPTS, e, delay,
+                            )
+                            await asyncio.sleep(delay)
+                            delay = min(delay * 2, 30.0)
+
+                async def worker(conn: "DcConnection") -> None:
+                    nonlocal next_part
+                    cur_conn = conn
+                    while True:
+                        async with next_part_lock:
+                            if next_part >= total_parts:
+                                return
+                            idx = next_part
+                            next_part += 1
+                        cur_conn = await fetch_part_on(cur_conn, idx)
+
+                def _build_download_req(offset: int) -> bytes:
+                    return _tl.serialize({
+                        "_": "upload.getFile",
+                        "location": location,
+                        "offset": offset,
+                        "limit": chunk_size,
+                    }, _SCHEMA)
+
+                async def worker_pipelined(conn: "DcConnection") -> None:
+                    """X > 1 worker: keeps `download_pipeline_depth` chunk
+                    requests in flight on one socket at once. Mirrors the
+                    sliding-window loop in ferogram's Rust `media.rs`."""
+                    nonlocal next_part
+                    depth = max(1, self._transfer_limits.download_pipeline_depth)
+                    sender = await conn.into_pipelined_sender()
+                    # Sliding window of (part_idx, in-flight PipelinedRequest).
+                    window: deque[tuple[int, Any]] = deque()
+
+                    async def submit_next() -> bool:
+                        nonlocal next_part
+                        async with next_part_lock:
+                            if next_part >= total_parts:
+                                return False
+                            idx = next_part
+                            next_part += 1
+                        request = await sender.enqueue(_build_download_req(idx * chunk_size))
+                        window.append((idx, request))
+                        return True
+
+                    while True:
+                        if handle is not None:
+                            await handle._poll_pause_cancel()
+                        while len(window) < depth:
+                            if not await submit_next():
+                                break
+                        if not window:
+                            return
+                        idx, request = window.popleft()
+                        try:
+                            resp_bytes = await request.wait()
+                        except Exception as e:
+                            new_dc = _parse_migrate(str(e)) if isinstance(e, RuntimeError) else None
+                            if new_dc is not None:
+                                # A redirect invalidates every part still in
+                                # flight from the old DC/session, not just this
+                                # one -- reopen fresh and resubmit the lot.
+                                self._log.info(
+                                    "download: FILE_MIGRATE_%d mid-pipeline, reopening on new DC (part %d)",
+                                    new_dc, idx,
+                                )
+                                pending = [idx] + [w[0] for w in window]
+                                window.clear()
+                                new_conn = await self._open_worker_conn(new_dc)
+                                sender = await new_conn.into_pipelined_sender()
+                                for pidx in sorted(pending):
+                                    req = await sender.enqueue(_build_download_req(pidx * chunk_size))
+                                    window.append((pidx, req))
+                                continue
+                            if not sender.is_alive():
+                                raise
+                            self._log.warning(
+                                "download: pipelined part %d failed, retrying directly: %s",
+                                idx, e,
+                            )
+                            resp_bytes = await sender.call(_build_download_req(idx * chunk_size))
+                        result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+                        data = result.get("bytes", b"") if isinstance(result, dict) else b""
+                        if len(data) != expected_len(idx):
+                            resp_bytes = await sender.call(_build_download_req(idx * chunk_size))
+                            result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
+                            data = result.get("bytes", b"") if isinstance(result, dict) else b""
+                        store_part(idx, data)
+                        if handle is not None:
+                            handle._add_bytes(len(data))
+
+                try:
+                    if dl_dedicated:
+                        await asyncio.gather(*[worker_pipelined(c) for c in conns])
+                    else:
+                        await asyncio.gather(*[worker(c) for c in conns])
+                finally:
+                    await dl_stack.aclose()
+                    fh.close()
+            else:
+                # Sequential path: unknown size or single worker. Uses the
+                # media's actual DC, not the home connection.
+                conn = await open_conn_for(media_dc_id)
+                offset = 0
+                with open(out_path, "wb") as fh:
+                    while True:
+                        if handle is not None:
+                            await handle._poll_pause_cancel()
                         req_bytes = _tl.serialize({
                             "_": "upload.getFile",
                             "location": location,
                             "offset": offset,
                             "limit": chunk_size,
                         }, _SCHEMA)
-                        resp_bytes = await conn.rpc_call(req_bytes)
+                        try:
+                            resp_bytes = await conn.rpc_call(req_bytes)
+                        except RuntimeError as e:
+                            new_dc = _parse_migrate(str(e))
+                            if new_dc is not None:
+                                conn = await self._open_worker_conn(new_dc)
+                                continue
+                            raise
                         result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
                         data = result.get("bytes", b"") if isinstance(result, dict) else b""
-                        parts_buf[part_idx] = data
+                        if not data:
+                            break
+                        fh.write(data)
                         if handle is not None:
                             handle._add_bytes(len(data))
-                        return conn
-                    except Exception as e:
-                        new_dc = _parse_migrate(str(e)) if isinstance(e, RuntimeError) else None
-                        if new_dc is not None:
-                            self._log.info(
-                                "download: FILE_MIGRATE_%d for part %d, reopening worker on new DC",
-                                new_dc, part_idx,
-                            )
-                            conn = await self._open_worker_conn(new_dc)
-                            continue  # migrate redirects don't consume a retry attempt
-                        attempt += 1
-                        if attempt >= MAX_ATTEMPTS:
-                            raise
-                        self._log.warning(
-                            "download: part %d failed (attempt %d/%d): %s — retrying in %.1fs",
-                            part_idx, attempt, MAX_ATTEMPTS, e, delay,
-                        )
-                        await asyncio.sleep(delay)
-                        delay = min(delay * 2, 30.0)
-
-            async def worker(conn: "DcConnection") -> None:
-                nonlocal next_part
-                cur_conn = conn
-                while True:
-                    async with next_part_lock:
-                        if next_part >= total_parts:
-                            return
-                        idx = next_part
-                        next_part += 1
-                    cur_conn = await fetch_part_on(cur_conn, idx)
-
-            def _build_download_req(offset: int) -> bytes:
-                return _tl.serialize({
-                    "_": "upload.getFile",
-                    "location": location,
-                    "offset": offset,
-                    "limit": chunk_size,
-                }, _SCHEMA)
-
-            async def worker_pipelined(conn: "DcConnection") -> None:
-                """X > 1 worker: keeps `download_pipeline_depth` chunk
-                requests in flight on one socket at once. Mirrors the
-                sliding-window loop in ferogram's Rust `media.rs`."""
-                nonlocal next_part
-                depth = max(1, self._transfer_limits.download_pipeline_depth)
-                sender = await conn.into_pipelined_sender()
-                # Sliding window of (part_idx, in-flight PipelinedRequest).
-                window: deque[tuple[int, Any]] = deque()
-
-                async def submit_next() -> bool:
-                    nonlocal next_part
-                    async with next_part_lock:
-                        if next_part >= total_parts:
-                            return False
-                        idx = next_part
-                        next_part += 1
-                    request = await sender.enqueue(_build_download_req(idx * chunk_size))
-                    window.append((idx, request))
-                    return True
-
-                while True:
-                    if handle is not None:
-                        await handle._poll_pause_cancel()
-                    while len(window) < depth:
-                        if not await submit_next():
+                        offset += len(data)
+                        if len(data) < chunk_size:
                             break
-                    if not window:
-                        return
-                    idx, request = window.popleft()
-                    try:
-                        resp_bytes = await request.wait()
-                    except Exception as e:
-                        new_dc = _parse_migrate(str(e)) if isinstance(e, RuntimeError) else None
-                        if new_dc is not None:
-                            # A redirect invalidates every part still in
-                            # flight from the old DC/session, not just this
-                            # one -- reopen fresh and resubmit the lot.
-                            self._log.info(
-                                "download: FILE_MIGRATE_%d mid-pipeline, reopening on new DC (part %d)",
-                                new_dc, idx,
-                            )
-                            pending = [idx] + [w[0] for w in window]
-                            window.clear()
-                            new_conn = await self._open_worker_conn(new_dc)
-                            sender = await new_conn.into_pipelined_sender()
-                            for pidx in sorted(pending):
-                                req = await sender.enqueue(_build_download_req(pidx * chunk_size))
-                                window.append((pidx, req))
-                            continue
-                        if not sender.is_alive():
-                            raise
-                        self._log.warning(
-                            "download: pipelined part %d failed, retrying directly: %s",
-                            idx, e,
-                        )
-                        resp_bytes = await sender.call(_build_download_req(idx * chunk_size))
-                    result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
-                    data = result.get("bytes", b"") if isinstance(result, dict) else b""
-                    parts_buf[idx] = data
-                    if handle is not None:
-                        handle._add_bytes(len(data))
+                if file_size > 0 and offset != file_size:
+                    raise RuntimeError(f"download ended at {offset} bytes, expected {file_size}")
 
-            try:
-                if dl_dedicated:
-                    await asyncio.gather(*[worker_pipelined(c) for c in conns])
-                else:
-                    await asyncio.gather(*[worker(c) for c in conns])
-            finally:
-                await dl_stack.aclose()
-
-            with open(path, "wb") as fh:
-                for part in parts_buf:
-                    if part:
-                        fh.write(part)
-        else:
-            # Sequential path: unknown size or single worker. Uses the
-            # media's actual DC, not the home connection.
-            conn = await open_conn_for(media_dc_id)
-            offset = 0
-            with open(path, "wb") as fh:
-                while True:
-                    if handle is not None:
-                        await handle._poll_pause_cancel()
-                    req_bytes = _tl.serialize({
-                        "_": "upload.getFile",
-                        "location": location,
-                        "offset": offset,
-                        "limit": chunk_size,
-                    }, _SCHEMA)
-                    try:
-                        resp_bytes = await conn.rpc_call(req_bytes)
-                    except RuntimeError as e:
-                        new_dc = _parse_migrate(str(e))
-                        if new_dc is not None:
-                            conn = await self._open_worker_conn(new_dc)
-                            continue
-                        raise
-                    result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
-                    data = result.get("bytes", b"") if isinstance(result, dict) else b""
-                    if not data:
-                        break
-                    fh.write(data)
-                    if handle is not None:
-                        handle._add_bytes(len(data))
-                    offset += len(data)
-                    if len(data) < chunk_size:
-                        break
+            os.replace(out_path, path)
+        except BaseException:
+            with suppress(OSError):
+                os.remove(out_path)
+            raise
 
         return path
 

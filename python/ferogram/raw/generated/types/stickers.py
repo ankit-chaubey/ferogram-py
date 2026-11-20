@@ -43,7 +43,7 @@ class SuggestedShortName:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stickers.suggestedShortName"}
-        obj["short_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["short_name"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

@@ -65,13 +65,13 @@ class CollectibleInfo:
         obj = {"_": "fragment.collectibleInfo"}
         obj["purchase_date"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["currency"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["currency"], pos = _tl._read_string(data, pos)
         obj["amount"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["crypto_currency"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["crypto_currency"], pos = _tl._read_string(data, pos)
         obj["crypto_amount"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

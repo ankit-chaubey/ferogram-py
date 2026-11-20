@@ -32,8 +32,11 @@ class InlineButton:
     # constructors
 
     @staticmethod
-    def callback(text: str, data: bytes) -> "InlineButton":
-        return InlineButton(text=text, _kind="callback", _data=data)
+    def callback(text: str, data: bytes | str) -> "InlineButton":
+        raw = data.encode() if isinstance(data, str) else bytes(data)
+        if len(raw) > 64:
+            raise ValueError(f"callback data is limited to 64 bytes, got {len(raw)}")
+        return InlineButton(text=text, _kind="callback", _data=raw)
 
     @staticmethod
     def url(text: str, url: str) -> "InlineButton":
@@ -96,6 +99,10 @@ class InlineKeyboard:
     def add_row(self, buttons: list[InlineButton]) -> None:
         if not buttons:
             raise ValueError("row must contain at least one button")
+        if len(buttons) > 8:
+            raise ValueError(f"a row holds at most 8 buttons, got {len(buttons)}")
+        if sum(len(r) for r in self._rows) + len(buttons) > 100:
+            raise ValueError("an inline keyboard holds at most 100 buttons")
         self._rows.append(list(buttons))
 
     @property

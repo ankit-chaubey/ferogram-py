@@ -47,7 +47,7 @@ class EligibleToJoin:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "smsjobs.eligibleToJoin"}
-        obj["terms_url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["terms_url"], pos = _tl._read_string(data, pos)
         obj["monthly_sent_sms"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -110,8 +110,8 @@ class Status:
         obj["recent_sent"], obj["recent_since"], obj["recent_remains"], obj["total_sent"], obj["total_since"], = _struct.unpack_from('<iiiii', data, pos)
         pos += 20
         if _flags_word & (1 << 1):
-            obj["last_gift_slug"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["terms_url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["last_gift_slug"], pos = _tl._read_string(data, pos)
+        obj["terms_url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

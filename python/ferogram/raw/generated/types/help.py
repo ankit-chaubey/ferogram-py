@@ -63,13 +63,13 @@ class AppUpdate:
         out += _struct.pack('<i', self.id)
         out += _tl._pack_string(self.version)
         out += _tl._pack_string(self.text)
-        out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+        out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.document), _SCHEMA)
+            out += _tl._ser(self.document, _SCHEMA)
         if _flags_word & (1 << 2):
             out += _tl._pack_string(self.url)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.sticker), _SCHEMA)
+            out += _tl._ser(self.sticker, _SCHEMA)
         return out
 
     @classmethod
@@ -81,15 +81,15 @@ class AppUpdate:
             obj["can_not_skip"] = True
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["version"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["text"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+        obj["version"], pos = _tl._read_string(data, pos)
+        obj["text"], pos = _tl._read_string(data, pos)
+        obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["document"], pos = _tl._read_typed(data, pos, "Document", _SCHEMA_BY_CID)
+            obj["document"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["url"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 3):
-            obj["sticker"], pos = _tl._read_typed(data, pos, "Document", _SCHEMA_BY_CID)
+            obj["sticker"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -139,7 +139,7 @@ class InviteText:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.inviteText"}
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -165,14 +165,14 @@ class Support:
     def to_bytes(self) -> bytes:
         out = b'\xf6\xb5\xc6\x17'
         out += _tl._pack_string(self.phone_number)
-        out += _tl.serialize(_tl._resolve(self.user), _SCHEMA)
+        out += _tl._ser(self.user, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.support"}
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["user"], pos = _tl._read_typed(data, pos, "User", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
+        obj["user"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -208,9 +208,9 @@ class TermsOfService:
         out = b'\x10\x03\nx'
         _flags_word = ((1 << 0) if self.popup else 0) | (0 if self.min_age_confirm is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
         out += _tl._pack_string(self.text)
-        out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+        out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.min_age_confirm)
         return out
@@ -222,9 +222,9 @@ class TermsOfService:
         pos += 4
         if _flags_word & (1 << 0):
             obj["popup"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
-        obj["text"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["text"], pos = _tl._read_string(data, pos)
+        obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
             obj["min_age_confirm"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -255,17 +255,17 @@ class RecentMeUrls:
 
     def to_bytes(self) -> bytes:
         out = b'\xd7\x10\x03\x0e'
-        out += _tl.serialize(_tl._resolve(self.urls), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.urls, 'Vector<RecentMeUrl>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.recentMeUrls"}
-        obj["urls"], pos = _tl._read_typed(data, pos, "Vector<RecentMeUrl>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["urls"], pos = _tl._read_vector(data, pos, 'RecentMeUrl', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -320,7 +320,7 @@ class TermsOfServiceUpdate:
     def to_bytes(self) -> bytes:
         out = b'a\xf9\xec('
         out += _struct.pack('<i', self.expires)
-        out += _tl.serialize(_tl._resolve(self.terms_of_service), _SCHEMA)
+        out += _tl._ser(self.terms_of_service, _SCHEMA)
         return out
 
     @classmethod
@@ -328,7 +328,7 @@ class TermsOfServiceUpdate:
         obj = {"_": "help.termsOfServiceUpdate"}
         obj["expires"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["terms_of_service"], pos = _tl._read_typed(data, pos, "help.TermsOfService", _SCHEMA_BY_CID)
+        obj["terms_of_service"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -382,7 +382,7 @@ class DeepLinkInfo:
         out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.message)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         return out
 
     @classmethod
@@ -392,9 +392,9 @@ class DeepLinkInfo:
         pos += 4
         if _flags_word & (1 << 0):
             obj["update_app"] = True
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -442,7 +442,7 @@ class PassportConfig:
     def to_bytes(self) -> bytes:
         out = b'\xaf\xd6\x98\xa0'
         out += _struct.pack('<i', self.hash)
-        out += _tl.serialize(_tl._resolve(self.countries_langs), _SCHEMA)
+        out += _tl._ser(self.countries_langs, _SCHEMA)
         return out
 
     @classmethod
@@ -450,7 +450,7 @@ class PassportConfig:
         obj = {"_": "help.passportConfig"}
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["countries_langs"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        obj["countries_langs"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -478,7 +478,7 @@ class SupportName:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.supportName"}
-        obj["name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["name"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -532,7 +532,7 @@ class UserInfo:
     def to_bytes(self) -> bytes:
         out = b'X7\xeb\x01'
         out += _tl._pack_string(self.message)
-        out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+        out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         out += _tl._pack_string(self.author)
         out += _struct.pack('<i', self.date)
         return out
@@ -540,9 +540,9 @@ class UserInfo:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.userInfo"}
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
-        obj["author"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
+        obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
+        obj["author"], pos = _tl._read_string(data, pos)
         obj["date"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -626,17 +626,17 @@ class PromoData:
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.expires)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser(self.peer, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.psa_type)
         if _flags_word & (1 << 2):
             out += _tl._pack_string(self.psa_message)
-        out += _tl.serialize(_tl._resolve(self.pending_suggestions), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.dismissed_suggestions), _SCHEMA)
+        out += _tl._serialize_field(self.pending_suggestions, 'Vector<string>', _SCHEMA)
+        out += _tl._serialize_field(self.dismissed_suggestions, 'Vector<string>', _SCHEMA)
         if _flags_word & (1 << 4):
-            out += _tl.serialize(_tl._resolve(self.custom_pending_suggestion), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+            out += _tl._ser(self.custom_pending_suggestion, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -649,17 +649,17 @@ class PromoData:
         obj["expires"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 3):
-            obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+            obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["psa_type"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["psa_type"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["psa_message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["pending_suggestions"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
-        obj["dismissed_suggestions"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+            obj["psa_message"], pos = _tl._read_string(data, pos)
+        obj["pending_suggestions"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
+        obj["dismissed_suggestions"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         if _flags_word & (1 << 4):
-            obj["custom_pending_suggestion"], pos = _tl._read_typed(data, pos, "PendingSuggestion", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["custom_pending_suggestion"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -691,9 +691,9 @@ class CountryCode:
         out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.country_code)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.prefixes), _SCHEMA)
+            out += _tl._serialize_field(self.prefixes, 'Vector<string>', _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.patterns), _SCHEMA)
+            out += _tl._serialize_field(self.patterns, 'Vector<string>', _SCHEMA)
         return out
 
     @classmethod
@@ -701,11 +701,11 @@ class CountryCode:
         obj = {"_": "help.countryCode"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["country_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["country_code"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["prefixes"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+            obj["prefixes"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["patterns"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+            obj["patterns"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -745,7 +745,7 @@ class Country:
         out += _tl._pack_string(self.default_name)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.name)
-        out += _tl.serialize(_tl._resolve(self.country_codes), _SCHEMA)
+        out += _tl._serialize_field(self.country_codes, 'Vector<help.CountryCode>', _SCHEMA)
         return out
 
     @classmethod
@@ -755,11 +755,11 @@ class Country:
         pos += 4
         if _flags_word & (1 << 0):
             obj["hidden"] = True
-        obj["iso2"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["default_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["iso2"], pos = _tl._read_string(data, pos)
+        obj["default_name"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["country_codes"], pos = _tl._read_typed(data, pos, "Vector<help.CountryCode>", _SCHEMA_BY_CID)
+            obj["name"], pos = _tl._read_string(data, pos)
+        obj["country_codes"], pos = _tl._read_vector(data, pos, 'help.CountryCode', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -806,14 +806,14 @@ class CountriesList:
 
     def to_bytes(self) -> bytes:
         out = b'\x9eu\xd0\x87'
-        out += _tl.serialize(_tl._resolve(self.countries), _SCHEMA)
+        out += _tl._serialize_field(self.countries, 'Vector<help.Country>', _SCHEMA)
         out += _struct.pack('<i', self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.countriesList"}
-        obj["countries"], pos = _tl._read_typed(data, pos, "Vector<help.Country>", _SCHEMA_BY_CID)
+        obj["countries"], pos = _tl._read_vector(data, pos, 'help.Country', _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -853,22 +853,22 @@ class PremiumPromo:
     def to_bytes(self) -> bytes:
         out = b'\x9cu4S'
         out += _tl._pack_string(self.status_text)
-        out += _tl.serialize(_tl._resolve(self.status_entities), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.video_sections), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.videos), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.period_options), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.status_entities, 'Vector<MessageEntity>', _SCHEMA)
+        out += _tl._serialize_field(self.video_sections, 'Vector<string>', _SCHEMA)
+        out += _tl._serialize_field(self.videos, 'Vector<Document>', _SCHEMA)
+        out += _tl._serialize_field(self.period_options, 'Vector<PremiumSubscriptionOption>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.premiumPromo"}
-        obj["status_text"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["status_entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
-        obj["video_sections"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
-        obj["videos"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
-        obj["period_options"], pos = _tl._read_typed(data, pos, "Vector<PremiumSubscriptionOption>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["status_text"], pos = _tl._read_string(data, pos)
+        obj["status_entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
+        obj["video_sections"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
+        obj["videos"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
+        obj["period_options"], pos = _tl._read_vector(data, pos, 'PremiumSubscriptionOption', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -916,7 +916,7 @@ class AppConfig:
     def to_bytes(self) -> bytes:
         out = b'.x\x18\xdd'
         out += _struct.pack('<i', self.hash)
-        out += _tl.serialize(_tl._resolve(self.config), _SCHEMA)
+        out += _tl._ser(self.config, _SCHEMA)
         return out
 
     @classmethod
@@ -924,7 +924,7 @@ class AppConfig:
         obj = {"_": "help.appConfig"}
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["config"], pos = _tl._read_typed(data, pos, "JSONValue", _SCHEMA_BY_CID)
+        obj["config"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -946,13 +946,13 @@ class PeerColorSet:
 
     def to_bytes(self) -> bytes:
         out = b'X\x9a!&'
-        out += _tl.serialize(_tl._resolve(self.colors), _SCHEMA)
+        out += _tl._serialize_field(self.colors, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.peerColorSet"}
-        obj["colors"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["colors"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -980,17 +980,17 @@ class PeerColorProfileSet:
 
     def to_bytes(self) -> bytes:
         out = b'\xeba}v'
-        out += _tl.serialize(_tl._resolve(self.palette_colors), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.bg_colors), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.story_colors), _SCHEMA)
+        out += _tl._serialize_field(self.palette_colors, 'Vector<int>', _SCHEMA)
+        out += _tl._serialize_field(self.bg_colors, 'Vector<int>', _SCHEMA)
+        out += _tl._serialize_field(self.story_colors, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.peerColorProfileSet"}
-        obj["palette_colors"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["bg_colors"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["story_colors"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["palette_colors"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["bg_colors"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["story_colors"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1031,9 +1031,9 @@ class PeerColorOption:
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.color_id)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.colors), _SCHEMA)
+            out += _tl._ser(self.colors, _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.dark_colors), _SCHEMA)
+            out += _tl._ser(self.dark_colors, _SCHEMA)
         if _flags_word & (1 << 3):
             out += _struct.pack('<i', self.channel_min_level)
         if _flags_word & (1 << 4):
@@ -1050,9 +1050,9 @@ class PeerColorOption:
         obj["color_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 1):
-            obj["colors"], pos = _tl._read_typed(data, pos, "help.PeerColorSet", _SCHEMA_BY_CID)
+            obj["colors"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["dark_colors"], pos = _tl._read_typed(data, pos, "help.PeerColorSet", _SCHEMA_BY_CID)
+            obj["dark_colors"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
             obj["channel_min_level"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -1106,7 +1106,7 @@ class PeerColors:
     def to_bytes(self) -> bytes:
         out = b'\x08\xed\xf8\x00'
         out += _struct.pack('<i', self.hash)
-        out += _tl.serialize(_tl._resolve(self.colors), _SCHEMA)
+        out += _tl._serialize_field(self.colors, 'Vector<help.PeerColorOption>', _SCHEMA)
         return out
 
     @classmethod
@@ -1114,7 +1114,7 @@ class PeerColors:
         obj = {"_": "help.peerColors"}
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["colors"], pos = _tl._read_typed(data, pos, "Vector<help.PeerColorOption>", _SCHEMA_BY_CID)
+        obj["colors"], pos = _tl._read_vector(data, pos, 'help.PeerColorOption', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1161,14 +1161,14 @@ class TimezonesList:
 
     def to_bytes(self) -> bytes:
         out = b'q\xedt{'
-        out += _tl.serialize(_tl._resolve(self.timezones), _SCHEMA)
+        out += _tl._serialize_field(self.timezones, 'Vector<Timezone>', _SCHEMA)
         out += _struct.pack('<i', self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.timezonesList"}
-        obj["timezones"], pos = _tl._read_typed(data, pos, "Vector<Timezone>", _SCHEMA_BY_CID)
+        obj["timezones"], pos = _tl._read_vector(data, pos, 'Timezone', _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos

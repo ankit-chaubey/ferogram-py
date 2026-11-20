@@ -48,10 +48,10 @@ class SentCode:
         out = b'\x02%\x00^'
         _flags_word = (0 if self.next_type is None else (1 << 1)) | (0 if self.timeout is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.type), _SCHEMA)
+        out += _tl._ser(self.type, _SCHEMA)
         out += _tl._pack_string(self.phone_code_hash)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.next_type), _SCHEMA)
+            out += _tl._ser(self.next_type, _SCHEMA)
         if _flags_word & (1 << 2):
             out += _struct.pack('<i', self.timeout)
         return out
@@ -61,10 +61,10 @@ class SentCode:
         obj = {"_": "auth.sentCode"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["type"], pos = _tl._read_typed(data, pos, "auth.SentCodeType", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["type"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["next_type"], pos = _tl._read_typed(data, pos, "auth.CodeType", _SCHEMA_BY_CID)
+            obj["next_type"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
             obj["timeout"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -89,13 +89,13 @@ class SentCodeSuccess:
 
     def to_bytes(self) -> bytes:
         out = b'D\xfe\x90#'
-        out += _tl.serialize(_tl._resolve(self.authorization), _SCHEMA)
+        out += _tl._ser(self.authorization, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.sentCodeSuccess"}
-        obj["authorization"], pos = _tl._read_typed(data, pos, "auth.Authorization", _SCHEMA_BY_CID)
+        obj["authorization"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -147,13 +147,13 @@ class SentCodePaymentRequired:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.sentCodePaymentRequired"}
-        obj["store_product"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["support_email_address"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["support_email_subject"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["store_product"], pos = _tl._read_string(data, pos)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
+        obj["support_email_address"], pos = _tl._read_string(data, pos)
+        obj["support_email_subject"], pos = _tl._read_string(data, pos)
         obj["premium_days"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["currency"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["currency"], pos = _tl._read_string(data, pos)
         obj["amount"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -197,7 +197,7 @@ class Authorization:
             out += _struct.pack('<i', self.tmp_sessions)
         if _flags_word & (1 << 2):
             out += _tl._pack_bytes(self.future_auth_token)
-        out += _tl.serialize(_tl._resolve(self.user), _SCHEMA)
+        out += _tl._ser(self.user, _SCHEMA)
         return out
 
     @classmethod
@@ -214,8 +214,8 @@ class Authorization:
             obj["tmp_sessions"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 2):
-            obj["future_auth_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["user"], pos = _tl._read_typed(data, pos, "User", _SCHEMA_BY_CID)
+            obj["future_auth_token"], pos = _tl._read_bytes(data, pos)
+        obj["user"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -240,7 +240,7 @@ class AuthorizationSignUpRequired:
         _flags_word = (0 if self.terms_of_service is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.terms_of_service), _SCHEMA)
+            out += _tl._ser(self.terms_of_service, _SCHEMA)
         return out
 
     @classmethod
@@ -249,7 +249,7 @@ class AuthorizationSignUpRequired:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["terms_of_service"], pos = _tl._read_typed(data, pos, "help.TermsOfService", _SCHEMA_BY_CID)
+            obj["terms_of_service"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -283,7 +283,7 @@ class ExportedAuthorization:
         obj = {"_": "auth.exportedAuthorization"}
         obj["id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["bytes"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -311,7 +311,7 @@ class PasswordRecovery:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.passwordRecovery"}
-        obj["email_pattern"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["email_pattern"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -536,7 +536,7 @@ class SentCodeTypeFlashCall:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.sentCodeTypeFlashCall"}
-        obj["pattern"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["pattern"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -568,7 +568,7 @@ class SentCodeTypeMissedCall:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.sentCodeTypeMissedCall"}
-        obj["prefix"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["prefix"], pos = _tl._read_string(data, pos)
         obj["length"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -626,7 +626,7 @@ class SentCodeTypeEmailCode:
             obj["apple_signin_allowed"] = True
         if _flags_word & (1 << 1):
             obj["google_signin_allowed"] = True
-        obj["email_pattern"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["email_pattern"], pos = _tl._read_string(data, pos)
         obj["length"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 3):
@@ -703,7 +703,7 @@ class SentCodeTypeFragmentSms:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.sentCodeTypeFragmentSms"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         obj["length"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -763,14 +763,14 @@ class SentCodeTypeFirebaseSms:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["nonce"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["nonce"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 2):
             obj["play_integrity_project_id"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 2):
-            obj["play_integrity_nonce"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["play_integrity_nonce"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 1):
-            obj["receipt"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["receipt"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
             obj["push_timeout"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -809,7 +809,7 @@ class SentCodeTypeSmsWord:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["beginning"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["beginning"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -843,7 +843,7 @@ class SentCodeTypeSmsPhrase:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["beginning"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["beginning"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -877,7 +877,7 @@ class LoginToken:
         obj = {"_": "auth.loginToken"}
         obj["expires"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["token"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -911,7 +911,7 @@ class LoginTokenMigrateTo:
         obj = {"_": "auth.loginTokenMigrateTo"}
         obj["dc_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["token"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -933,13 +933,13 @@ class LoginTokenSuccess:
 
     def to_bytes(self) -> bytes:
         out = b'^\\\r9'
-        out += _tl.serialize(_tl._resolve(self.authorization), _SCHEMA)
+        out += _tl._ser(self.authorization, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.loginTokenSuccess"}
-        obj["authorization"], pos = _tl._read_typed(data, pos, "auth.Authorization", _SCHEMA_BY_CID)
+        obj["authorization"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -973,7 +973,7 @@ class LoggedOut:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["future_auth_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["future_auth_token"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -995,13 +995,13 @@ class PasskeyLoginOptions:
 
     def to_bytes(self) -> bytes:
         out = b'\x89w\x03\xe2'
-        out += _tl.serialize(_tl._resolve(self.options), _SCHEMA)
+        out += _tl._ser(self.options, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.passkeyLoginOptions"}
-        obj["options"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        obj["options"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1033,8 +1033,8 @@ class FirebasePnvIntent:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.firebasePnvIntent"}
-        obj["nonce"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["digital_credential_payload"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["nonce"], pos = _tl._read_string(data, pos)
+        obj["digital_credential_payload"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

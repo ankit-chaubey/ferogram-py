@@ -51,9 +51,9 @@ class BotInfo:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "bots.botInfo"}
-        obj["name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["about"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["description"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["name"], pos = _tl._read_string(data, pos)
+        obj["about"], pos = _tl._read_string(data, pos)
+        obj["description"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -82,7 +82,7 @@ class PopularAppBots:
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -91,8 +91,8 @@ class PopularAppBots:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -117,15 +117,15 @@ class PreviewInfo:
 
     def to_bytes(self) -> bytes:
         out = b'd\x1d\xa7\x0c'
-        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.lang_codes), _SCHEMA)
+        out += _tl._serialize_field(self.media, 'Vector<BotPreviewMedia>', _SCHEMA)
+        out += _tl._serialize_field(self.lang_codes, 'Vector<string>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "bots.previewInfo"}
-        obj["media"], pos = _tl._read_typed(data, pos, "Vector<BotPreviewMedia>", _SCHEMA_BY_CID)
-        obj["lang_codes"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        obj["media"], pos = _tl._read_vector(data, pos, 'BotPreviewMedia', _SCHEMA_BY_CID)
+        obj["lang_codes"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -153,7 +153,7 @@ class ExportedBotToken:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "bots.exportedBotToken"}
-        obj["token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["token"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -181,7 +181,7 @@ class RequestedButton:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "bots.requestedButton"}
-        obj["webapp_req_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["webapp_req_id"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -209,7 +209,7 @@ class AccessSettings:
         _flags_word = ((1 << 0) if self.restricted else 0) | (0 if self.add_users is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.add_users), _SCHEMA)
+            out += _tl._serialize_field(self.add_users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -220,7 +220,7 @@ class AccessSettings:
         if _flags_word & (1 << 0):
             obj["restricted"] = True
         if _flags_word & (1 << 1):
-            obj["add_users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["add_users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

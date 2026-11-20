@@ -51,16 +51,27 @@ class ParticipantMethods:
             "bots": "channelParticipantsBots",
             "contacts": "channelParticipantsContacts",
         }
-        tl_filter = filter_map.get(filter, "channelParticipantsRecent")
-        result = await self._rpc({
-            "_": "channels.getParticipants",
-            "channel": input_peer,
-            "filter": {"_": tl_filter},
-            "offset": 0,
-            "limit": limit,
-            "hash": 0,
-        })
-        return result.get("participants", []) if isinstance(result, dict) else []
+        if filter not in filter_map:
+            raise ValueError(f"unknown participant filter {filter!r}, use one of {sorted(filter_map)}")
+        tl_filter = {"_": filter_map[filter]}
+        if filter in ("kicked", "contacts"):
+            tl_filter["q"] = ""
+        out: list[dict] = []
+        while len(out) < limit:
+            batch = min(200, limit - len(out))
+            result = await self._rpc({
+                "_": "channels.getParticipants",
+                "channel": input_peer,
+                "filter": tl_filter,
+                "offset": len(out),
+                "limit": batch,
+                "hash": 0,
+            })
+            page = result.get("participants", []) if isinstance(result, dict) else []
+            out.extend(page)
+            if len(page) < batch:
+                break
+        return out
 
     async def kick_participant(self, peer: str, user: str) -> None:
         channel = await self._resolve_peer(peer)

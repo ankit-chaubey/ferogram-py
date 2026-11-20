@@ -52,7 +52,7 @@ class SaveFilePart:
         obj = {"_": "upload.saveFilePart"}
         obj["file_id"], obj["file_part"], = _struct.unpack_from('<qi', data, pos)
         pos += 12
-        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["bytes"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -88,7 +88,7 @@ class GetFile:
         out = b'\xbe5S\xbe'
         _flags_word = ((1 << 0) if self.precise else 0) | ((1 << 1) if self.cdn_supported else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.location), _SCHEMA)
+        out += _tl._ser(self.location, _SCHEMA)
         out += _struct.pack('<qi', self.offset, self.limit)
         return out
 
@@ -101,7 +101,7 @@ class GetFile:
             obj["precise"] = True
         if _flags_word & (1 << 1):
             obj["cdn_supported"] = True
-        obj["location"], pos = _tl._read_typed(data, pos, "InputFileLocation", _SCHEMA_BY_CID)
+        obj["location"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset"], obj["limit"], = _struct.unpack_from('<qi', data, pos)
         pos += 12
         return obj, pos
@@ -143,7 +143,7 @@ class SaveBigFilePart:
         obj = {"_": "upload.saveBigFilePart"}
         obj["file_id"], obj["file_part"], obj["file_total_parts"], = _struct.unpack_from('<qii', data, pos)
         pos += 16
-        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["bytes"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -171,14 +171,14 @@ class GetWebFile:
 
     def to_bytes(self) -> bytes:
         out = b'\x8d\x81\xe6$'
-        out += _tl.serialize(_tl._resolve(self.location), _SCHEMA)
+        out += _tl._ser(self.location, _SCHEMA)
         out += _struct.pack('<ii', self.offset, self.limit)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "upload.getWebFile"}
-        obj["location"], pos = _tl._read_typed(data, pos, "InputWebFileLocation", _SCHEMA_BY_CID)
+        obj["location"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset"], obj["limit"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         return obj, pos
@@ -215,7 +215,7 @@ class GetCdnFile:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "upload.getCdnFile"}
-        obj["file_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["file_token"], pos = _tl._read_bytes(data, pos)
         obj["offset"], obj["limit"], = _struct.unpack_from('<qi', data, pos)
         pos += 12
         return obj, pos
@@ -249,8 +249,8 @@ class ReuploadCdnFile:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "upload.reuploadCdnFile"}
-        obj["file_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["request_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["file_token"], pos = _tl._read_bytes(data, pos)
+        obj["request_token"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -282,7 +282,7 @@ class GetCdnFileHashes:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "upload.getCdnFileHashes"}
-        obj["file_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["file_token"], pos = _tl._read_bytes(data, pos)
         obj["offset"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -309,14 +309,14 @@ class GetFileHashes:
 
     def to_bytes(self) -> bytes:
         out = b'*\x98V\x91'
-        out += _tl.serialize(_tl._resolve(self.location), _SCHEMA)
+        out += _tl._ser(self.location, _SCHEMA)
         out += _struct.pack('<q', self.offset)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "upload.getFileHashes"}
-        obj["location"], pos = _tl._read_typed(data, pos, "InputFileLocation", _SCHEMA_BY_CID)
+        obj["location"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos

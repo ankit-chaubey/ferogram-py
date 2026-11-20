@@ -43,17 +43,17 @@ class UserFull:
 
     def to_bytes(self) -> bytes:
         out = b'.\x15m;'
-        out += _tl.serialize(_tl._resolve(self.full_user), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.full_user, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "users.userFull"}
-        obj["full_user"], pos = _tl._read_typed(data, pos, "UserFull", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["full_user"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -75,13 +75,13 @@ class Users:
 
     def to_bytes(self) -> bytes:
         out = b'\xb8\x06\xd7b'
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "users.users"}
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -107,7 +107,7 @@ class UsersSlice:
     def to_bytes(self) -> bytes:
         out = b'tIZ1'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -115,7 +115,7 @@ class UsersSlice:
         obj = {"_": "users.usersSlice"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -170,7 +170,7 @@ class SavedMusic:
     def to_bytes(self) -> bytes:
         out = b'\x97\xf2\xa24'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.documents), _SCHEMA)
+        out += _tl._serialize_field(self.documents, 'Vector<Document>', _SCHEMA)
         return out
 
     @classmethod
@@ -178,7 +178,7 @@ class SavedMusic:
         obj = {"_": "users.savedMusic"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["documents"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        obj["documents"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

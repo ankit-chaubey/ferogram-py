@@ -163,7 +163,7 @@ class GetSmsJob:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "smsjobs.getSmsJob"}
-        obj["job_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["job_id"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -200,9 +200,9 @@ class FinishJob:
         obj = {"_": "smsjobs.finishJob"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["job_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["job_id"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["error"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["error"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

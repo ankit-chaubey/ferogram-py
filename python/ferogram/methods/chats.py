@@ -17,13 +17,12 @@
 
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING, Any
 
 from ..types import (
     Chat,
 )
-from .._internal import _as_input_channel
+from .._internal import _as_input_channel, _rand_i64
 
 if TYPE_CHECKING:
     pass
@@ -220,7 +219,7 @@ class ChatMethods:
             "_": "messages.createForumTopic",
             "peer": input_peer,
             "title": title,
-            "random_id": random.randint(0, 2**63 - 1),
+            "random_id": (_rand_i64() & 0x7FFFFFFFFFFFFFFF),
         }
         if icon_color is not None:
             req["icon_color"] = icon_color

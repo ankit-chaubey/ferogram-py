@@ -44,8 +44,19 @@ def _get_from_id(m: Any) -> int | None:
 
 all_updates = _make(lambda _: True)
 private   = _make(lambda m: _get_chat_id(m) is not None and _get_chat_id(m) > 0)
-group     = _make(lambda m: (_get_chat_id(m) or 0) < 0)
-channel   = _make(lambda m: (_get_chat_id(m) or 0) < 0 and not _get_from_id(m))
+def _is_channel_post(m: Any) -> bool:
+    msg = _get_msg(m)
+    raw = getattr(msg, "_raw", None) or {}
+    if raw.get("post"):
+        return True
+    peer = getattr(msg, "peer_id", None)
+    if isinstance(peer, dict) and peer:
+        return peer.get("_") == "peerChannel" and _get_from_id(m) is None
+    return _get_from_id(m) is None
+
+
+group     = _make(lambda m: (_get_chat_id(m) or 0) < 0 and not _is_channel_post(m))
+channel   = _make(lambda m: (_get_chat_id(m) or 0) < 0 and _is_channel_post(m))
 text      = _make(lambda m: bool(_get_text(m)))
 photo     = _make(lambda m: getattr(_get_msg(m), "has_photo", False))
 document  = _make(lambda m: getattr(_get_msg(m), "has_document", False))
@@ -69,8 +80,15 @@ def command(*names: str, prefix: str = "/") -> Filter:
         parts = t[len(prefix):].split()
         if not parts:
             return False
-        cmd = parts[0].split("@")[0].lower()
-        return cmd in lower
+        cmd, _, target = parts[0].partition("@")
+        if cmd.lower() not in lower:
+            return False
+        if target:
+            client = getattr(_get_msg(m), "_client", None)
+            own = getattr(client, "_me_username", None)
+            if own and target.lower() != own:
+                return False
+        return True
     return check
 
 

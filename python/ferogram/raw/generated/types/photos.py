@@ -40,15 +40,15 @@ class Photos:
 
     def to_bytes(self) -> bytes:
         out = b'\xa5j\xca\x8d'
-        out += _tl.serialize(_tl._resolve(self.photos), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.photos, 'Vector<Photo>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "photos.photos"}
-        obj["photos"], pos = _tl._read_typed(data, pos, "Vector<Photo>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["photos"], pos = _tl._read_vector(data, pos, 'Photo', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -77,8 +77,8 @@ class PhotosSlice:
     def to_bytes(self) -> bytes:
         out = b'T\x1f\x05\x15'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.photos), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.photos, 'Vector<Photo>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -86,8 +86,8 @@ class PhotosSlice:
         obj = {"_": "photos.photosSlice"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["photos"], pos = _tl._read_typed(data, pos, "Vector<Photo>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["photos"], pos = _tl._read_vector(data, pos, 'Photo', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -112,15 +112,15 @@ class Photo:
 
     def to_bytes(self) -> bytes:
         out = b'\xa8,! '
-        out += _tl.serialize(_tl._resolve(self.photo), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.photo, _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "photos.photo"}
-        obj["photo"], pos = _tl._read_typed(data, pos, "Photo", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["photo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

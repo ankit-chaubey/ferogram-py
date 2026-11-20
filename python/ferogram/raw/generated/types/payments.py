@@ -88,21 +88,21 @@ class PaymentForm:
         out += _tl._pack_string(self.title)
         out += _tl._pack_string(self.description)
         if _flags_word & (1 << 5):
-            out += _tl.serialize(_tl._resolve(self.photo), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.invoice), _SCHEMA)
+            out += _tl._ser(self.photo, _SCHEMA)
+        out += _tl._ser(self.invoice, _SCHEMA)
         out += _struct.pack('<q', self.provider_id)
         out += _tl._pack_string(self.url)
         if _flags_word & (1 << 4):
             out += _tl._pack_string(self.native_provider)
         if _flags_word & (1 << 4):
-            out += _tl.serialize(_tl._resolve(self.native_params), _SCHEMA)
+            out += _tl._ser(self.native_params, _SCHEMA)
         if _flags_word & (1 << 6):
-            out += _tl.serialize(_tl._resolve(self.additional_methods), _SCHEMA)
+            out += _tl._serialize_field(self.additional_methods, 'Vector<PaymentFormMethod>', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.saved_info), _SCHEMA)
+            out += _tl._ser(self.saved_info, _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.saved_credentials), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+            out += _tl._serialize_field(self.saved_credentials, 'Vector<PaymentSavedCredentials>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -116,25 +116,25 @@ class PaymentForm:
             obj["password_missing"] = True
         obj["form_id"], obj["bot_id"], = _struct.unpack_from('<qq', data, pos)
         pos += 16
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["description"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
+        obj["description"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 5):
-            obj["photo"], pos = _tl._read_typed(data, pos, "WebDocument", _SCHEMA_BY_CID)
-        obj["invoice"], pos = _tl._read_typed(data, pos, "Invoice", _SCHEMA_BY_CID)
+            obj["photo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["invoice"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["provider_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 4):
-            obj["native_provider"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["native_provider"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 4):
-            obj["native_params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+            obj["native_params"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 6):
-            obj["additional_methods"], pos = _tl._read_typed(data, pos, "Vector<PaymentFormMethod>", _SCHEMA_BY_CID)
+            obj["additional_methods"], pos = _tl._read_vector(data, pos, 'PaymentFormMethod', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["saved_info"], pos = _tl._read_typed(data, pos, "PaymentRequestedInfo", _SCHEMA_BY_CID)
+            obj["saved_info"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["saved_credentials"], pos = _tl._read_typed(data, pos, "Vector<PaymentSavedCredentials>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["saved_credentials"], pos = _tl._read_vector(data, pos, 'PaymentSavedCredentials', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -180,9 +180,9 @@ class PaymentFormStars:
         out += _tl._pack_string(self.title)
         out += _tl._pack_string(self.description)
         if _flags_word & (1 << 5):
-            out += _tl.serialize(_tl._resolve(self.photo), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.invoice), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+            out += _tl._ser(self.photo, _SCHEMA)
+        out += _tl._ser(self.invoice, _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -192,12 +192,12 @@ class PaymentFormStars:
         pos += 4
         obj["form_id"], obj["bot_id"], = _struct.unpack_from('<qq', data, pos)
         pos += 16
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["description"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
+        obj["description"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 5):
-            obj["photo"], pos = _tl._read_typed(data, pos, "WebDocument", _SCHEMA_BY_CID)
-        obj["invoice"], pos = _tl._read_typed(data, pos, "Invoice", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["photo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["invoice"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -223,7 +223,7 @@ class PaymentFormStarGift:
     def to_bytes(self) -> bytes:
         out = b'\xe1\xcf%\xb4'
         out += _struct.pack('<q', self.form_id)
-        out += _tl.serialize(_tl._resolve(self.invoice), _SCHEMA)
+        out += _tl._ser(self.invoice, _SCHEMA)
         return out
 
     @classmethod
@@ -231,7 +231,7 @@ class PaymentFormStarGift:
         obj = {"_": "payments.paymentFormStarGift"}
         obj["form_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["invoice"], pos = _tl._read_typed(data, pos, "Invoice", _SCHEMA_BY_CID)
+        obj["invoice"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -261,7 +261,7 @@ class ValidatedRequestedInfo:
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.id)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.shipping_options), _SCHEMA)
+            out += _tl._serialize_field(self.shipping_options, 'Vector<ShippingOption>', _SCHEMA)
         return out
 
     @classmethod
@@ -270,9 +270,9 @@ class ValidatedRequestedInfo:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["id"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["shipping_options"], pos = _tl._read_typed(data, pos, "Vector<ShippingOption>", _SCHEMA_BY_CID)
+            obj["shipping_options"], pos = _tl._read_vector(data, pos, 'ShippingOption', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -294,13 +294,13 @@ class PaymentResult:
 
     def to_bytes(self) -> bytes:
         out = b'\r\x81_N'
-        out += _tl.serialize(_tl._resolve(self.updates), _SCHEMA)
+        out += _tl._ser(self.updates, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.paymentResult"}
-        obj["updates"], pos = _tl._read_typed(data, pos, "Updates", _SCHEMA_BY_CID)
+        obj["updates"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -328,7 +328,7 @@ class PaymentVerificationNeeded:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.paymentVerificationNeeded"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -395,18 +395,18 @@ class PaymentReceipt:
         out += _tl._pack_string(self.title)
         out += _tl._pack_string(self.description)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.photo), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.invoice), _SCHEMA)
+            out += _tl._ser(self.photo, _SCHEMA)
+        out += _tl._ser(self.invoice, _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.info), _SCHEMA)
+            out += _tl._ser(self.info, _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.shipping), _SCHEMA)
+            out += _tl._ser(self.shipping, _SCHEMA)
         if _flags_word & (1 << 3):
             out += _struct.pack('<q', self.tip_amount)
         out += _tl._pack_string(self.currency)
         out += _struct.pack('<q', self.total_amount)
         out += _tl._pack_string(self.credentials_title)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -416,23 +416,23 @@ class PaymentReceipt:
         pos += 4
         obj["date"], obj["bot_id"], obj["provider_id"], = _struct.unpack_from('<iqq', data, pos)
         pos += 20
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["description"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
+        obj["description"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["photo"], pos = _tl._read_typed(data, pos, "WebDocument", _SCHEMA_BY_CID)
-        obj["invoice"], pos = _tl._read_typed(data, pos, "Invoice", _SCHEMA_BY_CID)
+            obj["photo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["invoice"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["info"], pos = _tl._read_typed(data, pos, "PaymentRequestedInfo", _SCHEMA_BY_CID)
+            obj["info"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["shipping"], pos = _tl._read_typed(data, pos, "ShippingOption", _SCHEMA_BY_CID)
+            obj["shipping"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
             obj["tip_amount"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
-        obj["currency"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["currency"], pos = _tl._read_string(data, pos)
         obj["total_amount"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["credentials_title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["credentials_title"], pos = _tl._read_string(data, pos)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -487,12 +487,12 @@ class PaymentReceiptStars:
         out += _tl._pack_string(self.title)
         out += _tl._pack_string(self.description)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.photo), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.invoice), _SCHEMA)
+            out += _tl._ser(self.photo, _SCHEMA)
+        out += _tl._ser(self.invoice, _SCHEMA)
         out += _tl._pack_string(self.currency)
         out += _struct.pack('<q', self.total_amount)
         out += _tl._pack_string(self.transaction_id)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -502,16 +502,16 @@ class PaymentReceiptStars:
         pos += 4
         obj["date"], obj["bot_id"], = _struct.unpack_from('<iq', data, pos)
         pos += 12
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["description"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
+        obj["description"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["photo"], pos = _tl._read_typed(data, pos, "WebDocument", _SCHEMA_BY_CID)
-        obj["invoice"], pos = _tl._read_typed(data, pos, "Invoice", _SCHEMA_BY_CID)
-        obj["currency"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["photo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["invoice"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["currency"], pos = _tl._read_string(data, pos)
         obj["total_amount"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["transaction_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["transaction_id"], pos = _tl._read_string(data, pos)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -539,7 +539,7 @@ class SavedInfo:
         _flags_word = ((1 << 1) if self.has_saved_credentials else 0) | (0 if self.saved_info is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.saved_info), _SCHEMA)
+            out += _tl._ser(self.saved_info, _SCHEMA)
         return out
 
     @classmethod
@@ -550,7 +550,7 @@ class SavedInfo:
         if _flags_word & (1 << 1):
             obj["has_saved_credentials"] = True
         if _flags_word & (1 << 0):
-            obj["saved_info"], pos = _tl._read_typed(data, pos, "PaymentRequestedInfo", _SCHEMA_BY_CID)
+            obj["saved_info"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -576,14 +576,14 @@ class BankCardData:
     def to_bytes(self) -> bytes:
         out = b's\xe5$>'
         out += _tl._pack_string(self.title)
-        out += _tl.serialize(_tl._resolve(self.open_urls), _SCHEMA)
+        out += _tl._serialize_field(self.open_urls, 'Vector<BankCardOpenUrl>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.bankCardData"}
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["open_urls"], pos = _tl._read_typed(data, pos, "Vector<BankCardOpenUrl>", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
+        obj["open_urls"], pos = _tl._read_vector(data, pos, 'BankCardOpenUrl', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -611,7 +611,7 @@ class ExportedInvoice:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.exportedInvoice"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -660,7 +660,7 @@ class CheckedGiftCode:
         _flags_word = ((1 << 2) if self.via_giveaway else 0) | (0 if self.from_id is None else (1 << 4)) | (0 if self.giveaway_msg_id is None else (1 << 3)) | (0 if self.to_id is None else (1 << 0)) | (0 if self.used_date is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 4):
-            out += _tl.serialize(_tl._resolve(self.from_id), _SCHEMA)
+            out += _tl._ser(self.from_id, _SCHEMA)
         if _flags_word & (1 << 3):
             out += _struct.pack('<i', self.giveaway_msg_id)
         if _flags_word & (1 << 0):
@@ -668,8 +668,8 @@ class CheckedGiftCode:
         out += _struct.pack('<ii', self.date, self.days)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.used_date)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -680,7 +680,7 @@ class CheckedGiftCode:
         if _flags_word & (1 << 2):
             obj["via_giveaway"] = True
         if _flags_word & (1 << 4):
-            obj["from_id"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
+            obj["from_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
             obj["giveaway_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -692,8 +692,8 @@ class CheckedGiftCode:
         if _flags_word & (1 << 1):
             obj["used_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -759,7 +759,7 @@ class GiveawayInfo:
             obj["admin_disallowed_chat_id"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 4):
-            obj["disallowed_country"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["disallowed_country"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -826,7 +826,7 @@ class GiveawayInfoResults:
         obj["start_date"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 3):
-            obj["gift_code_slug"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["gift_code_slug"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 4):
             obj["stars_prize"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -879,19 +879,19 @@ class StarsStatus:
         out = b'\xed\xe8\x9cl'
         _flags_word = (0 if self.subscriptions is None else (1 << 1)) | (0 if self.subscriptions_next_offset is None else (1 << 2)) | (0 if self.subscriptions_missing_balance is None else (1 << 4)) | (0 if self.history is None else (1 << 3)) | (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.balance), _SCHEMA)
+        out += _tl._ser(self.balance, _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.subscriptions), _SCHEMA)
+            out += _tl._serialize_field(self.subscriptions, 'Vector<StarsSubscription>', _SCHEMA)
         if _flags_word & (1 << 2):
             out += _tl._pack_string(self.subscriptions_next_offset)
         if _flags_word & (1 << 4):
             out += _struct.pack('<q', self.subscriptions_missing_balance)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.history), _SCHEMA)
+            out += _tl._serialize_field(self.history, 'Vector<StarsTransaction>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -899,20 +899,20 @@ class StarsStatus:
         obj = {"_": "payments.starsStatus"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["balance"], pos = _tl._read_typed(data, pos, "StarsAmount", _SCHEMA_BY_CID)
+        obj["balance"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["subscriptions"], pos = _tl._read_typed(data, pos, "Vector<StarsSubscription>", _SCHEMA_BY_CID)
+            obj["subscriptions"], pos = _tl._read_vector(data, pos, 'StarsSubscription', _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["subscriptions_next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["subscriptions_next_offset"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 4):
             obj["subscriptions_missing_balance"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 3):
-            obj["history"], pos = _tl._read_typed(data, pos, "Vector<StarsTransaction>", _SCHEMA_BY_CID)
+            obj["history"], pos = _tl._read_vector(data, pos, 'StarsTransaction', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -946,9 +946,9 @@ class StarsRevenueStats:
         _flags_word = (0 if self.top_hours_graph is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.top_hours_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.revenue_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.status), _SCHEMA)
+            out += _tl._ser(self.top_hours_graph, _SCHEMA)
+        out += _tl._ser(self.revenue_graph, _SCHEMA)
+        out += _tl._ser(self.status, _SCHEMA)
         out += _struct.pack('<d', self.usd_rate)
         return out
 
@@ -958,9 +958,9 @@ class StarsRevenueStats:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["top_hours_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["revenue_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["status"], pos = _tl._read_typed(data, pos, "StarsRevenueStatus", _SCHEMA_BY_CID)
+            obj["top_hours_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["revenue_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["status"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["usd_rate"] = _struct.unpack_from('<d', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -990,7 +990,7 @@ class StarsRevenueWithdrawalUrl:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starsRevenueWithdrawalUrl"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1018,7 +1018,7 @@ class StarsRevenueAdsAccountUrl:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starsRevenueAdsAccountUrl"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1072,9 +1072,9 @@ class StarGifts:
     def to_bytes(self) -> bytes:
         out = b'\x95)\xd8.'
         out += _struct.pack('<i', self.hash)
-        out += _tl.serialize(_tl._resolve(self.gifts), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.gifts, 'Vector<StarGift>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -1082,9 +1082,9 @@ class StarGifts:
         obj = {"_": "payments.starGifts"}
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["gifts"], pos = _tl._read_typed(data, pos, "Vector<StarGift>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["gifts"], pos = _tl._read_vector(data, pos, 'StarGift', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1113,8 +1113,8 @@ class ConnectedStarRefBots:
     def to_bytes(self) -> bytes:
         out = b'\x1d\xea\xd5\x98'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.connected_bots), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.connected_bots, 'Vector<ConnectedBotStarRef>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -1122,8 +1122,8 @@ class ConnectedStarRefBots:
         obj = {"_": "payments.connectedStarRefBots"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["connected_bots"], pos = _tl._read_typed(data, pos, "Vector<ConnectedBotStarRef>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["connected_bots"], pos = _tl._read_vector(data, pos, 'ConnectedBotStarRef', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1157,8 +1157,8 @@ class SuggestedStarRefBots:
         _flags_word = (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.suggested_bots), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.suggested_bots, 'Vector<StarRefProgram>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
         return out
@@ -1170,10 +1170,10 @@ class SuggestedStarRefBots:
         pos += 4
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["suggested_bots"], pos = _tl._read_typed(data, pos, "Vector<StarRefProgram>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["suggested_bots"], pos = _tl._read_vector(data, pos, 'StarRefProgram', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1201,17 +1201,17 @@ class StarGiftUpgradePreview:
 
     def to_bytes(self) -> bytes:
         out = b'\xed\xdf\xe1='
-        out += _tl.serialize(_tl._resolve(self.sample_attributes), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.prices), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.next_prices), _SCHEMA)
+        out += _tl._serialize_field(self.sample_attributes, 'Vector<StarGiftAttribute>', _SCHEMA)
+        out += _tl._serialize_field(self.prices, 'Vector<StarGiftUpgradePrice>', _SCHEMA)
+        out += _tl._serialize_field(self.next_prices, 'Vector<StarGiftUpgradePrice>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starGiftUpgradePreview"}
-        obj["sample_attributes"], pos = _tl._read_typed(data, pos, "Vector<StarGiftAttribute>", _SCHEMA_BY_CID)
-        obj["prices"], pos = _tl._read_typed(data, pos, "Vector<StarGiftUpgradePrice>", _SCHEMA_BY_CID)
-        obj["next_prices"], pos = _tl._read_typed(data, pos, "Vector<StarGiftUpgradePrice>", _SCHEMA_BY_CID)
+        obj["sample_attributes"], pos = _tl._read_vector(data, pos, 'StarGiftAttribute', _SCHEMA_BY_CID)
+        obj["prices"], pos = _tl._read_vector(data, pos, 'StarGiftUpgradePrice', _SCHEMA_BY_CID)
+        obj["next_prices"], pos = _tl._read_vector(data, pos, 'StarGiftUpgradePrice', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1239,17 +1239,17 @@ class UniqueStarGift:
 
     def to_bytes(self) -> bytes:
         out = b'\xe8VlA'
-        out += _tl.serialize(_tl._resolve(self.gift), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.gift, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.uniqueStarGift"}
-        obj["gift"], pos = _tl._read_typed(data, pos, "StarGift", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["gift"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1291,11 +1291,11 @@ class SavedStarGifts:
         out += _struct.pack('<i', self.count)
         if _flags_word & (1 << 1):
             out += _tl._pack_bool(self.chat_notifications_enabled)
-        out += _tl.serialize(_tl._resolve(self.gifts), _SCHEMA)
+        out += _tl._serialize_field(self.gifts, 'Vector<SavedStarGift>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -1306,12 +1306,12 @@ class SavedStarGifts:
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 1):
-            obj["chat_notifications_enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
-        obj["gifts"], pos = _tl._read_typed(data, pos, "Vector<SavedStarGift>", _SCHEMA_BY_CID)
+            obj["chat_notifications_enabled"], pos = _tl._read_bool(data, pos)
+        obj["gifts"], pos = _tl._read_vector(data, pos, 'SavedStarGift', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1339,7 +1339,7 @@ class StarGiftWithdrawalUrl:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starGiftWithdrawalUrl"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1385,17 +1385,17 @@ class ResaleStarGifts:
         _flags_word = (0 if self.next_offset is None else (1 << 0)) | (0 if self.attributes is None else (1 << 1)) | (0 if self.attributes_hash is None else (1 << 1)) | (0 if self.counters is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.gifts), _SCHEMA)
+        out += _tl._serialize_field(self.gifts, 'Vector<StarGift>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.attributes), _SCHEMA)
+            out += _tl._serialize_field(self.attributes, 'Vector<StarGiftAttribute>', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _struct.pack('<q', self.attributes_hash)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.counters), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+            out += _tl._serialize_field(self.counters, 'Vector<StarGiftAttributeCounter>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -1405,18 +1405,18 @@ class ResaleStarGifts:
         pos += 4
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["gifts"], pos = _tl._read_typed(data, pos, "Vector<StarGift>", _SCHEMA_BY_CID)
+        obj["gifts"], pos = _tl._read_vector(data, pos, 'StarGift', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["attributes"], pos = _tl._read_typed(data, pos, "Vector<StarGiftAttribute>", _SCHEMA_BY_CID)
+            obj["attributes"], pos = _tl._read_vector(data, pos, 'StarGiftAttribute', _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
             obj["attributes_hash"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["counters"], pos = _tl._read_typed(data, pos, "Vector<StarGiftAttributeCounter>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["counters"], pos = _tl._read_vector(data, pos, 'StarGiftAttributeCounter', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1460,13 +1460,13 @@ class StarGiftCollections:
 
     def to_bytes(self) -> bytes:
         out = b'\xf32)\x8a'
-        out += _tl.serialize(_tl._resolve(self.collections), _SCHEMA)
+        out += _tl._serialize_field(self.collections, 'Vector<StarGiftCollection>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starGiftCollections"}
-        obj["collections"], pos = _tl._read_typed(data, pos, "Vector<StarGiftCollection>", _SCHEMA_BY_CID)
+        obj["collections"], pos = _tl._read_vector(data, pos, 'StarGiftCollection', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1556,7 +1556,7 @@ class UniqueStarGiftValueInfo:
             obj["last_sale_on_fragment"] = True
         if _flags_word & (1 << 6):
             obj["value_is_average"] = True
-        obj["currency"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["currency"], pos = _tl._read_string(data, pos)
         obj["value"], obj["initial_sale_date"], obj["initial_sale_stars"], obj["initial_sale_price"], = _struct.unpack_from('<qiqq', data, pos)
         pos += 28
         if _flags_word & (1 << 0):
@@ -1578,7 +1578,7 @@ class UniqueStarGiftValueInfo:
             obj["fragment_listed_count"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 5):
-            obj["fragment_listed_url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["fragment_listed_url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1622,13 +1622,13 @@ class CheckCanSendGiftResultFail:
 
     def to_bytes(self) -> bytes:
         out = b't\x82\xe5\xd5'
-        out += _tl.serialize(_tl._resolve(self.reason), _SCHEMA)
+        out += _tl._ser(self.reason, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.checkCanSendGiftResultFail"}
-        obj["reason"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+        obj["reason"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1665,24 +1665,24 @@ class StarGiftAuctionState:
 
     def to_bytes(self) -> bytes:
         out = b'\xec\xf49k'
-        out += _tl.serialize(_tl._resolve(self.gift), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.state), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.user_state), _SCHEMA)
+        out += _tl._ser(self.gift, _SCHEMA)
+        out += _tl._ser(self.state, _SCHEMA)
+        out += _tl._ser(self.user_state, _SCHEMA)
         out += _struct.pack('<i', self.timeout)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starGiftAuctionState"}
-        obj["gift"], pos = _tl._read_typed(data, pos, "StarGift", _SCHEMA_BY_CID)
-        obj["state"], pos = _tl._read_typed(data, pos, "StarGiftAuctionState", _SCHEMA_BY_CID)
-        obj["user_state"], pos = _tl._read_typed(data, pos, "StarGiftAuctionUserState", _SCHEMA_BY_CID)
+        obj["gift"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["state"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["user_state"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["timeout"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1710,17 +1710,17 @@ class StarGiftAuctionAcquiredGifts:
 
     def to_bytes(self) -> bytes:
         out = b'\xf0\xd1[}'
-        out += _tl.serialize(_tl._resolve(self.gifts), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl._serialize_field(self.gifts, 'Vector<StarGiftAuctionAcquiredGift>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starGiftAuctionAcquiredGifts"}
-        obj["gifts"], pos = _tl._read_typed(data, pos, "Vector<StarGiftAuctionAcquiredGift>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["gifts"], pos = _tl._read_vector(data, pos, 'StarGiftAuctionAcquiredGift', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1770,17 +1770,17 @@ class StarGiftActiveAuctions:
 
     def to_bytes(self) -> bytes:
         out = b'\xbc\xab\xf6\xae'
-        out += _tl.serialize(_tl._resolve(self.auctions), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl._serialize_field(self.auctions, 'Vector<StarGiftActiveAuctionState>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starGiftActiveAuctions"}
-        obj["auctions"], pos = _tl._read_typed(data, pos, "Vector<StarGiftActiveAuctionState>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["auctions"], pos = _tl._read_vector(data, pos, 'StarGiftActiveAuctionState', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1802,13 +1802,13 @@ class StarGiftUpgradeAttributes:
 
     def to_bytes(self) -> bytes:
         out = b'o\xe3\xc6F'
-        out += _tl.serialize(_tl._resolve(self.attributes), _SCHEMA)
+        out += _tl._serialize_field(self.attributes, 'Vector<StarGiftAttribute>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starGiftUpgradeAttributes"}
-        obj["attributes"], pos = _tl._read_typed(data, pos, "Vector<StarGiftAttribute>", _SCHEMA_BY_CID)
+        obj["attributes"], pos = _tl._read_vector(data, pos, 'StarGiftAttribute', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1830,13 +1830,13 @@ class CurrencyRates:
 
     def to_bytes(self) -> bytes:
         out = b'\xc2\xe4\xcc\xbb'
-        out += _tl.serialize(_tl._resolve(self.rates), _SCHEMA)
+        out += _tl._serialize_field(self.rates, 'Vector<CurrencyRate>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.currencyRates"}
-        obj["rates"], pos = _tl._read_typed(data, pos, "Vector<CurrencyRate>", _SCHEMA_BY_CID)
+        obj["rates"], pos = _tl._read_vector(data, pos, 'CurrencyRate', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1872,8 +1872,8 @@ class StarGiftDepositPayload:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "payments.starGiftDepositPayload"}
-        obj["nft_address"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["payload"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["nft_address"], pos = _tl._read_string(data, pos)
+        obj["payload"], pos = _tl._read_bytes(data, pos)
         obj["amount"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos

@@ -86,18 +86,22 @@ class CallbackQuery:
     game_short_name: str
     _raw: dict = field(default_factory=dict, repr=False)
     _client: Any = field(default=None, repr=False, compare=False)
+    inline_message_id: dict | None = None
 
     @classmethod
     def from_tl(cls, d: dict) -> "CallbackQuery":
+        msg_id = d.get("msg_id")
+        inline = msg_id if isinstance(msg_id, dict) else None
         return cls(
             query_id=_int(d, "query_id"),
             sender_id=_int(d, "user_id"),
             peer=d.get("peer") or {},
-            message_id=_int(d, "msg_id"),
+            message_id=0 if inline is not None else _int(d, "msg_id"),
             chat_instance=_int(d, "chat_instance"),
             data=d.get("data") or b"",
             game_short_name=_str(d, "game_short_name"),
             _raw=d,
+            inline_message_id=inline,
         )
 
     def _require_client(self) -> Any:
@@ -329,8 +333,9 @@ class JoinRequest:
 
     @classmethod
     def from_tl(cls, d: dict) -> "JoinRequest":
+        peer = d.get("peer") or {}
         return cls(
-            channel_id=d.get("channel_id"),
+            channel_id=d.get("channel_id") or peer.get("channel_id") or peer.get("chat_id"),
             user_id=_int(d, "user_id"),
             date=_int(d, "date"),
             _raw=d,
@@ -358,7 +363,7 @@ class MessageReaction:
         return cls(
             peer=d.get("peer") or {},
             msg_id=_int(d, "msg_id"),
-            reactions=d.get("reactions") or {},
+            reactions=d.get("reactions") or d.get("new_reactions") or {},
             _raw=d,
         )
 

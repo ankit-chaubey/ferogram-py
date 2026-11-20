@@ -34,6 +34,7 @@ from .raw.proxy import RawProxy, PeerCache, resolve_peer as _resolve_peer_fn
 from .types import (
     Message,
 )
+from .errors import RpcError
 from .updates import wrap_update
 from .methods import (
     AuthMethods,
@@ -207,6 +208,12 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
         # Rust core's `max_tcp_connections` (the "city-wide speed limit").
         self._transfer_semaphore      = asyncio.Semaphore(self._transfer_limits.max_tcp_connections)
         self._conn: DcConnection | None = None
+        self._migrate_lock = asyncio.Lock()
+        self._seen_entities: set[bytes] = set()
+        self._event_by_cid: dict[int, str] = {}
+        self._me_username: str | None = None
+        self._dropped_updates = 0
+        self._diff_failures = 0
         self._frame_pump_task: asyncio.Task | None = None
         # Periodic flush of the peer access-hash cache to the session file.
         # Mirrors the Rust core's dirty-flag + 60s interval snapshot saver:
@@ -427,13 +434,23 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
                 except asyncio.QueueEmpty:
                     pass
                 self._update_queue.put_nowait(item)
+                self._note_dropped()
             elif self.update_overflow == "drop_newest":
-                pass
+                self._note_dropped()
             else:
                 raise ValueError(
                     f"unknown update_overflow {self.update_overflow!r}; "
                     "expected None, 'drop_oldest', or 'drop_newest'"
                 )
+
+    def _note_dropped(self) -> None:
+        self._dropped_updates += 1
+        n = self._dropped_updates
+        if n == 1 or n % 100 == 0:
+            self._log.warning(
+                "update queue full, %d update(s) dropped so far; raise update_queue_capacity "
+                "or workers, or set update_overflow=None to apply backpressure", n,
+            )
 
     async def _worker(self) -> None:
         while True:
@@ -456,13 +473,14 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
     # of set/dict lookups.
     _MESSAGE_WRAP_TYPES = frozenset((
         "updateNewMessage", "updateNewChannelMessage",
-        "updateNewScheduledMessage", "updateShortMessage",
+        "updateNewScheduledMessage", "updateShortMessage", "updateShortChatMessage",
     ))
 
     _EDITED_WRAP_TYPES = frozenset(("updateEditMessage", "updateEditChannelMessage"))
 
     _SIMPLE_ROUTE_MAP = {
         "updateDeleteMessages":        "message_deleted",
+        "updateDeleteChannelMessages": "message_deleted",
         "updateBotCallbackQuery":      "callback_query",
         "updateInlineBotCallbackQuery": "callback_query",
         "updateBotInlineQuery":        "inline_query",
@@ -472,8 +490,10 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
         "updateChatUserTyping":        "chat_action",
         "updateChannelUserTyping":     "chat_action",
         "updateChannelParticipant":    "participant_update",
-        "updateBotJoinRequest":        "join_request",
+        "updateBotChatInviteRequester": "join_request",
         "updateMessageReactions":      "message_reaction",
+        "updateBotMessageReaction":    "message_reaction",
+        "updateBotMessageReactions":   "message_reaction",
         "updateMessagePoll":           "poll_vote",
         "updateBotStopped":            "bot_stopped",
         "updateBotShippingQuery":      "shipping_query",
@@ -481,12 +501,53 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
         "updateBotChatBoost":          "chat_boost",
     }
 
+    @staticmethod
+    def _message_of(upd: dict) -> dict:
+        msg = upd.get("message")
+        if isinstance(msg, dict):
+            return msg
+        t = upd.get("_")
+        if t == "updateShortMessage":
+            peer = {"_": "peerUser", "user_id": upd.get("user_id", 0)}
+            sender = peer
+        elif t == "updateShortChatMessage":
+            peer = {"_": "peerChat", "chat_id": upd.get("chat_id", 0)}
+            sender = {"_": "peerUser", "user_id": upd.get("from_id", 0)}
+        else:
+            return upd
+        out = bool(upd.get("out"))
+        return {
+            "_": "message", "out": out, "id": upd.get("id", 0), "peer_id": peer,
+            "from_id": None if out and t == "updateShortMessage" else sender,
+            "date": upd.get("date", 0), "message": msg or "",
+            "entities": upd.get("entities"), "fwd_from": upd.get("fwd_from"),
+            "reply_to": upd.get("reply_to"), "via_bot_id": upd.get("via_bot_id"),
+        }
+
+    def _event_type_of_cid(self, cid: int) -> str:
+        et = self._event_by_cid.get(cid)
+        if et is None:
+            entry = _SCHEMA_BY_CID.get(cid)
+            name = entry[0] if entry else ""
+            if name in self._MESSAGE_WRAP_TYPES:
+                et = "message"
+            elif name in self._EDITED_WRAP_TYPES:
+                et = "edited_message"
+            else:
+                et = self._SIMPLE_ROUTE_MAP.get(name, "raw_update")
+            self._event_by_cid[cid] = et
+        return et
+
+    def _wants(self, event_type: str) -> bool:
+        groups = self._handlers.get(event_type)
+        return bool(groups) and any(groups.values())
+
     def _route_update(self, upd: dict) -> tuple[str, Any] | None:
         t = upd.get("_", "")
         if t in self._MESSAGE_WRAP_TYPES:
-            return ("message", upd.get("message") or upd)
+            return ("message", self._message_of(upd))
         if t in self._EDITED_WRAP_TYPES:
-            return ("edited_message", upd.get("message") or upd)
+            return ("edited_message", self._message_of(upd))
         event_type = self._SIMPLE_ROUTE_MAP.get(t)
         if event_type is not None:
             return (event_type, upd)
@@ -502,30 +563,46 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
         update exactly like the old dict-based diff path did.
         """
         if users_b or chats_b:
-            self._populate_cache({
-                "users": [_tl.deserialize(b, _SCHEMA_BY_CID) for b in users_b],
-                "chats": [_tl.deserialize(b, _SCHEMA_BY_CID) for b in chats_b],
-            })
+            seen = self._seen_entities
+            fresh_users = [b for b in users_b if b not in seen]
+            fresh_chats = [b for b in chats_b if b not in seen]
+            if fresh_users or fresh_chats:
+                try:
+                    self._populate_cache({
+                        "users": [_tl.deserialize(b, _SCHEMA_BY_CID) for b in fresh_users],
+                        "chats": [_tl.deserialize(b, _SCHEMA_BY_CID) for b in fresh_chats],
+                    })
+                    if len(seen) > 20000:
+                        seen.clear()
+                    seen.update(fresh_users)
+                    seen.update(fresh_chats)
+                except Exception as exc:
+                    self._log.warning("could not cache users/chats from update batch: %s", exc)
         for b in updates_b:
-            upd = _tl.deserialize(b, _SCHEMA_BY_CID)
-            routed = self._route_update(upd)
-            if routed is None:
+            try:
+                if not self._wants(self._event_type_of_cid(_tl._u32(b, 0)[0])):
+                    continue
+                upd = _tl.deserialize(b, _SCHEMA_BY_CID)
+                routed = self._route_update(upd)
+                if routed is None:
+                    continue
+                event_type, event = routed
+                wrapped = wrap_update(event_type, event)
+                if event_type in ("message", "edited_message"):
+                    entity = wrapped.message
+                else:
+                    entity = wrapped
+                if hasattr(entity, "_client"):
+                    entity._client = self
+            except Exception as exc:
+                self._log.warning("skipping undecodable update: %s", exc, exc_info=True)
                 continue
-            event_type, event = routed
-            self._log.debug("dispatching %s", event_type)
-            wrapped = wrap_update(event_type, event)
-            if event_type in ("message", "edited_message"):
-                entity = wrapped.message
-            else:
-                entity = wrapped
-            if hasattr(entity, "_client"):
-                entity._client = self
             await self._enqueue_update((event_type, entity))
 
     async def _run_updates(self) -> None:
         self._log.debug("update loop started")
         self._update_queue = asyncio.Queue(
-            maxsize=self.update_queue_capacity or (self._workers * 4)
+            maxsize=self.update_queue_capacity or max(1024, self._workers * 256)
         )
         worker_tasks = [
             asyncio.create_task(self._worker())
@@ -559,87 +636,18 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
                 except Exception as e:
                     self._log.warning("getState failed: %s", e)
 
+            failures = 0
             while True:
-                conn = self._conn
-                if conn is None:
-                    return
-
-                # MessageBox is the single authority on timing: it reports
-                # 0.0 the instant a diff is actually owed (gap detected, or
-                # the no-updates deadline elapsed), and a longer wait otherwise.
-                delay = await self._message_box.check_deadline_secs()
-                if delay > 0:
-                    # Cap the sleep so cancellation/shutdown stays responsive
-                    # even if a channel's deadline is far out.
-                    await asyncio.sleep(min(delay, 30.0))
-                    continue
-
-                # Global (pts/qts) difference, if one is due.
-                req = await self._message_box.get_difference_bytes()
-                if req is not None:
-                    try:
-                        body = await conn.rpc_call(req)
-                    except Exception as e:
-                        self._log.debug("getDifference error: %s", e)
-                        await self._message_box.abort_difference()
-                        await asyncio.sleep(2)
-                        continue
-                    try:
-                        updates_b, users_b, chats_b = await self._message_box.apply_difference(body)
-                    except Exception as e:
-                        self._log.warning("apply_difference failed: %s", e)
-                        await self._message_box.abort_difference()
-                        continue
-                    self._log.debug("global diff applied: %d updates", len(updates_b))
-                    await self._dispatch_raw_batch(updates_b, users_b, chats_b)
-                    continue
-
-                # Otherwise, a specific channel may need getChannelDifference.
-                chan = await self._message_box.next_channel_diff()
-                if chan is None:
-                    # Nothing owed right now; re-check next deadline.
-                    continue
-                channel_id, pts = chan
-                access_hash = self._peer_cache.get_channel(channel_id)
-                if access_hash is None:
-                    # Can't build a valid request without the access_hash -
-                    # give up on this round; it'll be retried once the
-                    # channel gets resolved through normal use (e.g. the
-                    # next message the client sends/receives there).
-                    self._log.debug(
-                        "channel %s: no access_hash cached, skipping diff at pts=%s "
-                        "(will retry once the channel is resolved through normal use)",
-                        channel_id, pts,
-                    )
-                    await self._message_box.end_channel_difference(banned=False)
-                    continue
                 try:
-                    diff = await self._rpc({
-                        "_": "updates.getChannelDifference",
-                        "force": False,
-                        "channel": {
-                            "_": "inputChannel",
-                            "channel_id": channel_id,
-                            "access_hash": access_hash,
-                        },
-                        "filter": {"_": "channelMessagesFilterEmpty"},
-                        "pts": pts,
-                        "limit": 100,
-                    }, return_bytes=True)
-                except Exception as e:
-                    msg = str(e)
-                    banned = "CHANNEL_PRIVATE" in msg or "CHANNEL_INVALID" in msg
-                    self._log.debug("getChannelDifference error for %s: %s", channel_id, e)
-                    await self._message_box.end_channel_difference(banned=banned)
-                    continue
-                try:
-                    updates_b, users_b, chats_b = await self._message_box.apply_channel_difference(diff)
-                except Exception as e:
-                    self._log.warning("apply_channel_difference failed for %s: %s", channel_id, e)
-                    await self._message_box.end_channel_difference(banned=False)
-                    continue
-                self._log.debug("channel %s diff applied: %d updates", channel_id, len(updates_b))
-                await self._dispatch_raw_batch(updates_b, users_b, chats_b)
+                    if not await self._updates_tick():
+                        return
+                    failures = 0
+                except (asyncio.CancelledError, KeyboardInterrupt):
+                    raise
+                except Exception as exc:
+                    failures += 1
+                    self._log.error("update loop iteration failed: %s", exc, exc_info=True)
+                    await asyncio.sleep(min(2 ** min(failures, 5), 30))
 
         except (asyncio.CancelledError, KeyboardInterrupt):
             pass
@@ -647,6 +655,91 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
             for _ in worker_tasks:
                 await self._update_queue.put(None)
             await asyncio.gather(*worker_tasks)
+
+    async def _updates_tick(self) -> bool:
+        conn = self._conn
+        if conn is None:
+            return False
+
+        # MessageBox is the single authority on timing: it reports
+        # 0.0 the instant a diff is actually owed (gap detected, or
+        # the no-updates deadline elapsed), and a longer wait otherwise.
+        delay = await self._message_box.check_deadline_secs()
+        if delay > 0:
+            # Cap the sleep so cancellation/shutdown stays responsive
+            # even if a channel's deadline is far out.
+            await asyncio.sleep(min(delay, 30.0))
+            return True
+
+        # Global (pts/qts) difference, if one is due.
+        req = await self._message_box.get_difference_bytes()
+        if req is not None:
+            try:
+                body = await conn.rpc_call(req)
+                self._diff_failures = 0
+            except Exception as e:
+                self._log.debug("getDifference error: %s", e)
+                await self._message_box.abort_difference()
+                self._diff_failures += 1
+                await asyncio.sleep(min(2 ** self._diff_failures, 60))
+                return True
+            try:
+                updates_b, users_b, chats_b = await self._message_box.apply_difference(body)
+            except Exception as e:
+                self._log.warning("apply_difference failed: %s", e)
+                await self._message_box.abort_difference()
+                return True
+            self._log.debug("global diff applied: %d updates", len(updates_b))
+            await self._dispatch_raw_batch(updates_b, users_b, chats_b)
+            return True
+
+        # Otherwise, a specific channel may need getChannelDifference.
+        chan = await self._message_box.next_channel_diff()
+        if chan is None:
+            # Nothing owed right now; re-check next deadline.
+            return True
+        channel_id, pts = chan
+        access_hash = self._peer_cache.get_channel(channel_id)
+        if access_hash is None:
+            # Can't build a valid request without the access_hash -
+            # give up on this round; it'll be retried once the
+            # channel gets resolved through normal use (e.g. the
+            # next message the client sends/receives there).
+            self._log.debug(
+                "channel %s: no access_hash cached, skipping diff at pts=%s "
+                "(will retry once the channel is resolved through normal use)",
+                channel_id, pts,
+            )
+            await self._message_box.end_channel_difference(banned=False)
+            return True
+        try:
+            diff = await self._rpc({
+                "_": "updates.getChannelDifference",
+                "force": False,
+                "channel": {
+                    "_": "inputChannel",
+                    "channel_id": channel_id,
+                    "access_hash": access_hash,
+                },
+                "filter": {"_": "channelMessagesFilterEmpty"},
+                "pts": pts,
+                "limit": 100,
+            }, return_bytes=True)
+        except Exception as e:
+            msg = str(e)
+            banned = "CHANNEL_PRIVATE" in msg or "CHANNEL_INVALID" in msg
+            self._log.debug("getChannelDifference error for %s: %s", channel_id, e)
+            await self._message_box.end_channel_difference(banned=banned)
+            return True
+        try:
+            updates_b, users_b, chats_b = await self._message_box.apply_channel_difference(diff)
+        except Exception as e:
+            self._log.warning("apply_channel_difference failed for %s: %s", channel_id, e)
+            await self._message_box.end_channel_difference(banned=False)
+            return True
+        self._log.debug("channel %s diff applied: %d updates", channel_id, len(updates_b))
+        await self._dispatch_raw_batch(updates_b, users_b, chats_b)
+        return True
 
     async def _run_frame_pump(self) -> None:
         """Drain `DcConnection.recv_frame()` and feed pushed update frames
@@ -667,43 +760,53 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
         alone.
         """
         self._log.debug("frame pump started")
+        backoff = 1.0
         while True:
             conn = self._conn
             if conn is None:
                 return
-            frame = await conn.recv_frame()
+            try:
+                frame = await conn.recv_frame()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                self._log.warning("frame pump: recv failed: %s", exc)
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 30.0)
+                continue
             if frame is None:
                 self._log.warning("frame pump: sender task shut down; pushed updates stopped arriving")
                 return
             kind, payload = frame
             if kind == "update":
+                backoff = 1.0
                 try:
                     result = await self._message_box.process_raw(payload)
-                except Exception as e:
-                    self._log.debug("process_raw failed for pushed frame: %s", e)
-                    continue
-                if result is None:
-                    # No dispatchable content, or a gap was detected -
-                    # _run_updates()'s deadline poll will catch it up.
-                    continue
-                updates_b, users_b, chats_b = result
-                self._log.debug("pushed frame applied: %d updates", len(updates_b))
-                await self._dispatch_raw_batch(updates_b, users_b, chats_b)
+                    if result is None:
+                        continue
+                    updates_b, users_b, chats_b = result
+                    self._log.debug("pushed frame applied: %d updates", len(updates_b))
+                    await self._dispatch_raw_batch(updates_b, users_b, chats_b)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    self._log.warning("frame pump: failed to process pushed frame: %s", exc, exc_info=True)
             elif kind == "connected":
+                backoff = 1.0
                 self._log.debug("frame pump: sender task (re)connected")
                 await self._message_box.mark_gap()
             elif kind == "error":
                 self._log.warning("frame pump: connection error: %s", payload.decode("utf-8", "replace"))
-                # Streaming connections aren't reconnected in place here;
-                # stop the pump rather than loop silently on a dead socket.
-                return
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 30.0)
 
     async def _rpc(
         self, obj: dict, _retried_restart: bool = False, return_bytes: bool = False,
+        _migrations: int = 0,
     ) -> dict | bytes:
         conn = self._require_conn()
         method = obj.get("_", "?")
-        req_bytes = _tl.serialize(obj, _SCHEMA)
+        req_bytes = _tl.serialize_object(obj, _SCHEMA) if type(obj) is dict else _tl.serialize(obj, _SCHEMA)
         t0 = time.monotonic()
         try:
             resp_bytes = await conn.rpc_call(req_bytes)
@@ -713,8 +816,12 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
             dc = _parse_migrate(msg)
             if dc is not None:
                 self._log.debug("rpc %s failed after %dms: %s", method, elapsed_ms, msg)
-                await self._migrate(dc, reason=f"{method} -> {msg}")
-                return await self._rpc(obj, return_bytes=return_bytes)
+                if _migrations >= 3:
+                    raise RpcError.from_runtime(e) from e
+                async with self._migrate_lock:
+                    if self._conn is conn:
+                        await self._migrate(dc, reason=f"{method} -> {msg}")
+                return await self._rpc(obj, return_bytes=return_bytes, _migrations=_migrations + 1)
             if "SESSION_PASSWORD_NEEDED" in msg:
                 if return_bytes:
                     raise
@@ -727,9 +834,12 @@ class Client(AuthMethods, UserMethods, MessageMethods, DialogMethods, ChatMethod
                 self._log.debug("AUTH_RESTART received for %s, retrying request once", method)
                 return await self._rpc(obj, _retried_restart=True, return_bytes=return_bytes)
             self._log.debug("rpc %s failed after %dms: %s", method, elapsed_ms, msg)
-            raise
-        elapsed_ms = int((time.monotonic() - t0) * 1000)
-        self._log.debug("rpc %s (%dms)", method, elapsed_ms)
+            typed = RpcError.from_runtime(e)
+            if typed is e:
+                raise
+            raise typed from e
+        if self._log.isEnabledFor(10):
+            self._log.debug("rpc %s (%dms)", method, int((time.monotonic() - t0) * 1000))
         if return_bytes:
             # Caller needs the exact wire bytes (e.g. to feed straight into
             # `MessageBox.apply_difference`/`apply_channel_difference`), not

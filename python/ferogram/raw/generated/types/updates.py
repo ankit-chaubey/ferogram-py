@@ -125,23 +125,23 @@ class Difference:
 
     def to_bytes(self) -> bytes:
         out = b'\xa0\x9c\xf4\x00'
-        out += _tl.serialize(_tl._resolve(self.new_messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.new_encrypted_messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.other_updates), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.state), _SCHEMA)
+        out += _tl._serialize_field(self.new_messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.new_encrypted_messages, 'Vector<EncryptedMessage>', _SCHEMA)
+        out += _tl._serialize_field(self.other_updates, 'Vector<Update>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
+        out += _tl._ser(self.state, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "updates.difference"}
-        obj["new_messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["new_encrypted_messages"], pos = _tl._read_typed(data, pos, "Vector<EncryptedMessage>", _SCHEMA_BY_CID)
-        obj["other_updates"], pos = _tl._read_typed(data, pos, "Vector<Update>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
-        obj["state"], pos = _tl._read_typed(data, pos, "updates.State", _SCHEMA_BY_CID)
+        obj["new_messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["new_encrypted_messages"], pos = _tl._read_vector(data, pos, 'EncryptedMessage', _SCHEMA_BY_CID)
+        obj["other_updates"], pos = _tl._read_vector(data, pos, 'Update', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
+        obj["state"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -178,23 +178,23 @@ class DifferenceSlice:
 
     def to_bytes(self) -> bytes:
         out = b'\x81\x19\xfb\xa8'
-        out += _tl.serialize(_tl._resolve(self.new_messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.new_encrypted_messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.other_updates), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.intermediate_state), _SCHEMA)
+        out += _tl._serialize_field(self.new_messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.new_encrypted_messages, 'Vector<EncryptedMessage>', _SCHEMA)
+        out += _tl._serialize_field(self.other_updates, 'Vector<Update>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
+        out += _tl._ser(self.intermediate_state, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "updates.differenceSlice"}
-        obj["new_messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["new_encrypted_messages"], pos = _tl._read_typed(data, pos, "Vector<EncryptedMessage>", _SCHEMA_BY_CID)
-        obj["other_updates"], pos = _tl._read_typed(data, pos, "Vector<Update>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
-        obj["intermediate_state"], pos = _tl._read_typed(data, pos, "updates.State", _SCHEMA_BY_CID)
+        obj["new_messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["new_encrypted_messages"], pos = _tl._read_vector(data, pos, 'EncryptedMessage', _SCHEMA_BY_CID)
+        obj["other_updates"], pos = _tl._read_vector(data, pos, 'Update', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
+        obj["intermediate_state"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -310,10 +310,10 @@ class ChannelDifferenceTooLong:
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.timeout)
-        out += _tl.serialize(_tl._resolve(self.dialog), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.dialog, _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -326,10 +326,10 @@ class ChannelDifferenceTooLong:
         if _flags_word & (1 << 1):
             obj["timeout"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
-        obj["dialog"], pos = _tl._read_typed(data, pos, "Dialog", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["dialog"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -374,10 +374,10 @@ class ChannelDifference:
         out += _struct.pack('<i', self.pts)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.timeout)
-        out += _tl.serialize(_tl._resolve(self.new_messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.other_updates), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.new_messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.other_updates, 'Vector<Update>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -392,10 +392,10 @@ class ChannelDifference:
         if _flags_word & (1 << 1):
             obj["timeout"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
-        obj["new_messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["other_updates"], pos = _tl._read_typed(data, pos, "Vector<Update>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["new_messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["other_updates"], pos = _tl._read_vector(data, pos, 'Update', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

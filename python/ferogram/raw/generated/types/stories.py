@@ -43,7 +43,7 @@ class AllStoriesNotModified:
         _flags_word = 0
         out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.state)
-        out += _tl.serialize(_tl._resolve(self.stealth_mode), _SCHEMA)
+        out += _tl._ser(self.stealth_mode, _SCHEMA)
         return out
 
     @classmethod
@@ -51,8 +51,8 @@ class AllStoriesNotModified:
         obj = {"_": "stories.allStoriesNotModified"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["state"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["stealth_mode"], pos = _tl._read_typed(data, pos, "StoriesStealthMode", _SCHEMA_BY_CID)
+        obj["state"], pos = _tl._read_string(data, pos)
+        obj["stealth_mode"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -96,10 +96,10 @@ class AllStories:
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
         out += _tl._pack_string(self.state)
-        out += _tl.serialize(_tl._resolve(self.peer_stories), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.stealth_mode), _SCHEMA)
+        out += _tl._serialize_field(self.peer_stories, 'Vector<PeerStories>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
+        out += _tl._ser(self.stealth_mode, _SCHEMA)
         return out
 
     @classmethod
@@ -111,11 +111,11 @@ class AllStories:
             obj["has_more"] = True
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["state"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["peer_stories"], pos = _tl._read_typed(data, pos, "Vector<PeerStories>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
-        obj["stealth_mode"], pos = _tl._read_typed(data, pos, "StoriesStealthMode", _SCHEMA_BY_CID)
+        obj["state"], pos = _tl._read_string(data, pos)
+        obj["peer_stories"], pos = _tl._read_vector(data, pos, 'PeerStories', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
+        obj["stealth_mode"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -152,11 +152,11 @@ class Stories:
         _flags_word = (0 if self.pinned_to_top is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.stories), _SCHEMA)
+        out += _tl._serialize_field(self.stories, 'Vector<StoryItem>', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.pinned_to_top), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+            out += _tl._serialize_field(self.pinned_to_top, 'Vector<int>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -166,11 +166,11 @@ class Stories:
         pos += 4
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["stories"], pos = _tl._read_typed(data, pos, "Vector<StoryItem>", _SCHEMA_BY_CID)
+        obj["stories"], pos = _tl._read_vector(data, pos, 'StoryItem', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["pinned_to_top"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["pinned_to_top"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -216,9 +216,9 @@ class StoryViewsList:
         _flags_word = (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<iiii', self.count, self.views_count, self.forwards_count, self.reactions_count)
-        out += _tl.serialize(_tl._resolve(self.views), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.views, 'Vector<StoryView>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
         return out
@@ -230,11 +230,11 @@ class StoryViewsList:
         pos += 4
         obj["count"], obj["views_count"], obj["forwards_count"], obj["reactions_count"], = _struct.unpack_from('<iiii', data, pos)
         pos += 16
-        obj["views"], pos = _tl._read_typed(data, pos, "Vector<StoryView>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["views"], pos = _tl._read_vector(data, pos, 'StoryView', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -259,15 +259,15 @@ class StoryViews:
 
     def to_bytes(self) -> bytes:
         out = b'\x1d\xed\x9e\xde'
-        out += _tl.serialize(_tl._resolve(self.views), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.views, 'Vector<StoryViews>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.storyViews"}
-        obj["views"], pos = _tl._read_typed(data, pos, "Vector<StoryViews>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["views"], pos = _tl._read_vector(data, pos, 'StoryViews', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -295,17 +295,17 @@ class PeerStories:
 
     def to_bytes(self) -> bytes:
         out = b'h\x87\xe6\xca'
-        out += _tl.serialize(_tl._resolve(self.stories), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.stories, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.peerStories"}
-        obj["stories"], pos = _tl._read_typed(data, pos, "PeerStories", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["stories"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -342,9 +342,9 @@ class StoryReactionsList:
         _flags_word = (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.reactions), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.reactions, 'Vector<StoryReaction>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
         return out
@@ -356,11 +356,11 @@ class StoryReactionsList:
         pos += 4
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["reactions"], pos = _tl._read_typed(data, pos, "Vector<StoryReaction>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["reactions"], pos = _tl._read_vector(data, pos, 'StoryReaction', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -397,11 +397,11 @@ class FoundStories:
         _flags_word = (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.stories), _SCHEMA)
+        out += _tl._serialize_field(self.stories, 'Vector<FoundStory>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -411,11 +411,11 @@ class FoundStories:
         pos += 4
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["stories"], pos = _tl._read_typed(data, pos, "Vector<FoundStory>", _SCHEMA_BY_CID)
+        obj["stories"], pos = _tl._read_vector(data, pos, 'FoundStory', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -492,7 +492,7 @@ class Albums:
     def to_bytes(self) -> bytes:
         out = b':z\x98\xc3'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.albums), _SCHEMA)
+        out += _tl._serialize_field(self.albums, 'Vector<StoryAlbum>', _SCHEMA)
         return out
 
     @classmethod
@@ -500,7 +500,7 @@ class Albums:
         obj = {"_": "stories.albums"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["albums"], pos = _tl._read_typed(data, pos, "Vector<StoryAlbum>", _SCHEMA_BY_CID)
+        obj["albums"], pos = _tl._read_vector(data, pos, 'StoryAlbum', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

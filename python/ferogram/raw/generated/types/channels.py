@@ -47,9 +47,9 @@ class ChannelParticipants:
     def to_bytes(self) -> bytes:
         out = b'\xaf\xfe\xb0\x9a'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.participants), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.participants, 'Vector<ChannelParticipant>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -57,9 +57,9 @@ class ChannelParticipants:
         obj = {"_": "channels.channelParticipants"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["participants"], pos = _tl._read_typed(data, pos, "Vector<ChannelParticipant>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["participants"], pos = _tl._read_vector(data, pos, 'ChannelParticipant', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -109,17 +109,17 @@ class ChannelParticipant:
 
     def to_bytes(self) -> bytes:
         out = b'\x17\x03\xb8\xdf'
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.participant, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.channelParticipant"}
-        obj["participant"], pos = _tl._read_typed(data, pos, "ChannelParticipant", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -147,17 +147,17 @@ class AdminLogResults:
 
     def to_bytes(self) -> bytes:
         out = b'M\xf7\x8a\xed'
-        out += _tl.serialize(_tl._resolve(self.events), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.events, 'Vector<ChannelAdminLogEvent>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.adminLogResults"}
-        obj["events"], pos = _tl._read_typed(data, pos, "Vector<ChannelAdminLogEvent>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["events"], pos = _tl._read_vector(data, pos, 'ChannelAdminLogEvent', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -185,17 +185,17 @@ class SendAsPeers:
 
     def to_bytes(self) -> bytes:
         out = b'\xc6\xb0\x96\xf4'
-        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.peers, 'Vector<SendAsPeer>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.sendAsPeers"}
-        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<SendAsPeer>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["peers"], pos = _tl._read_vector(data, pos, 'SendAsPeer', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -221,14 +221,14 @@ class SponsoredMessageReportResultChooseOption:
     def to_bytes(self) -> bytes:
         out = b'B\x9eo\x84'
         out += _tl._pack_string(self.title)
-        out += _tl.serialize(_tl._resolve(self.options), _SCHEMA)
+        out += _tl._serialize_field(self.options, 'Vector<SponsoredMessageReportOption>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.sponsoredMessageReportResultChooseOption"}
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["options"], pos = _tl._read_typed(data, pos, "Vector<SponsoredMessageReportOption>", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
+        obj["options"], pos = _tl._read_vector(data, pos, 'SponsoredMessageReportOption', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

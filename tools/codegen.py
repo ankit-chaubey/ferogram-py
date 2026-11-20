@@ -332,7 +332,7 @@ def _emit_read_single_field(f: Field, indent: str) -> list[str]:
             ]
         return [
             guard,
-            f'{II}obj["{fname}"], pos = _tl._read_typed(data, pos, "{f.ftype}", _SCHEMA_BY_CID)',
+            f'{II}obj["{fname}"], pos = {_read_call(f.ftype)}',
         ]
 
     # Unconditional field
@@ -345,7 +345,7 @@ def _emit_read_single_field(f: Field, indent: str) -> list[str]:
             f'{I}obj["{fname}"] = {val_expr}',
             f"{I}pos = {pos_expr}",
         ]
-    return [f'{I}obj["{fname}"], pos = _tl._read_typed(data, pos, "{f.ftype}", _SCHEMA_BY_CID)']
+    return [f'{I}obj["{fname}"], pos = {_read_call(f.ftype)}']
 
 # Serialization codegen helpers
 
@@ -511,6 +511,25 @@ def _emit_single_field(f: Field, indent: str) -> list[str]:
     return [f"{I}out += {expr}"]
 
 
+_PEER_FTYPES = {"InputPeer", "InputUser", "InputChannel"}
+
+
+def _read_call(ftype: str) -> str:
+    if ftype == "string":
+        return "_tl._read_string(data, pos)"
+    if ftype == "bytes":
+        return "_tl._read_bytes(data, pos)"
+    if ftype == "Bool":
+        return "_tl._read_bool(data, pos)"
+    if ftype == "int128":
+        return "_tl._read_int128(data, pos)"
+    if ftype == "int256":
+        return "_tl._read_int256(data, pos)"
+    if ftype.startswith(("Vector<", "vector<")):
+        return f"_tl._read_vector(data, pos, {ftype[7:-1]!r}, _SCHEMA_BY_CID)"
+    return "_tl._read_object(data, pos, _SCHEMA_BY_CID)"
+
+
 def _pack_expr(ftype: str, access: str) -> str | None:
     """
     Return a Python expression that evaluates to bytes for one field value,
@@ -534,8 +553,11 @@ def _pack_expr(ftype: str, access: str) -> str | None:
         return f"{access}.to_bytes(16, 'little', signed=False)"
     if ftype == "int256":
         return f"{access}.to_bytes(32, 'little', signed=False)"
-    # Vector or TL object - fall back to generic serialize
-    return f"_tl.serialize(_tl._resolve({access}), _SCHEMA)"
+    if ftype.startswith(("Vector<", "vector<")):
+        return f"_tl._serialize_field({access}, {ftype!r}, _SCHEMA)"
+    if ftype in _PEER_FTYPES:
+        return f"_tl._ser_peer({access}, {ftype!r}, _SCHEMA)"
+    return f"_tl._ser({access}, _SCHEMA)"
 
 
 def _emit_fields_sequence(fields: list[Field], conditional: bool, indent: str) -> list[str]:
@@ -630,6 +652,25 @@ def build_schema(constructors: list[Constructor]) -> str:
     return "\n".join(lines)
 
 
+def build_class_index(type_ns: dict, func_ns: dict) -> str:
+    lines = ["_CLASS_INDEX = {"]
+    for kind, grouped in (("types", type_ns), ("functions", func_ns)):
+        for ns in sorted(grouped):
+            for c in grouped[ns]:
+                lines.append(f'    "{c.name}": ("{kind}", "{ns}", "{py_class(c.name)}"),')
+    lines.append("}")
+    return "\n".join(lines)
+
+
+def build_flag_markers(constructors: list[Constructor]) -> str:
+    lines = ["_FLAG_MARKERS = {"]
+    for c in constructors:
+        if c.flag_markers:
+            lines.append(f'    "{c.name}": {c.flag_markers!r},')
+    lines.append("}")
+    return "\n".join(lines)
+
+
 def build_schema_by_cid(constructors: list[Constructor]) -> str:
     lines = ["_SCHEMA_BY_CID = {"]
     for c in constructors:
@@ -687,22 +728,47 @@ def write_namespace_pkg(
             body.append(render_class(c))
         mod_file.write_text("\n".join(body))
 
+    flat: dict[str, str] = {}
+    for ns in sorted(grouped):
+        for c in grouped[ns]:
+            flat[py_class(c.name)] = ns
     init_lines = [
         "# auto-generated - do not edit\n",
         "",
         LICENSE,
-        "# Flat imports so both styles work:",
+        "# Classes load on first access. Both styles work:",
         "#   raw.functions.messages.GetHistory(...)   <- namespace style",
         "#   raw.functions.GetHistory(...)            <- flat style (convenience)",
         "",
+        "import importlib as _il",
+        "",
+        f"_NAMESPACES = {tuple(sorted(grouped))!r}",
+        "",
+        "_FLAT = {",
     ]
-    for ns in sorted(grouped):
-        init_lines.append(f"from .{ns} import *  # noqa: F401,F403")
-    init_lines.append("")
-    init_lines.append("# namespace sub-modules")
-    for ns in sorted(grouped):
-        init_lines.append(f"from . import {ns}  # noqa: F401")
-    init_lines.append("")
+    for name in sorted(flat):
+        init_lines.append(f"    {name!r}: {flat[name]!r},")
+    init_lines += [
+        "}",
+        "",
+        "__all__ = [*_NAMESPACES, *_FLAT]",
+        "",
+        "",
+        "def __getattr__(name):",
+        "    ns = _FLAT.get(name)",
+        "    if ns is not None:",
+        "        value = getattr(_il.import_module(f\"{__name__}.{ns}\"), name)",
+        "        globals()[name] = value",
+        "        return value",
+        "    if name in _NAMESPACES:",
+        "        return _il.import_module(f\"{__name__}.{name}\")",
+        "    raise AttributeError(f\"module {__name__!r} has no attribute {name!r}\")",
+        "",
+        "",
+        "def __dir__():",
+        "    return sorted({*globals(), *_NAMESPACES, *_FLAT})",
+        "",
+    ]
 
     (out_pkg / "__init__.py").write_text("\n".join(init_lines))
 
@@ -716,20 +782,22 @@ def generate(tl_path: Path, out_dir: Path) -> None:
     schema_str    = build_schema(all_constructors)
     schema_by_cid = build_schema_by_cid(types)
 
-    (out_dir / "_tl_schema.py").write_text(
-        "# auto-generated schema - do not edit\n\n"
-        + LICENSE + "\n"
-        + (f"LAYER = {layer}\n\n" if layer else "")
-        + schema_str + "\n\n"
-        + schema_by_cid + "\n"
-    )
-
     type_ns: dict[str, list[Constructor]] = defaultdict(list)
     func_ns: dict[str, list[Constructor]] = defaultdict(list)
     for c in types:
         type_ns[ns_of(c.name)].append(c)
     for c in funcs:
         func_ns[ns_of(c.name)].append(c)
+
+    (out_dir / "_tl_schema.py").write_text(
+        "# auto-generated schema - do not edit\n\n"
+        + LICENSE + "\n"
+        + (f"LAYER = {layer}\n\n" if layer else "")
+        + schema_str + "\n\n"
+        + schema_by_cid + "\n\n"
+        + build_flag_markers(all_constructors) + "\n\n"
+        + build_class_index(type_ns, func_ns) + "\n"
+    )
 
     write_namespace_pkg(out_dir / "types",     type_ns, schema_str)
     write_namespace_pkg(out_dir / "functions", func_ns, schema_str)

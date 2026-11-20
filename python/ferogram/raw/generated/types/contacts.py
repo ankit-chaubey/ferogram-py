@@ -65,18 +65,18 @@ class Contacts:
 
     def to_bytes(self) -> bytes:
         out = b'B~\xe8\xea'
-        out += _tl.serialize(_tl._resolve(self.contacts), _SCHEMA)
+        out += _tl._serialize_field(self.contacts, 'Vector<Contact>', _SCHEMA)
         out += _struct.pack('<i', self.saved_count)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.contacts"}
-        obj["contacts"], pos = _tl._read_typed(data, pos, "Vector<Contact>", _SCHEMA_BY_CID)
+        obj["contacts"], pos = _tl._read_vector(data, pos, 'Contact', _SCHEMA_BY_CID)
         obj["saved_count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -107,19 +107,19 @@ class ImportedContacts:
 
     def to_bytes(self) -> bytes:
         out = b';\x1c\xd0w'
-        out += _tl.serialize(_tl._resolve(self.imported), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.popular_invites), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.retry_contacts), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.imported, 'Vector<ImportedContact>', _SCHEMA)
+        out += _tl._serialize_field(self.popular_invites, 'Vector<PopularContact>', _SCHEMA)
+        out += _tl._serialize_field(self.retry_contacts, 'Vector<long>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.importedContacts"}
-        obj["imported"], pos = _tl._read_typed(data, pos, "Vector<ImportedContact>", _SCHEMA_BY_CID)
-        obj["popular_invites"], pos = _tl._read_typed(data, pos, "Vector<PopularContact>", _SCHEMA_BY_CID)
-        obj["retry_contacts"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["imported"], pos = _tl._read_vector(data, pos, 'ImportedContact', _SCHEMA_BY_CID)
+        obj["popular_invites"], pos = _tl._read_vector(data, pos, 'PopularContact', _SCHEMA_BY_CID)
+        obj["retry_contacts"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -147,17 +147,17 @@ class Blocked:
 
     def to_bytes(self) -> bytes:
         out = b'\x91\x15\xde\n'
-        out += _tl.serialize(_tl._resolve(self.blocked), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.blocked, 'Vector<PeerBlocked>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.blocked"}
-        obj["blocked"], pos = _tl._read_typed(data, pos, "Vector<PeerBlocked>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["blocked"], pos = _tl._read_vector(data, pos, 'PeerBlocked', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -189,9 +189,9 @@ class BlockedSlice:
     def to_bytes(self) -> bytes:
         out = b'\x94Af\xe1'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.blocked), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.blocked, 'Vector<PeerBlocked>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -199,9 +199,9 @@ class BlockedSlice:
         obj = {"_": "contacts.blockedSlice"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["blocked"], pos = _tl._read_typed(data, pos, "Vector<PeerBlocked>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["blocked"], pos = _tl._read_vector(data, pos, 'PeerBlocked', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -232,19 +232,19 @@ class Found:
 
     def to_bytes(self) -> bytes:
         out = b'\x9dM\x13\xb3'
-        out += _tl.serialize(_tl._resolve(self.my_results), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.results), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.my_results, 'Vector<Peer>', _SCHEMA)
+        out += _tl._serialize_field(self.results, 'Vector<Peer>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.found"}
-        obj["my_results"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
-        obj["results"], pos = _tl._read_typed(data, pos, "Vector<Peer>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["my_results"], pos = _tl._read_vector(data, pos, 'Peer', _SCHEMA_BY_CID)
+        obj["results"], pos = _tl._read_vector(data, pos, 'Peer', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -272,17 +272,17 @@ class ResolvedPeer:
 
     def to_bytes(self) -> bytes:
         out = b'\xd9z\x07\x7f'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.resolvedPeer"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -332,17 +332,17 @@ class TopPeers:
 
     def to_bytes(self) -> bytes:
         out = b'\xa8r\xb7p'
-        out += _tl.serialize(_tl._resolve(self.categories), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.categories, 'Vector<TopPeerCategoryPeers>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.topPeers"}
-        obj["categories"], pos = _tl._read_typed(data, pos, "Vector<TopPeerCategoryPeers>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["categories"], pos = _tl._read_vector(data, pos, 'TopPeerCategoryPeers', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -389,15 +389,15 @@ class ContactBirthdays:
 
     def to_bytes(self) -> bytes:
         out = b'\r\xf3O\x11'
-        out += _tl.serialize(_tl._resolve(self.contacts), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.contacts, 'Vector<ContactBirthday>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.contactBirthdays"}
-        obj["contacts"], pos = _tl._read_typed(data, pos, "Vector<ContactBirthday>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["contacts"], pos = _tl._read_vector(data, pos, 'ContactBirthday', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -447,17 +447,17 @@ class SponsoredPeers:
 
     def to_bytes(self) -> bytes:
         out = b'\x84(\x03\xeb'
-        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.peers, 'Vector<SponsoredPeer>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.sponsoredPeers"}
-        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<SponsoredPeer>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["peers"], pos = _tl._read_vector(data, pos, 'SponsoredPeer', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

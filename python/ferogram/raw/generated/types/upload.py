@@ -43,7 +43,7 @@ class File:
 
     def to_bytes(self) -> bytes:
         out = b'\xd5\x18j\t'
-        out += _tl.serialize(_tl._resolve(self.type), _SCHEMA)
+        out += _tl._ser(self.type, _SCHEMA)
         out += _struct.pack('<i', self.mtime)
         out += _tl._pack_bytes(self.bytes)
         return out
@@ -51,10 +51,10 @@ class File:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "upload.file"}
-        obj["type"], pos = _tl._read_typed(data, pos, "storage.FileType", _SCHEMA_BY_CID)
+        obj["type"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["mtime"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["bytes"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -92,7 +92,7 @@ class FileCdnRedirect:
         out += _tl._pack_bytes(self.file_token)
         out += _tl._pack_bytes(self.encryption_key)
         out += _tl._pack_bytes(self.encryption_iv)
-        out += _tl.serialize(_tl._resolve(self.file_hashes), _SCHEMA)
+        out += _tl._serialize_field(self.file_hashes, 'Vector<FileHash>', _SCHEMA)
         return out
 
     @classmethod
@@ -100,10 +100,10 @@ class FileCdnRedirect:
         obj = {"_": "upload.fileCdnRedirect"}
         obj["dc_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["file_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["encryption_key"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["encryption_iv"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["file_hashes"], pos = _tl._read_typed(data, pos, "Vector<FileHash>", _SCHEMA_BY_CID)
+        obj["file_token"], pos = _tl._read_bytes(data, pos)
+        obj["encryption_key"], pos = _tl._read_bytes(data, pos)
+        obj["encryption_iv"], pos = _tl._read_bytes(data, pos)
+        obj["file_hashes"], pos = _tl._read_vector(data, pos, 'FileHash', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -139,7 +139,7 @@ class WebFile:
         out = b'\xbcS\xe7!'
         out += _struct.pack('<i', self.size)
         out += _tl._pack_string(self.mime_type)
-        out += _tl.serialize(_tl._resolve(self.file_type), _SCHEMA)
+        out += _tl._ser(self.file_type, _SCHEMA)
         out += _struct.pack('<i', self.mtime)
         out += _tl._pack_bytes(self.bytes)
         return out
@@ -149,11 +149,11 @@ class WebFile:
         obj = {"_": "upload.webFile"}
         obj["size"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["mime_type"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["file_type"], pos = _tl._read_typed(data, pos, "storage.FileType", _SCHEMA_BY_CID)
+        obj["mime_type"], pos = _tl._read_string(data, pos)
+        obj["file_type"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["mtime"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["bytes"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -181,7 +181,7 @@ class CdnFileReuploadNeeded:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "upload.cdnFileReuploadNeeded"}
-        obj["request_token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["request_token"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -209,7 +209,7 @@ class CdnFile:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "upload.cdnFile"}
-        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["bytes"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

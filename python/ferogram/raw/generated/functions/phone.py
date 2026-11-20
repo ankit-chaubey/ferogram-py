@@ -73,10 +73,10 @@ class RequestCall:
         out = b'\xed\x96\xffB'
         _flags_word = ((1 << 0) if self.video else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _struct.pack('<i', self.random_id)
         out += _tl._pack_bytes(self.g_a_hash)
-        out += _tl.serialize(_tl._resolve(self.protocol), _SCHEMA)
+        out += _tl._ser(self.protocol, _SCHEMA)
         return out
 
     @classmethod
@@ -86,11 +86,11 @@ class RequestCall:
         pos += 4
         if _flags_word & (1 << 0):
             obj["video"] = True
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["g_a_hash"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["protocol"], pos = _tl._read_typed(data, pos, "PhoneCallProtocol", _SCHEMA_BY_CID)
+        obj["g_a_hash"], pos = _tl._read_bytes(data, pos)
+        obj["protocol"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -118,17 +118,17 @@ class AcceptCall:
 
     def to_bytes(self) -> bytes:
         out = b'\xa0\xb4\xd2;'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _tl._pack_bytes(self.g_b)
-        out += _tl.serialize(_tl._resolve(self.protocol), _SCHEMA)
+        out += _tl._ser(self.protocol, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.acceptCall"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPhoneCall", _SCHEMA_BY_CID)
-        obj["g_b"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["protocol"], pos = _tl._read_typed(data, pos, "PhoneCallProtocol", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["g_b"], pos = _tl._read_bytes(data, pos)
+        obj["protocol"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -159,20 +159,20 @@ class ConfirmCall:
 
     def to_bytes(self) -> bytes:
         out = b'"\x17\xfe.'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _tl._pack_bytes(self.g_a)
         out += _struct.pack('<q', self.key_fingerprint)
-        out += _tl.serialize(_tl._resolve(self.protocol), _SCHEMA)
+        out += _tl._ser(self.protocol, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.confirmCall"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPhoneCall", _SCHEMA_BY_CID)
-        obj["g_a"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["g_a"], pos = _tl._read_bytes(data, pos)
         obj["key_fingerprint"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["protocol"], pos = _tl._read_typed(data, pos, "PhoneCallProtocol", _SCHEMA_BY_CID)
+        obj["protocol"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -194,13 +194,13 @@ class ReceivedCall:
 
     def to_bytes(self) -> bytes:
         out = b'aO\xd5\x17'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.receivedCall"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPhoneCall", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -236,9 +236,9 @@ class DiscardCall:
         out = b'\xc0\xc1\xcb\xb2'
         _flags_word = ((1 << 0) if self.video else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _struct.pack('<i', self.duration)
-        out += _tl.serialize(_tl._resolve(self.reason), _SCHEMA)
+        out += _tl._ser(self.reason, _SCHEMA)
         out += _struct.pack('<q', self.connection_id)
         return out
 
@@ -249,10 +249,10 @@ class DiscardCall:
         pos += 4
         if _flags_word & (1 << 0):
             obj["video"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPhoneCall", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["duration"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["reason"], pos = _tl._read_typed(data, pos, "PhoneCallDiscardReason", _SCHEMA_BY_CID)
+        obj["reason"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["connection_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -287,7 +287,7 @@ class SetCallRating:
         out = b"'\xd6\xeaY"
         _flags_word = ((1 << 0) if self.user_initiative else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _struct.pack('<i', self.rating)
         out += _tl._pack_string(self.comment)
         return out
@@ -299,10 +299,10 @@ class SetCallRating:
         pos += 4
         if _flags_word & (1 << 0):
             obj["user_initiative"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPhoneCall", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["rating"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["comment"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["comment"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -327,15 +327,15 @@ class SaveCallDebug:
 
     def to_bytes(self) -> bytes:
         out = b"~\xddz'"
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.debug), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
+        out += _tl._ser(self.debug, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.saveCallDebug"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPhoneCall", _SCHEMA_BY_CID)
-        obj["debug"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["debug"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -360,15 +360,15 @@ class SendSignalingData:
 
     def to_bytes(self) -> bytes:
         out = b'\x83\x93z\xff'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _tl._pack_bytes(self.data)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.sendSignalingData"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPhoneCall", _SCHEMA_BY_CID)
-        obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["data"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -404,7 +404,7 @@ class CreateGroupCall:
         out = b'\xd8\xc6\xcdH'
         _flags_word = ((1 << 2) if self.rtmp_stream else 0) | (0 if self.title is None else (1 << 0)) | (0 if self.schedule_date is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.random_id)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.title)
@@ -419,11 +419,11 @@ class CreateGroupCall:
         pos += 4
         if _flags_word & (1 << 2):
             obj["rtmp_stream"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["title"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
             obj["schedule_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -471,15 +471,15 @@ class JoinGroupCall:
         out = b'W0\xb5\x8f'
         _flags_word = ((1 << 0) if self.muted else 0) | ((1 << 2) if self.video_stopped else 0) | (0 if self.invite_hash is None else (1 << 1)) | (0 if self.public_key is None else (1 << 3)) | (0 if self.block is None else (1 << 3))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.join_as), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._ser_peer(self.join_as, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.invite_hash)
         if _flags_word & (1 << 3):
             out += self.public_key.to_bytes(32, 'little', signed=False)
         if _flags_word & (1 << 3):
             out += _tl._pack_bytes(self.block)
-        out += _tl.serialize(_tl._resolve(self.params), _SCHEMA)
+        out += _tl._ser(self.params, _SCHEMA)
         return out
 
     @classmethod
@@ -491,15 +491,15 @@ class JoinGroupCall:
             obj["muted"] = True
         if _flags_word & (1 << 2):
             obj["video_stopped"] = True
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["join_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["join_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["invite_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["invite_hash"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 3):
-            obj["public_key"], pos = _tl._read_typed(data, pos, "int256", _SCHEMA_BY_CID)
+            obj["public_key"], pos = _tl._read_int256(data, pos)
         if _flags_word & (1 << 3):
-            obj["block"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+            obj["block"], pos = _tl._read_bytes(data, pos)
+        obj["params"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -524,14 +524,14 @@ class LeaveGroupCall:
 
     def to_bytes(self) -> bytes:
         out = b'\xf9w\x03P'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         out += _struct.pack('<i', self.source)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.leaveGroupCall"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["source"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -558,15 +558,15 @@ class InviteToGroupCall:
 
     def to_bytes(self) -> bytes:
         out = b'`19{'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<InputUser>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.inviteToGroupCall"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'InputUser', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -588,13 +588,13 @@ class DiscardGroupCall:
 
     def to_bytes(self) -> bytes:
         out = b'5qwz'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.discardGroupCall"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -630,7 +630,7 @@ class ToggleGroupCallSettings:
         out = b'\xf2\x92C\x97'
         _flags_word = ((1 << 1) if self.reset_invite_hash else 0) | (0 if self.join_muted is None else (1 << 0)) | (0 if self.messages_enabled is None else (1 << 2)) | (0 if self.send_paid_messages_stars is None else (1 << 3))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_bool(self.join_muted)
         if _flags_word & (1 << 2):
@@ -646,11 +646,11 @@ class ToggleGroupCallSettings:
         pos += 4
         if _flags_word & (1 << 1):
             obj["reset_invite_hash"] = True
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["join_muted"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["join_muted"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 2):
-            obj["messages_enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["messages_enabled"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 3):
             obj["send_paid_messages_stars"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -678,14 +678,14 @@ class GetGroupCall:
 
     def to_bytes(self) -> bytes:
         out = b'\xdbE\x18\x04'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         out += _struct.pack('<i', self.limit)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.getGroupCall"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -721,9 +721,9 @@ class GetGroupParticipants:
 
     def to_bytes(self) -> bytes:
         out = b'\xab\xd8X\xc5'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.ids), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.sources), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._serialize_field(self.ids, 'Vector<InputPeer>', _SCHEMA)
+        out += _tl._serialize_field(self.sources, 'Vector<int>', _SCHEMA)
         out += _tl._pack_string(self.offset)
         out += _struct.pack('<i', self.limit)
         return out
@@ -731,10 +731,10 @@ class GetGroupParticipants:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.getGroupParticipants"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["ids"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
-        obj["sources"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["ids"], pos = _tl._read_vector(data, pos, 'InputPeer', _SCHEMA_BY_CID)
+        obj["sources"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -761,15 +761,15 @@ class CheckGroupCall:
 
     def to_bytes(self) -> bytes:
         out = b'w\xf9\x9c\xb5'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.sources), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._serialize_field(self.sources, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.checkGroupCall"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["sources"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["sources"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -805,7 +805,7 @@ class ToggleGroupCallRecord:
         out = b'\x08\xc7(\xf1'
         _flags_word = ((1 << 0) if self.start else 0) | ((1 << 2) if self.video else 0) | (0 if self.title is None else (1 << 1)) | (0 if self.video_portrait is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.title)
         if _flags_word & (1 << 2):
@@ -821,11 +821,11 @@ class ToggleGroupCallRecord:
             obj["start"] = True
         if _flags_word & (1 << 2):
             obj["video"] = True
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["title"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["video_portrait"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["video_portrait"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -870,8 +870,8 @@ class EditGroupCallParticipant:
         out = b"\xbf:'\xa5"
         _flags_word = (0 if self.muted is None else (1 << 0)) | (0 if self.volume is None else (1 << 1)) | (0 if self.raise_hand is None else (1 << 2)) | (0 if self.video_stopped is None else (1 << 3)) | (0 if self.video_paused is None else (1 << 4)) | (0 if self.presentation_paused is None else (1 << 5))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_bool(self.muted)
         if _flags_word & (1 << 1):
@@ -891,21 +891,21 @@ class EditGroupCallParticipant:
         obj = {"_": "phone.editGroupCallParticipant"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["muted"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["muted"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 1):
             obj["volume"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 2):
-            obj["raise_hand"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["raise_hand"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 3):
-            obj["video_stopped"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["video_stopped"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 4):
-            obj["video_paused"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["video_paused"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 5):
-            obj["presentation_paused"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["presentation_paused"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -930,15 +930,15 @@ class EditGroupCallTitle:
 
     def to_bytes(self) -> bytes:
         out = b'\n\xac\xa6\x1c'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         out += _tl._pack_string(self.title)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.editGroupCallTitle"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -960,13 +960,13 @@ class GetGroupCallJoinAs:
 
     def to_bytes(self) -> bytes:
         out = b':!|\xef'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.getGroupCallJoinAs"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -993,7 +993,7 @@ class ExportGroupCallInvite:
         out = b'\x7fd\xaa\xe6'
         _flags_word = ((1 << 0) if self.can_self_unmute else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         return out
 
     @classmethod
@@ -1003,7 +1003,7 @@ class ExportGroupCallInvite:
         pos += 4
         if _flags_word & (1 << 0):
             obj["can_self_unmute"] = True
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1028,15 +1028,15 @@ class ToggleGroupCallStartSubscription:
 
     def to_bytes(self) -> bytes:
         out = b'\xe64\x9c!'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         out += _tl._pack_bool(self.subscribed)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.toggleGroupCallStartSubscription"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["subscribed"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["subscribed"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1058,13 +1058,13 @@ class StartScheduledGroupCall:
 
     def to_bytes(self) -> bytes:
         out = b'B\xe3\x80V'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.startScheduledGroupCall"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1089,15 +1089,15 @@ class SaveDefaultGroupCallJoinAs:
 
     def to_bytes(self) -> bytes:
         out = b'\x8c\x1f^W'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.join_as), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.join_as, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.saveDefaultGroupCallJoinAs"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["join_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["join_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1122,15 +1122,15 @@ class JoinGroupCallPresentation:
 
     def to_bytes(self) -> bytes:
         out = b'\xc4k\xea\xcb'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.params), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._ser(self.params, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.joinGroupCallPresentation"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["params"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1152,13 +1152,13 @@ class LeaveGroupCallPresentation:
 
     def to_bytes(self) -> bytes:
         out = b'D\xd1P\x1c'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.leaveGroupCallPresentation"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1180,13 +1180,13 @@ class GetGroupCallStreamChannels:
 
     def to_bytes(self) -> bytes:
         out = b'@\x19\xb2\x1a'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.getGroupCallStreamChannels"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1216,7 +1216,7 @@ class GetGroupCallStreamRtmpUrl:
         out = b':\xc7\xf4Z'
         _flags_word = ((1 << 0) if self.live_story else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_bool(self.revoke)
         return out
 
@@ -1227,8 +1227,8 @@ class GetGroupCallStreamRtmpUrl:
         pos += 4
         if _flags_word & (1 << 0):
             obj["live_story"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["revoke"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["revoke"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1253,15 +1253,15 @@ class SaveCallLog:
 
     def to_bytes(self) -> bytes:
         out = b'\x86\x87$A'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
+        out += _tl._ser(self.file, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.saveCallLog"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPhoneCall", _SCHEMA_BY_CID)
-        obj["file"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["file"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1309,7 +1309,7 @@ class CreateConferenceCall:
         if _flags_word & (1 << 3):
             out += _tl._pack_bytes(self.block)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.params), _SCHEMA)
+            out += _tl._ser(self.params, _SCHEMA)
         return out
 
     @classmethod
@@ -1326,11 +1326,11 @@ class CreateConferenceCall:
         obj["random_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 3):
-            obj["public_key"], pos = _tl._read_typed(data, pos, "int256", _SCHEMA_BY_CID)
+            obj["public_key"], pos = _tl._read_int256(data, pos)
         if _flags_word & (1 << 3):
-            obj["block"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["block"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 3):
-            obj["params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+            obj["params"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1366,8 +1366,8 @@ class DeleteConferenceCallParticipants:
         out = b'%\x05\xa6\x8c'
         _flags_word = ((1 << 0) if self.only_left else 0) | ((1 << 1) if self.kick else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.ids), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._serialize_field(self.ids, 'Vector<long>', _SCHEMA)
         out += _tl._pack_bytes(self.block)
         return out
 
@@ -1380,9 +1380,9 @@ class DeleteConferenceCallParticipants:
             obj["only_left"] = True
         if _flags_word & (1 << 1):
             obj["kick"] = True
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["ids"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
-        obj["block"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["ids"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
+        obj["block"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1407,15 +1407,15 @@ class SendConferenceCallBroadcast:
 
     def to_bytes(self) -> bytes:
         out = b'\x00\x19p\xc6'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         out += _tl._pack_bytes(self.block)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.sendConferenceCallBroadcast"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["block"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["block"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1445,8 +1445,8 @@ class InviteConferenceCallParticipant:
         out = b'\x85&\xf2\xbc'
         _flags_word = ((1 << 0) if self.video else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
@@ -1456,8 +1456,8 @@ class InviteConferenceCallParticipant:
         pos += 4
         if _flags_word & (1 << 0):
             obj["video"] = True
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1517,14 +1517,14 @@ class GetGroupCallChainBlocks:
 
     def to_bytes(self) -> bytes:
         out = b'\xa6\x88\x9f\xee'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         out += _struct.pack('<iii', self.sub_chain_id, self.offset, self.limit)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.getGroupCallChainBlocks"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["sub_chain_id"], obj["offset"], obj["limit"], = _struct.unpack_from('<iii', data, pos)
         pos += 12
         return obj, pos
@@ -1562,13 +1562,13 @@ class SendGroupCallMessage:
         out = b'\x10\x14\xd1\xb1'
         _flags_word = (0 if self.allow_paid_stars is None else (1 << 0)) | (0 if self.send_as is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         out += _struct.pack('<q', self.random_id)
-        out += _tl.serialize(_tl._resolve(self.message), _SCHEMA)
+        out += _tl._ser(self.message, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<q', self.allow_paid_stars)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+            out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -1576,15 +1576,15 @@ class SendGroupCallMessage:
         obj = {"_": "phone.sendGroupCallMessage"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["message"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["allow_paid_stars"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 1):
-            obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1609,15 +1609,15 @@ class SendGroupCallEncryptedMessage:
 
     def to_bytes(self) -> bytes:
         out = b'm\xa5\xaf\xe5'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         out += _tl._pack_bytes(self.encrypted_message)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.sendGroupCallEncryptedMessage"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["encrypted_message"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["encrypted_message"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1647,8 +1647,8 @@ class DeleteGroupCallMessages:
         out = b'\xf7TO\xf6'
         _flags_word = ((1 << 0) if self.report_spam else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
@@ -1658,8 +1658,8 @@ class DeleteGroupCallMessages:
         pos += 4
         if _flags_word & (1 << 0):
             obj["report_spam"] = True
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1689,8 +1689,8 @@ class DeleteGroupCallParticipantMessages:
         out = b'\xa0\xec\xbf\x1d'
         _flags_word = ((1 << 0) if self.report_spam else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -1700,8 +1700,8 @@ class DeleteGroupCallParticipantMessages:
         pos += 4
         if _flags_word & (1 << 0):
             obj["report_spam"] = True
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1723,13 +1723,13 @@ class GetGroupCallStars:
 
     def to_bytes(self) -> bytes:
         out = b'\x02cco'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.getGroupCallStars"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1754,15 +1754,15 @@ class SaveDefaultSendAs:
 
     def to_bytes(self) -> bytes:
         out = b'\xd1\xadgA'
-        out += _tl.serialize(_tl._resolve(self.call), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+        out += _tl._ser(self.call, _SCHEMA)
+        out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "phone.saveDefaultSendAs"}
-        obj["call"], pos = _tl._read_typed(data, pos, "InputGroupCall", _SCHEMA_BY_CID)
-        obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["call"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

@@ -396,7 +396,7 @@ async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
         # supergroup / channel / community - all three share the same id
         # space and are addressed via inputPeerChannel on the wire, so a
         # cache hit in either bucket is enough to answer without a fetch.
-        channel_id = abs_id - 1_000_000_000
+        channel_id = abs_id - 1_000_000_000_000 if abs_id >= 1_000_000_000_000 else abs_id - 1_000_000_000
         ah = cache.get_channel(channel_id)
         if ah is not None:
             return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
@@ -404,7 +404,7 @@ async def _resolve_int_peer(client: Any, peer_id: int) -> dict:
         if ah is not None:
             return {"_": "inputPeerChannel", "channel_id": channel_id, "access_hash": ah}
         # cache miss: fetch from API
-        result = await client.invoke(_make_get_channels([peer_id]))
+        result = await client.invoke(_make_get_channels([channel_id]))
         chats = result.get("chats") or [] if isinstance(result, dict) else result or []
         for ch in chats:
             if ch.get("id") == channel_id:
@@ -423,6 +423,6 @@ def _make_get_users(user_ids: list[int]) -> dict:
 
 def _make_get_channels(channel_ids: list[int]) -> dict:
     return {
-        "_": "messages.getChats",
-        "id": [abs(cid) - 1_000_000_000 for cid in channel_ids],
+        "_": "channels.getChannels",
+        "id": [{"_": "inputChannel", "channel_id": cid, "access_hash": 0} for cid in channel_ids],
     }

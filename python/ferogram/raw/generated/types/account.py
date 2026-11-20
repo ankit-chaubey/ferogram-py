@@ -43,17 +43,17 @@ class PrivacyRules:
 
     def to_bytes(self) -> bytes:
         out = b'EN\xa0P'
-        out += _tl.serialize(_tl._resolve(self.rules), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.rules, 'Vector<PrivacyRule>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.privacyRules"}
-        obj["rules"], pos = _tl._read_typed(data, pos, "Vector<PrivacyRule>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["rules"], pos = _tl._read_vector(data, pos, 'PrivacyRule', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -79,7 +79,7 @@ class Authorizations:
     def to_bytes(self) -> bytes:
         out = b'\xa0\x8e\xffK'
         out += _struct.pack('<i', self.authorization_ttl_days)
-        out += _tl.serialize(_tl._resolve(self.authorizations), _SCHEMA)
+        out += _tl._serialize_field(self.authorizations, 'Vector<Authorization>', _SCHEMA)
         return out
 
     @classmethod
@@ -87,7 +87,7 @@ class Authorizations:
         obj = {"_": "account.authorizations"}
         obj["authorization_ttl_days"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["authorizations"], pos = _tl._read_typed(data, pos, "Vector<Authorization>", _SCHEMA_BY_CID)
+        obj["authorizations"], pos = _tl._read_vector(data, pos, 'Authorization', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -148,7 +148,7 @@ class Password:
         _flags_word = ((1 << 0) if self.has_recovery else 0) | ((1 << 1) if self.has_secure_values else 0) | ((1 << 2) if self.has_password else 0) | (0 if self.current_algo is None else (1 << 2)) | (0 if self.srp_B is None else (1 << 2)) | (0 if self.srp_id is None else (1 << 2)) | (0 if self.hint is None else (1 << 3)) | (0 if self.email_unconfirmed_pattern is None else (1 << 4)) | (0 if self.pending_reset_date is None else (1 << 5)) | (0 if self.login_email_pattern is None else (1 << 6))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.current_algo), _SCHEMA)
+            out += _tl._ser(self.current_algo, _SCHEMA)
         if _flags_word & (1 << 2):
             out += _tl._pack_bytes(self.srp_B)
         if _flags_word & (1 << 2):
@@ -157,8 +157,8 @@ class Password:
             out += _tl._pack_string(self.hint)
         if _flags_word & (1 << 4):
             out += _tl._pack_string(self.email_unconfirmed_pattern)
-        out += _tl.serialize(_tl._resolve(self.new_algo), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.new_secure_algo), _SCHEMA)
+        out += _tl._ser(self.new_algo, _SCHEMA)
+        out += _tl._ser(self.new_secure_algo, _SCHEMA)
         out += _tl._pack_bytes(self.secure_random)
         if _flags_word & (1 << 5):
             out += _struct.pack('<i', self.pending_reset_date)
@@ -178,24 +178,24 @@ class Password:
         if _flags_word & (1 << 2):
             obj["has_password"] = True
         if _flags_word & (1 << 2):
-            obj["current_algo"], pos = _tl._read_typed(data, pos, "PasswordKdfAlgo", _SCHEMA_BY_CID)
+            obj["current_algo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["srp_B"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["srp_B"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 2):
             obj["srp_id"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 3):
-            obj["hint"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["hint"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 4):
-            obj["email_unconfirmed_pattern"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["new_algo"], pos = _tl._read_typed(data, pos, "PasswordKdfAlgo", _SCHEMA_BY_CID)
-        obj["new_secure_algo"], pos = _tl._read_typed(data, pos, "SecurePasswordKdfAlgo", _SCHEMA_BY_CID)
-        obj["secure_random"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["email_unconfirmed_pattern"], pos = _tl._read_string(data, pos)
+        obj["new_algo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["new_secure_algo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["secure_random"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 5):
             obj["pending_reset_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 6):
-            obj["login_email_pattern"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["login_email_pattern"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -225,7 +225,7 @@ class PasswordSettings:
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.email)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.secure_settings), _SCHEMA)
+            out += _tl._ser(self.secure_settings, _SCHEMA)
         return out
 
     @classmethod
@@ -234,9 +234,9 @@ class PasswordSettings:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["email"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["email"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["secure_settings"], pos = _tl._read_typed(data, pos, "SecureSecretSettings", _SCHEMA_BY_CID)
+            obj["secure_settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -273,7 +273,7 @@ class PasswordInputSettings:
         _flags_word = (0 if self.new_algo is None else (1 << 0)) | (0 if self.new_password_hash is None else (1 << 0)) | (0 if self.hint is None else (1 << 0)) | (0 if self.email is None else (1 << 1)) | (0 if self.new_secure_settings is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.new_algo), _SCHEMA)
+            out += _tl._ser(self.new_algo, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_bytes(self.new_password_hash)
         if _flags_word & (1 << 0):
@@ -281,7 +281,7 @@ class PasswordInputSettings:
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.email)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.new_secure_settings), _SCHEMA)
+            out += _tl._ser(self.new_secure_settings, _SCHEMA)
         return out
 
     @classmethod
@@ -290,15 +290,15 @@ class PasswordInputSettings:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["new_algo"], pos = _tl._read_typed(data, pos, "PasswordKdfAlgo", _SCHEMA_BY_CID)
+            obj["new_algo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["new_password_hash"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["new_password_hash"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 0):
-            obj["hint"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["hint"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["email"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["email"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["new_secure_settings"], pos = _tl._read_typed(data, pos, "SecureSecretSettings", _SCHEMA_BY_CID)
+            obj["new_secure_settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -330,7 +330,7 @@ class TmpPassword:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.tmpPassword"}
-        obj["tmp_password"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["tmp_password"], pos = _tl._read_bytes(data, pos)
         obj["valid_until"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -357,15 +357,15 @@ class WebAuthorizations:
 
     def to_bytes(self) -> bytes:
         out = b'\xfc\xc9V\xed'
-        out += _tl.serialize(_tl._resolve(self.authorizations), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.authorizations, 'Vector<WebAuthorization>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.webAuthorizations"}
-        obj["authorizations"], pos = _tl._read_typed(data, pos, "Vector<WebAuthorization>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["authorizations"], pos = _tl._read_vector(data, pos, 'WebAuthorization', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -401,10 +401,10 @@ class AuthorizationForm:
         out = b'\xd8\x1c.\xad'
         _flags_word = (0 if self.privacy_policy_url is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.required_types), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.values), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.errors), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.required_types, 'Vector<SecureRequiredType>', _SCHEMA)
+        out += _tl._serialize_field(self.values, 'Vector<SecureValue>', _SCHEMA)
+        out += _tl._serialize_field(self.errors, 'Vector<SecureValueError>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.privacy_policy_url)
         return out
@@ -414,12 +414,12 @@ class AuthorizationForm:
         obj = {"_": "account.authorizationForm"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["required_types"], pos = _tl._read_typed(data, pos, "Vector<SecureRequiredType>", _SCHEMA_BY_CID)
-        obj["values"], pos = _tl._read_typed(data, pos, "Vector<SecureValue>", _SCHEMA_BY_CID)
-        obj["errors"], pos = _tl._read_typed(data, pos, "Vector<SecureValueError>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["required_types"], pos = _tl._read_vector(data, pos, 'SecureRequiredType', _SCHEMA_BY_CID)
+        obj["values"], pos = _tl._read_vector(data, pos, 'SecureValue', _SCHEMA_BY_CID)
+        obj["errors"], pos = _tl._read_vector(data, pos, 'SecureValueError', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["privacy_policy_url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["privacy_policy_url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -451,7 +451,7 @@ class SentEmailCode:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.sentEmailCode"}
-        obj["email_pattern"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["email_pattern"], pos = _tl._read_string(data, pos)
         obj["length"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -530,7 +530,7 @@ class WallPapers:
     def to_bytes(self) -> bytes:
         out = b'\x8c\x85\xc3\xcd'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.wallpapers), _SCHEMA)
+        out += _tl._serialize_field(self.wallpapers, 'Vector<WallPaper>', _SCHEMA)
         return out
 
     @classmethod
@@ -538,7 +538,7 @@ class WallPapers:
         obj = {"_": "account.wallPapers"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["wallpapers"], pos = _tl._read_typed(data, pos, "Vector<WallPaper>", _SCHEMA_BY_CID)
+        obj["wallpapers"], pos = _tl._read_vector(data, pos, 'WallPaper', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -566,17 +566,17 @@ class AutoDownloadSettings:
 
     def to_bytes(self) -> bytes:
         out = b'&\xcf\xcac'
-        out += _tl.serialize(_tl._resolve(self.low), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.medium), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.high), _SCHEMA)
+        out += _tl._ser(self.low, _SCHEMA)
+        out += _tl._ser(self.medium, _SCHEMA)
+        out += _tl._ser(self.high, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.autoDownloadSettings"}
-        obj["low"], pos = _tl._read_typed(data, pos, "AutoDownloadSettings", _SCHEMA_BY_CID)
-        obj["medium"], pos = _tl._read_typed(data, pos, "AutoDownloadSettings", _SCHEMA_BY_CID)
-        obj["high"], pos = _tl._read_typed(data, pos, "AutoDownloadSettings", _SCHEMA_BY_CID)
+        obj["low"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["medium"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["high"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -624,7 +624,7 @@ class Themes:
     def to_bytes(self) -> bytes:
         out = b'm\x8c=\x9a'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.themes), _SCHEMA)
+        out += _tl._serialize_field(self.themes, 'Vector<Theme>', _SCHEMA)
         return out
 
     @classmethod
@@ -632,7 +632,7 @@ class Themes:
         obj = {"_": "account.themes"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["themes"], pos = _tl._read_typed(data, pos, "Vector<Theme>", _SCHEMA_BY_CID)
+        obj["themes"], pos = _tl._read_vector(data, pos, 'Theme', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -808,9 +808,9 @@ class ChatThemes:
         _flags_word = (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.themes), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.themes, 'Vector<ChatTheme>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
         return out
@@ -822,11 +822,11 @@ class ChatThemes:
         pos += 4
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["themes"], pos = _tl._read_typed(data, pos, "Vector<ChatTheme>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["themes"], pos = _tl._read_vector(data, pos, 'ChatTheme', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -874,7 +874,7 @@ class SavedRingtones:
     def to_bytes(self) -> bytes:
         out = b'\xc5,\xe9\xc1'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.ringtones), _SCHEMA)
+        out += _tl._serialize_field(self.ringtones, 'Vector<Document>', _SCHEMA)
         return out
 
     @classmethod
@@ -882,7 +882,7 @@ class SavedRingtones:
         obj = {"_": "account.savedRingtones"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["ringtones"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        obj["ringtones"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -926,13 +926,13 @@ class SavedRingtoneConverted:
 
     def to_bytes(self) -> bytes:
         out = b'\xb7~0\x1f'
-        out += _tl.serialize(_tl._resolve(self.document), _SCHEMA)
+        out += _tl._ser(self.document, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.savedRingtoneConverted"}
-        obj["document"], pos = _tl._read_typed(data, pos, "Document", _SCHEMA_BY_CID)
+        obj["document"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -980,7 +980,7 @@ class EmojiStatuses:
     def to_bytes(self) -> bytes:
         out = b'\xd1g\xc4\x90'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.statuses), _SCHEMA)
+        out += _tl._serialize_field(self.statuses, 'Vector<EmojiStatus>', _SCHEMA)
         return out
 
     @classmethod
@@ -988,7 +988,7 @@ class EmojiStatuses:
         obj = {"_": "account.emojiStatuses"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["statuses"], pos = _tl._read_typed(data, pos, "Vector<EmojiStatus>", _SCHEMA_BY_CID)
+        obj["statuses"], pos = _tl._read_vector(data, pos, 'EmojiStatus', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1016,7 +1016,7 @@ class EmailVerified:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.emailVerified"}
-        obj["email"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["email"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1042,14 +1042,14 @@ class EmailVerifiedLogin:
     def to_bytes(self) -> bytes:
         out = b'a\r\xbb\xe1'
         out += _tl._pack_string(self.email)
-        out += _tl.serialize(_tl._resolve(self.sent_code), _SCHEMA)
+        out += _tl._ser(self.sent_code, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.emailVerifiedLogin"}
-        obj["email"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["sent_code"], pos = _tl._read_typed(data, pos, "auth.SentCode", _SCHEMA_BY_CID)
+        obj["email"], pos = _tl._read_string(data, pos)
+        obj["sent_code"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1086,23 +1086,23 @@ class AutoSaveSettings:
 
     def to_bytes(self) -> bytes:
         out = b'\x9d\x06>L'
-        out += _tl.serialize(_tl._resolve(self.users_settings), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats_settings), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.broadcasts_settings), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.exceptions), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.users_settings, _SCHEMA)
+        out += _tl._ser(self.chats_settings, _SCHEMA)
+        out += _tl._ser(self.broadcasts_settings, _SCHEMA)
+        out += _tl._serialize_field(self.exceptions, 'Vector<AutoSaveException>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.autoSaveSettings"}
-        obj["users_settings"], pos = _tl._read_typed(data, pos, "AutoSaveSettings", _SCHEMA_BY_CID)
-        obj["chats_settings"], pos = _tl._read_typed(data, pos, "AutoSaveSettings", _SCHEMA_BY_CID)
-        obj["broadcasts_settings"], pos = _tl._read_typed(data, pos, "AutoSaveSettings", _SCHEMA_BY_CID)
-        obj["exceptions"], pos = _tl._read_typed(data, pos, "Vector<AutoSaveException>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["users_settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats_settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["broadcasts_settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["exceptions"], pos = _tl._read_vector(data, pos, 'AutoSaveException', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1127,15 +1127,15 @@ class ConnectedBots:
 
     def to_bytes(self) -> bytes:
         out = b'{\xf8\xd7\x17'
-        out += _tl.serialize(_tl._resolve(self.connected_bots), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.connected_bots, 'Vector<ConnectedBot>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.connectedBots"}
-        obj["connected_bots"], pos = _tl._read_typed(data, pos, "Vector<ConnectedBot>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["connected_bots"], pos = _tl._read_vector(data, pos, 'ConnectedBot', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1163,17 +1163,17 @@ class BusinessChatLinks:
 
     def to_bytes(self) -> bytes:
         out = b'\xd1\xa2C\xec'
-        out += _tl.serialize(_tl._resolve(self.links), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.links, 'Vector<BusinessChatLink>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.businessChatLinks"}
-        obj["links"], pos = _tl._read_typed(data, pos, "Vector<BusinessChatLink>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["links"], pos = _tl._read_vector(data, pos, 'BusinessChatLink', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1209,12 +1209,12 @@ class ResolvedBusinessChatLinks:
         out = b'!\xaf#\x9a'
         _flags_word = (0 if self.entities is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _tl._pack_string(self.message)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -1222,12 +1222,12 @@ class ResolvedBusinessChatLinks:
         obj = {"_": "account.resolvedBusinessChatLinks"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "Peer", _SCHEMA_BY_CID)
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1300,13 +1300,13 @@ class SavedMusicIds:
 
     def to_bytes(self) -> bytes:
         out = b'6f\x8d\x99'
-        out += _tl.serialize(_tl._resolve(self.ids), _SCHEMA)
+        out += _tl._serialize_field(self.ids, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.savedMusicIds"}
-        obj["ids"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["ids"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1328,13 +1328,13 @@ class Passkeys:
 
     def to_bytes(self) -> bytes:
         out = b'\x1c\xaa\xe0\xf8'
-        out += _tl.serialize(_tl._resolve(self.passkeys), _SCHEMA)
+        out += _tl._serialize_field(self.passkeys, 'Vector<Passkey>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.passkeys"}
-        obj["passkeys"], pos = _tl._read_typed(data, pos, "Vector<Passkey>", _SCHEMA_BY_CID)
+        obj["passkeys"], pos = _tl._read_vector(data, pos, 'Passkey', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1356,13 +1356,13 @@ class PasskeyRegistrationOptions:
 
     def to_bytes(self) -> bytes:
         out = b'\xe1\\k\xe1'
-        out += _tl.serialize(_tl._resolve(self.options), _SCHEMA)
+        out += _tl._ser(self.options, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "account.passkeyRegistrationOptions"}
-        obj["options"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        obj["options"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1420,8 +1420,8 @@ class WebBrowserSettings:
         out = b'\xb3\x8c\xeby'
         _flags_word = ((1 << 0) if self.open_external_browser else 0) | ((1 << 1) if self.display_close_button else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.external_exceptions), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.inapp_exceptions), _SCHEMA)
+        out += _tl._serialize_field(self.external_exceptions, 'Vector<WebDomainException>', _SCHEMA)
+        out += _tl._serialize_field(self.inapp_exceptions, 'Vector<WebDomainException>', _SCHEMA)
         out += _struct.pack('<q', self.hash)
         return out
 
@@ -1434,8 +1434,8 @@ class WebBrowserSettings:
             obj["open_external_browser"] = True
         if _flags_word & (1 << 1):
             obj["display_close_button"] = True
-        obj["external_exceptions"], pos = _tl._read_typed(data, pos, "Vector<WebDomainException>", _SCHEMA_BY_CID)
-        obj["inapp_exceptions"], pos = _tl._read_typed(data, pos, "Vector<WebDomainException>", _SCHEMA_BY_CID)
+        obj["external_exceptions"], pos = _tl._read_vector(data, pos, 'WebDomainException', _SCHEMA_BY_CID)
+        obj["inapp_exceptions"], pos = _tl._read_vector(data, pos, 'WebDomainException', _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos

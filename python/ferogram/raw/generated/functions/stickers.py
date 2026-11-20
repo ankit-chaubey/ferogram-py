@@ -63,12 +63,12 @@ class CreateStickerSet:
         out = b'g\xab!\x90'
         _flags_word = ((1 << 0) if self.masks else 0) | ((1 << 5) if self.emojis else 0) | ((1 << 6) if self.text_color else 0) | (0 if self.thumb is None else (1 << 2)) | (0 if self.software is None else (1 << 3))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _tl._pack_string(self.title)
         out += _tl._pack_string(self.short_name)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.thumb), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
+            out += _tl._ser(self.thumb, _SCHEMA)
+        out += _tl._serialize_field(self.stickers, 'Vector<InputStickerSetItem>', _SCHEMA)
         if _flags_word & (1 << 3):
             out += _tl._pack_string(self.software)
         return out
@@ -84,14 +84,14 @@ class CreateStickerSet:
             obj["emojis"] = True
         if _flags_word & (1 << 6):
             obj["text_color"] = True
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["short_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
+        obj["short_name"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["thumb"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
-        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<InputStickerSetItem>", _SCHEMA_BY_CID)
+            obj["thumb"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["stickers"], pos = _tl._read_vector(data, pos, 'InputStickerSetItem', _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["software"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["software"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -113,13 +113,13 @@ class RemoveStickerFromSet:
 
     def to_bytes(self) -> bytes:
         out = b'Q\x0fv\xf7'
-        out += _tl.serialize(_tl._resolve(self.sticker), _SCHEMA)
+        out += _tl._ser(self.sticker, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stickers.removeStickerFromSet"}
-        obj["sticker"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
+        obj["sticker"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -144,14 +144,14 @@ class ChangeStickerPosition:
 
     def to_bytes(self) -> bytes:
         out = b'\xca\xd4\xb6\xff'
-        out += _tl.serialize(_tl._resolve(self.sticker), _SCHEMA)
+        out += _tl._ser(self.sticker, _SCHEMA)
         out += _struct.pack('<i', self.position)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stickers.changeStickerPosition"}
-        obj["sticker"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
+        obj["sticker"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["position"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -178,15 +178,15 @@ class AddStickerToSet:
 
     def to_bytes(self) -> bytes:
         out = b'\xbe\xfeS\x86'
-        out += _tl.serialize(_tl._resolve(self.stickerset), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.sticker), _SCHEMA)
+        out += _tl._ser(self.stickerset, _SCHEMA)
+        out += _tl._ser(self.sticker, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stickers.addStickerToSet"}
-        obj["stickerset"], pos = _tl._read_typed(data, pos, "InputStickerSet", _SCHEMA_BY_CID)
-        obj["sticker"], pos = _tl._read_typed(data, pos, "InputStickerSetItem", _SCHEMA_BY_CID)
+        obj["stickerset"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["sticker"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -216,9 +216,9 @@ class SetStickerSetThumb:
         out = b'\x92Sj\xa7'
         _flags_word = (0 if self.thumb is None else (1 << 0)) | (0 if self.thumb_document_id is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.stickerset), _SCHEMA)
+        out += _tl._ser(self.stickerset, _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.thumb), _SCHEMA)
+            out += _tl._ser(self.thumb, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _struct.pack('<q', self.thumb_document_id)
         return out
@@ -228,9 +228,9 @@ class SetStickerSetThumb:
         obj = {"_": "stickers.setStickerSetThumb"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["stickerset"], pos = _tl._read_typed(data, pos, "InputStickerSet", _SCHEMA_BY_CID)
+        obj["stickerset"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["thumb"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
+            obj["thumb"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
             obj["thumb_document_id"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -261,7 +261,7 @@ class CheckShortName:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stickers.checkShortName"}
-        obj["short_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["short_name"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -289,7 +289,7 @@ class SuggestShortName:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stickers.suggestShortName"}
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -322,11 +322,11 @@ class ChangeSticker:
         out = b'\xbc~S\xf5'
         _flags_word = (0 if self.emoji is None else (1 << 0)) | (0 if self.mask_coords is None else (1 << 1)) | (0 if self.keywords is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.sticker), _SCHEMA)
+        out += _tl._ser(self.sticker, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.emoji)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.mask_coords), _SCHEMA)
+            out += _tl._ser(self.mask_coords, _SCHEMA)
         if _flags_word & (1 << 2):
             out += _tl._pack_string(self.keywords)
         return out
@@ -336,13 +336,13 @@ class ChangeSticker:
         obj = {"_": "stickers.changeSticker"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["sticker"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
+        obj["sticker"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["emoji"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["emoji"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["mask_coords"], pos = _tl._read_typed(data, pos, "MaskCoords", _SCHEMA_BY_CID)
+            obj["mask_coords"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["keywords"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["keywords"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -367,15 +367,15 @@ class RenameStickerSet:
 
     def to_bytes(self) -> bytes:
         out = b'\x00\x1cK\x12'
-        out += _tl.serialize(_tl._resolve(self.stickerset), _SCHEMA)
+        out += _tl._ser(self.stickerset, _SCHEMA)
         out += _tl._pack_string(self.title)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stickers.renameStickerSet"}
-        obj["stickerset"], pos = _tl._read_typed(data, pos, "InputStickerSet", _SCHEMA_BY_CID)
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["stickerset"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -397,13 +397,13 @@ class DeleteStickerSet:
 
     def to_bytes(self) -> bytes:
         out = b'\x94Cp\x87'
-        out += _tl.serialize(_tl._resolve(self.stickerset), _SCHEMA)
+        out += _tl._ser(self.stickerset, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stickers.deleteStickerSet"}
-        obj["stickerset"], pos = _tl._read_typed(data, pos, "InputStickerSet", _SCHEMA_BY_CID)
+        obj["stickerset"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -428,15 +428,15 @@ class ReplaceSticker:
 
     def to_bytes(self) -> bytes:
         out = b'\x9aE\x96F'
-        out += _tl.serialize(_tl._resolve(self.sticker), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.new_sticker), _SCHEMA)
+        out += _tl._ser(self.sticker, _SCHEMA)
+        out += _tl._ser(self.new_sticker, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stickers.replaceSticker"}
-        obj["sticker"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
-        obj["new_sticker"], pos = _tl._read_typed(data, pos, "InputStickerSetItem", _SCHEMA_BY_CID)
+        obj["sticker"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["new_sticker"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

@@ -37,13 +37,13 @@ class GetCollectibleInfo:
 
     def to_bytes(self) -> bytes:
         out = b'\xba\x85\x1e\xbe'
-        out += _tl.serialize(_tl._resolve(self.collectible), _SCHEMA)
+        out += _tl._ser(self.collectible, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "fragment.getCollectibleInfo"}
-        obj["collectible"], pos = _tl._read_typed(data, pos, "InputCollectible", _SCHEMA_BY_CID)
+        obj["collectible"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

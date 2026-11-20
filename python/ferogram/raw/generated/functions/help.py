@@ -87,7 +87,7 @@ class GetAppUpdate:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.getAppUpdate"}
-        obj["source"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["source"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -165,7 +165,7 @@ class SetBotUpdatesStatus:
         obj = {"_": "help.setBotUpdatesStatus"}
         obj["pending_updates_count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -215,7 +215,7 @@ class GetRecentMeUrls:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.getRecentMeUrls"}
-        obj["referer"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["referer"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -259,13 +259,13 @@ class AcceptTermsOfService:
 
     def to_bytes(self) -> bytes:
         out = b'\x9a\xf7r\xee'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.acceptTermsOfService"}
-        obj["id"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -293,7 +293,7 @@ class GetDeepLinkInfo:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.getDeepLinkInfo"}
-        obj["path"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["path"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -344,13 +344,13 @@ class SaveAppLog:
 
     def to_bytes(self) -> bytes:
         out = b'H\xf7\x02o'
-        out += _tl.serialize(_tl._resolve(self.events), _SCHEMA)
+        out += _tl._serialize_field(self.events, 'Vector<InputAppEvent>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.saveAppLog"}
-        obj["events"], pos = _tl._read_typed(data, pos, "Vector<InputAppEvent>", _SCHEMA_BY_CID)
+        obj["events"], pos = _tl._read_vector(data, pos, 'InputAppEvent', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -423,13 +423,13 @@ class GetUserInfo:
 
     def to_bytes(self) -> bytes:
         out = b'\xd3\x08\x8a\x03'
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.getUserInfo"}
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -457,17 +457,17 @@ class EditUserInfo:
 
     def to_bytes(self) -> bytes:
         out = b'p\x1b\xb9f'
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _tl._pack_string(self.message)
-        out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+        out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.editUserInfo"}
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
+        obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -511,13 +511,13 @@ class HidePromoData:
 
     def to_bytes(self) -> bytes:
         out = b'\x95\x1c%\x1e'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.hidePromoData"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -542,15 +542,15 @@ class DismissSuggestion:
 
     def to_bytes(self) -> bytes:
         out = b'\xa1\xba\r\xf5'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.suggestion)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.dismissSuggestion"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["suggestion"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["suggestion"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -582,7 +582,7 @@ class GetCountriesList:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "help.getCountriesList"}
-        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_string(data, pos)
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos

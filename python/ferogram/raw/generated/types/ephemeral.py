@@ -63,7 +63,7 @@ class WelcomeMessages:
     def to_bytes(self) -> bytes:
         out = b'r\xc8O\x10'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<EphemeralMessage>', _SCHEMA)
         return out
 
     @classmethod
@@ -71,7 +71,7 @@ class WelcomeMessages:
         obj = {"_": "ephemeral.welcomeMessages"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<EphemeralMessage>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'EphemeralMessage', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

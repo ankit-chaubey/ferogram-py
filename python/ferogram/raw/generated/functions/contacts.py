@@ -117,13 +117,13 @@ class ImportContacts:
 
     def to_bytes(self) -> bytes:
         out = b'\xe5\x0b\x80,'
-        out += _tl.serialize(_tl._resolve(self.contacts), _SCHEMA)
+        out += _tl._serialize_field(self.contacts, 'Vector<InputContact>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.importContacts"}
-        obj["contacts"], pos = _tl._read_typed(data, pos, "Vector<InputContact>", _SCHEMA_BY_CID)
+        obj["contacts"], pos = _tl._read_vector(data, pos, 'InputContact', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -145,13 +145,13 @@ class DeleteContacts:
 
     def to_bytes(self) -> bytes:
         out = b'\x00\x0ej\t'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputUser>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.deleteContacts"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputUser', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -173,13 +173,13 @@ class DeleteByPhones:
 
     def to_bytes(self) -> bytes:
         out = b'\x9e\xfd\x13\x10'
-        out += _tl.serialize(_tl._resolve(self.phones), _SCHEMA)
+        out += _tl._serialize_field(self.phones, 'Vector<string>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.deleteByPhones"}
-        obj["phones"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        obj["phones"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -206,7 +206,7 @@ class Block:
         out = b'4\x87..'
         _flags_word = ((1 << 0) if self.my_stories_from else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -216,7 +216,7 @@ class Block:
         pos += 4
         if _flags_word & (1 << 0):
             obj["my_stories_from"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -243,7 +243,7 @@ class Unblock:
         out = b'(\xd3P\xb5'
         _flags_word = ((1 << 0) if self.my_stories_from else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -253,7 +253,7 @@ class Unblock:
         pos += 4
         if _flags_word & (1 << 0):
             obj["my_stories_from"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -340,7 +340,7 @@ class Search:
             obj["broadcasts"] = True
         if _flags_word & (1 << 1):
             obj["bots"] = True
-        obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["q"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -379,9 +379,9 @@ class ResolveUsername:
         obj = {"_": "contacts.resolveUsername"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["username"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["username"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["referer"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["referer"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -495,15 +495,15 @@ class ResetTopPeerRating:
 
     def to_bytes(self) -> bytes:
         out = b'\xacs\xe3\x1a'
-        out += _tl.serialize(_tl._resolve(self.category), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.category, _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.resetTopPeerRating"}
-        obj["category"], pos = _tl._read_typed(data, pos, "TopPeerCategory", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["category"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -575,7 +575,7 @@ class ToggleTopPeers:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.toggleTopPeers"}
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -614,12 +614,12 @@ class AddContact:
         out = b'T.\xba\xd9'
         _flags_word = ((1 << 0) if self.add_phone_privacy_exception else 0) | (0 if self.note is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputUser', _SCHEMA)
         out += _tl._pack_string(self.first_name)
         out += _tl._pack_string(self.last_name)
         out += _tl._pack_string(self.phone)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.note), _SCHEMA)
+            out += _tl._ser(self.note, _SCHEMA)
         return out
 
     @classmethod
@@ -629,12 +629,12 @@ class AddContact:
         pos += 4
         if _flags_word & (1 << 0):
             obj["add_phone_privacy_exception"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["first_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["last_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["first_name"], pos = _tl._read_string(data, pos)
+        obj["last_name"], pos = _tl._read_string(data, pos)
+        obj["phone"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["note"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+            obj["note"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -656,13 +656,13 @@ class AcceptContact:
 
     def to_bytes(self) -> bytes:
         out = b'\x0f\xa21\xf8'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.acceptContact"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -692,7 +692,7 @@ class GetLocated:
         out = b'D\xbcH\xd3'
         _flags_word = ((1 << 1) if self.background else 0) | (0 if self.self_expires is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.geo_point), _SCHEMA)
+        out += _tl._ser(self.geo_point, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.self_expires)
         return out
@@ -704,7 +704,7 @@ class GetLocated:
         pos += 4
         if _flags_word & (1 << 1):
             obj["background"] = True
-        obj["geo_point"], pos = _tl._read_typed(data, pos, "InputGeoPoint", _SCHEMA_BY_CID)
+        obj["geo_point"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["self_expires"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -783,7 +783,7 @@ class ResolvePhone:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.resolvePhone"}
-        obj["phone"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -833,7 +833,7 @@ class ImportContactToken:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.importContactToken"}
-        obj["token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["token"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -855,13 +855,13 @@ class EditCloseFriends:
 
     def to_bytes(self) -> bytes:
         out = b'\xf0\x05g\xba'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.editCloseFriends"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -891,7 +891,7 @@ class SetBlocked:
         out = b'v\\\xc6\x94'
         _flags_word = ((1 << 0) if self.my_stories_from else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputPeer>', _SCHEMA)
         out += _struct.pack('<i', self.limit)
         return out
 
@@ -902,7 +902,7 @@ class SetBlocked:
         pos += 4
         if _flags_word & (1 << 0):
             obj["my_stories_from"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputPeer', _SCHEMA_BY_CID)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -954,7 +954,7 @@ class GetSponsoredPeers:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.getSponsoredPeers"}
-        obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["q"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -979,15 +979,15 @@ class UpdateContactNote:
 
     def to_bytes(self) -> bytes:
         out = b'\xfbc\x9f\x13'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.note), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputUser', _SCHEMA)
+        out += _tl._ser(self.note, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.updateContactNote"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["note"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["note"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1049,15 +1049,15 @@ class ImportNoPaidMessagesToken:
 
     def to_bytes(self) -> bytes:
         out = b'\xca\xc6\xa75'
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _tl._pack_string(self.token)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "contacts.importNoPaidMessagesToken"}
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["token"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

@@ -17,7 +17,6 @@
 
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING
 
 from ..types import (
@@ -25,6 +24,7 @@ from ..types import (
     _inline_result_to_tuple,
 )
 from .._internal import (
+    _rand_i64,
     _inline_message_id_to_tl,
     _inline_tuple_to_tl,
     _markup_to_dict,
@@ -191,5 +191,5 @@ class BotMethods:
             "peer": input_peer,
             "media": media,
             "message": "",
-            "random_id": random.randint(-(2**63), 2**63 - 1),
+            "random_id": _rand_i64(),
         })

@@ -12,8 +12,10 @@
 # If you use or modify this code, keep this notice at the top of the file
 # and include the LICENSE-MIT or LICENSE-APACHE file from this repository.
 
+import atexit
 import os
 import sys
+import time
 
 _main_file = getattr(sys.modules.get("__main__"), "__file__", None)
 if _main_file:
@@ -25,9 +27,12 @@ if _main_file:
             "Rename your file to something like 'bot.py', 'main.py', or 'app.py'."
         )
 
+atexit.register(time.sleep, 0.02)
+
 from .client import Client, StopPropagation, ContinuePropagation, TransferHandle, TransferCancelled
 from .client import TransferLimits, available_qualities
 from . import filters
+from .errors import RpcError, FloodWait
 
 # Session classes stay in Rust
 from ._ferogram import (
@@ -58,6 +63,7 @@ from .updates import (
 )
 
 __all__ = [
+    "RpcError", "FloodWait",
     # Core
     "Client", "filters", "StopPropagation", "ContinuePropagation",
     "TransferHandle", "TransferCancelled", "TransferLimits", "available_qualities",

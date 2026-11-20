@@ -37,13 +37,13 @@ class ApiResponse:
 
     def to_bytes(self) -> bytes:
         out = b'\x19\xfe\x8d\xac'
-        out += _tl.serialize(_tl._resolve(self.response), _SCHEMA)
+        out += _tl._ser(self.response, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "toncenter.apiResponse"}
-        obj["response"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
+        obj["response"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -75,7 +75,7 @@ class StreamingUrl:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "toncenter.streamingUrl"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         obj["expires"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos

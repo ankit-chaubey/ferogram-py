@@ -42,7 +42,7 @@ class GetBroadcastStats:
         out = b'\x1aDB\xab'
         _flags_word = ((1 << 0) if self.dark else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
@@ -52,7 +52,7 @@ class GetBroadcastStats:
         pos += 4
         if _flags_word & (1 << 0):
             obj["dark"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -89,7 +89,7 @@ class LoadAsyncGraph:
         obj = {"_": "stats.loadAsyncGraph"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["token"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
             obj["x"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -119,7 +119,7 @@ class GetMegagroupStats:
         out = b'\x07\x86\xdf\xdc'
         _flags_word = ((1 << 0) if self.dark else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
@@ -129,7 +129,7 @@ class GetMegagroupStats:
         pos += 4
         if _flags_word & (1 << 0):
             obj["dark"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -160,7 +160,7 @@ class GetMessagePublicForwards:
 
     def to_bytes(self) -> bytes:
         out = b'D\x01\x15_'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         out += _tl._pack_string(self.offset)
         out += _struct.pack('<i', self.limit)
@@ -169,10 +169,10 @@ class GetMessagePublicForwards:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stats.getMessagePublicForwards"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -204,7 +204,7 @@ class GetMessageStats:
         out = b'\xf5\xa3\xe0\xb6'
         _flags_word = ((1 << 0) if self.dark else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         return out
 
@@ -215,7 +215,7 @@ class GetMessageStats:
         pos += 4
         if _flags_word & (1 << 0):
             obj["dark"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -247,7 +247,7 @@ class GetStoryStats:
         out = b'@\xefO7'
         _flags_word = ((1 << 0) if self.dark else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         return out
 
@@ -258,7 +258,7 @@ class GetStoryStats:
         pos += 4
         if _flags_word & (1 << 0):
             obj["dark"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -291,7 +291,7 @@ class GetStoryPublicForwards:
 
     def to_bytes(self) -> bytes:
         out = b'\xf6~C\xa6'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         out += _tl._pack_string(self.offset)
         out += _struct.pack('<i', self.limit)
@@ -300,10 +300,10 @@ class GetStoryPublicForwards:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stats.getStoryPublicForwards"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -335,7 +335,7 @@ class GetPollStats:
         out = b'h\xfa}\xc2'
         _flags_word = ((1 << 0) if self.dark else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         return out
 
@@ -346,7 +346,7 @@ class GetPollStats:
         pos += 4
         if _flags_word & (1 << 0):
             obj["dark"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos

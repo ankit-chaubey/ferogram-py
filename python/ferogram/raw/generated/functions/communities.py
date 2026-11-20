@@ -51,7 +51,7 @@ class Create:
         out += _tl._pack_string(self.title)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.about)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -61,10 +61,10 @@ class Create:
         pos += 4
         if _flags_word & (1 << 1):
             obj["hidden"] = True
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["about"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["about"], pos = _tl._read_string(data, pos)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -100,8 +100,8 @@ class TogglePeerLink:
         out = b'\xea\xcfms'
         _flags_word = ((1 << 0) if self.visible else 0) | ((1 << 1) if self.hidden else 0) | ((1 << 2) if self.deleted else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.community, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -115,8 +115,8 @@ class TogglePeerLink:
             obj["hidden"] = True
         if _flags_word & (1 << 2):
             obj["deleted"] = True
-        obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["community"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -165,7 +165,7 @@ class ToggleCommunityCollapsedInDialogs:
         out = b'\xea\xe3f\xd7'
         _flags_word = ((1 << 0) if self.collapsed else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
+        out += _tl._ser_peer(self.community, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
@@ -175,7 +175,7 @@ class ToggleCommunityCollapsedInDialogs:
         pos += 4
         if _flags_word & (1 << 0):
             obj["collapsed"] = True
-        obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["community"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -203,7 +203,7 @@ class GetPeerLinkRequests:
 
     def to_bytes(self) -> bytes:
         out = b'D3w\x93'
-        out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
+        out += _tl._ser_peer(self.community, 'InputChannel', _SCHEMA)
         out += _tl._pack_string(self.offset)
         out += _struct.pack('<i', self.limit)
         return out
@@ -211,8 +211,8 @@ class GetPeerLinkRequests:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "communities.getPeerLinkRequests"}
-        obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["community"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -244,8 +244,8 @@ class TogglePeerLinkRequestApproval:
         out = b'\xa8\x19\x82\x8c'
         _flags_word = ((1 << 0) if self.reject else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.community, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -255,8 +255,8 @@ class TogglePeerLinkRequestApproval:
         pos += 4
         if _flags_word & (1 << 0):
             obj["reject"] = True
-        obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["community"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -283,7 +283,7 @@ class ToggleAllPeerLinkRequestApproval:
         out = b'=\xdd\xe3\xbf'
         _flags_word = ((1 << 0) if self.reject else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
+        out += _tl._ser_peer(self.community, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
@@ -293,7 +293,7 @@ class ToggleAllPeerLinkRequestApproval:
         pos += 4
         if _flags_word & (1 << 0):
             obj["reject"] = True
-        obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["community"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -323,8 +323,8 @@ class ToggleParticipantBanned:
         out = b'\x0f\xadg\x99'
         _flags_word = ((1 << 0) if self.unban else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
+        out += _tl._ser_peer(self.community, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -334,8 +334,8 @@ class ToggleParticipantBanned:
         pos += 4
         if _flags_word & (1 << 0):
             obj["unban"] = True
-        obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["community"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -360,15 +360,15 @@ class GetParticipantJoinedChats:
 
     def to_bytes(self) -> bytes:
         out = b'\xab\xab~\xf8'
-        out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
+        out += _tl._ser_peer(self.community, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "communities.getParticipantJoinedChats"}
-        obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["community"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

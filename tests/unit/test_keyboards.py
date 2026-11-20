@@ -158,11 +158,13 @@ def test_false_true_flags_are_not_sent():
     for flag in ("resize", "single_use", "selective", "persistent"):
         assert not rk.get(flag), flag
 
-    # An unknown extra key forces the generic (non-generated) serializer path.
-    generic = {"_": "inlineButtonTypeSwitchInline", "query": "q", "same_peer": False, "bogus": 1}
-    assert not _roundtrip(generic).get("same_peer")
+    generic = {"_": "inlineButtonTypeSwitchInline", "query": "q", "same_peer": False}
+    cid, fields = SCHEMA["inlineButtonTypeSwitchInline"]
+    wire = tl._serialize_generic(generic, cid, fields, SCHEMA)
+    assert not tl.deserialize(wire, BY_CID).get("same_peer")
     generic["same_peer"] = True
-    assert _roundtrip(generic).get("same_peer") is True
+    wire = tl._serialize_generic(generic, cid, fields, SCHEMA)
+    assert tl.deserialize(wire, BY_CID).get("same_peer") is True
 
 
 def test_inline_mini_app_simple_is_gone():

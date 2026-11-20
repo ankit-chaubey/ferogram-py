@@ -46,19 +46,19 @@ class Dialogs:
 
     def to_bytes(self) -> bytes:
         out = b'@l\xba\x15'
-        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.dialogs, 'Vector<Dialog>', _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.dialogs"}
-        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<Dialog>", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["dialogs"], pos = _tl._read_vector(data, pos, 'Dialog', _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -93,10 +93,10 @@ class DialogsSlice:
     def to_bytes(self) -> bytes:
         out = b'\xf3\x94\xe0q'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.dialogs, 'Vector<Dialog>', _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -104,10 +104,10 @@ class DialogsSlice:
         obj = {"_": "messages.dialogsSlice"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<Dialog>", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["dialogs"], pos = _tl._read_vector(data, pos, 'Dialog', _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -167,19 +167,19 @@ class Messages:
 
     def to_bytes(self) -> bytes:
         out = b'\xea\xe7s\x1d'
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.topics), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.topics, 'Vector<ForumTopic>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.messages"}
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["topics"], pos = _tl._read_typed(data, pos, "Vector<ForumTopic>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["topics"], pos = _tl._read_vector(data, pos, 'ForumTopic', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -233,11 +233,11 @@ class MessagesSlice:
         if _flags_word & (1 << 2):
             out += _struct.pack('<i', self.offset_id_offset)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.search_flood), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.topics), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+            out += _tl._ser(self.search_flood, _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.topics, 'Vector<ForumTopic>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -256,11 +256,11 @@ class MessagesSlice:
             obj["offset_id_offset"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 3):
-            obj["search_flood"], pos = _tl._read_typed(data, pos, "SearchPostsFlood", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["topics"], pos = _tl._read_typed(data, pos, "Vector<ForumTopic>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["search_flood"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["topics"], pos = _tl._read_vector(data, pos, 'ForumTopic', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -308,10 +308,10 @@ class ChannelMessages:
         out += _struct.pack('<ii', self.pts, self.count)
         if _flags_word & (1 << 2):
             out += _struct.pack('<i', self.offset_id_offset)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.topics), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.topics, 'Vector<ForumTopic>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -326,10 +326,10 @@ class ChannelMessages:
         if _flags_word & (1 << 2):
             obj["offset_id_offset"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["topics"], pos = _tl._read_typed(data, pos, "Vector<ForumTopic>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["topics"], pos = _tl._read_vector(data, pos, 'ForumTopic', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -380,13 +380,13 @@ class Chats:
 
     def to_bytes(self) -> bytes:
         out = b'\xd5\x9f\xffd'
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.chats"}
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -412,7 +412,7 @@ class ChatsSlice:
     def to_bytes(self) -> bytes:
         out = b'D\x11\xd8\x9c'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
         return out
 
     @classmethod
@@ -420,7 +420,7 @@ class ChatsSlice:
         obj = {"_": "messages.chatsSlice"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -448,17 +448,17 @@ class ChatFull:
 
     def to_bytes(self) -> bytes:
         out = b'\x9c\xd1\xd7\xe5'
-        out += _tl.serialize(_tl._resolve(self.full_chat), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.full_chat, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.chatFull"}
-        obj["full_chat"], pos = _tl._read_typed(data, pos, "ChatFull", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["full_chat"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -521,7 +521,7 @@ class DhConfigNotModified:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.dhConfigNotModified"}
-        obj["random"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["random"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -563,10 +563,10 @@ class DhConfig:
         obj = {"_": "messages.dhConfig"}
         obj["g"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["p"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["p"], pos = _tl._read_bytes(data, pos)
         obj["version"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["random"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["random"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -621,7 +621,7 @@ class SentEncryptedFile:
     def to_bytes(self) -> bytes:
         out = b'2\xff\x93\x94'
         out += _struct.pack('<i', self.date)
-        out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        out += _tl._ser(self.file, _SCHEMA)
         return out
 
     @classmethod
@@ -629,7 +629,7 @@ class SentEncryptedFile:
         obj = {"_": "messages.sentEncryptedFile"}
         obj["date"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["file"], pos = _tl._read_typed(data, pos, "EncryptedFile", _SCHEMA_BY_CID)
+        obj["file"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -677,7 +677,7 @@ class Stickers:
     def to_bytes(self) -> bytes:
         out = b'~\xec\xa60'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
+        out += _tl._serialize_field(self.stickers, 'Vector<Document>', _SCHEMA)
         return out
 
     @classmethod
@@ -685,7 +685,7 @@ class Stickers:
         obj = {"_": "messages.stickers"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        obj["stickers"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -733,7 +733,7 @@ class AllStickers:
     def to_bytes(self) -> bytes:
         out = b'\xbb\xce\xbb\xcd'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        out += _tl._serialize_field(self.sets, 'Vector<StickerSet>', _SCHEMA)
         return out
 
     @classmethod
@@ -741,7 +741,7 @@ class AllStickers:
         obj = {"_": "messages.allStickers"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSet>", _SCHEMA_BY_CID)
+        obj["sets"], pos = _tl._read_vector(data, pos, 'StickerSet', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -804,19 +804,19 @@ class StickerSet:
 
     def to_bytes(self) -> bytes:
         out = b'\x16?\x15n'
-        out += _tl.serialize(_tl._resolve(self.set), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.packs), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.keywords), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.documents), _SCHEMA)
+        out += _tl._ser(self.set, _SCHEMA)
+        out += _tl._serialize_field(self.packs, 'Vector<StickerPack>', _SCHEMA)
+        out += _tl._serialize_field(self.keywords, 'Vector<StickerKeyword>', _SCHEMA)
+        out += _tl._serialize_field(self.documents, 'Vector<Document>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.stickerSet"}
-        obj["set"], pos = _tl._read_typed(data, pos, "StickerSet", _SCHEMA_BY_CID)
-        obj["packs"], pos = _tl._read_typed(data, pos, "Vector<StickerPack>", _SCHEMA_BY_CID)
-        obj["keywords"], pos = _tl._read_typed(data, pos, "Vector<StickerKeyword>", _SCHEMA_BY_CID)
-        obj["documents"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        obj["set"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["packs"], pos = _tl._read_vector(data, pos, 'StickerPack', _SCHEMA_BY_CID)
+        obj["keywords"], pos = _tl._read_vector(data, pos, 'StickerKeyword', _SCHEMA_BY_CID)
+        obj["documents"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -886,7 +886,7 @@ class SavedGifs:
     def to_bytes(self) -> bytes:
         out = b'\r*\xa0\x84'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.gifs), _SCHEMA)
+        out += _tl._serialize_field(self.gifs, 'Vector<Document>', _SCHEMA)
         return out
 
     @classmethod
@@ -894,7 +894,7 @@ class SavedGifs:
         obj = {"_": "messages.savedGifs"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["gifs"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        obj["gifs"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -943,12 +943,12 @@ class BotResults:
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.next_offset)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.switch_pm), _SCHEMA)
+            out += _tl._ser(self.switch_pm, _SCHEMA)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.switch_webview), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.results), _SCHEMA)
+            out += _tl._ser(self.switch_webview, _SCHEMA)
+        out += _tl._serialize_field(self.results, 'Vector<BotInlineResult>', _SCHEMA)
         out += _struct.pack('<i', self.cache_time)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -961,15 +961,15 @@ class BotResults:
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 1):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["switch_pm"], pos = _tl._read_typed(data, pos, "InlineBotSwitchPM", _SCHEMA_BY_CID)
+            obj["switch_pm"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["switch_webview"], pos = _tl._read_typed(data, pos, "InlineBotWebView", _SCHEMA_BY_CID)
-        obj["results"], pos = _tl._read_typed(data, pos, "Vector<BotInlineResult>", _SCHEMA_BY_CID)
+            obj["switch_webview"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["results"], pos = _tl._read_vector(data, pos, 'BotInlineResult', _SCHEMA_BY_CID)
         obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1027,9 +1027,9 @@ class BotCallbackAnswer:
         if _flags_word & (1 << 4):
             obj["native_ui"] = True
         if _flags_word & (1 << 0):
-            obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["message"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["url"], pos = _tl._read_string(data, pos)
         obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1097,21 +1097,21 @@ class PeerDialogs:
 
     def to_bytes(self) -> bytes:
         out = b'T\xc3q3'
-        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.state), _SCHEMA)
+        out += _tl._serialize_field(self.dialogs, 'Vector<Dialog>', _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
+        out += _tl._ser(self.state, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.peerDialogs"}
-        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<Dialog>", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
-        obj["state"], pos = _tl._read_typed(data, pos, "updates.State", _SCHEMA_BY_CID)
+        obj["dialogs"], pos = _tl._read_vector(data, pos, 'Dialog', _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
+        obj["state"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1177,8 +1177,8 @@ class FeaturedStickers:
         _flags_word = ((1 << 0) if self.premium else 0)
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<qi', self.hash, self.count)
-        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.unread), _SCHEMA)
+        out += _tl._serialize_field(self.sets, 'Vector<StickerSetCovered>', _SCHEMA)
+        out += _tl._serialize_field(self.unread, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
@@ -1190,8 +1190,8 @@ class FeaturedStickers:
             obj["premium"] = True
         obj["hash"], obj["count"], = _struct.unpack_from('<qi', data, pos)
         pos += 12
-        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
-        obj["unread"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["sets"], pos = _tl._read_vector(data, pos, 'StickerSetCovered', _SCHEMA_BY_CID)
+        obj["unread"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1245,9 +1245,9 @@ class RecentStickers:
     def to_bytes(self) -> bytes:
         out = b'V|\xd3\x88'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.packs), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.dates), _SCHEMA)
+        out += _tl._serialize_field(self.packs, 'Vector<StickerPack>', _SCHEMA)
+        out += _tl._serialize_field(self.stickers, 'Vector<Document>', _SCHEMA)
+        out += _tl._serialize_field(self.dates, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
@@ -1255,9 +1255,9 @@ class RecentStickers:
         obj = {"_": "messages.recentStickers"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["packs"], pos = _tl._read_typed(data, pos, "Vector<StickerPack>", _SCHEMA_BY_CID)
-        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
-        obj["dates"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["packs"], pos = _tl._read_vector(data, pos, 'StickerPack', _SCHEMA_BY_CID)
+        obj["stickers"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
+        obj["dates"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1283,7 +1283,7 @@ class ArchivedStickers:
     def to_bytes(self) -> bytes:
         out = b'\xc8\xa9\xcbO'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        out += _tl._serialize_field(self.sets, 'Vector<StickerSetCovered>', _SCHEMA)
         return out
 
     @classmethod
@@ -1291,7 +1291,7 @@ class ArchivedStickers:
         obj = {"_": "messages.archivedStickers"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
+        obj["sets"], pos = _tl._read_vector(data, pos, 'StickerSetCovered', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1335,13 +1335,13 @@ class StickerSetInstallResultArchive:
 
     def to_bytes(self) -> bytes:
         out = b'\xa8\x10\xe45'
-        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        out += _tl._serialize_field(self.sets, 'Vector<StickerSetCovered>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.stickerSetInstallResultArchive"}
-        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
+        obj["sets"], pos = _tl._read_vector(data, pos, 'StickerSetCovered', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1366,15 +1366,15 @@ class HighScores:
 
     def to_bytes(self) -> bytes:
         out = b'\x99\xfd;\x9a'
-        out += _tl.serialize(_tl._resolve(self.scores), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.scores, 'Vector<HighScore>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.highScores"}
-        obj["scores"], pos = _tl._read_typed(data, pos, "Vector<HighScore>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["scores"], pos = _tl._read_vector(data, pos, 'HighScore', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1425,8 +1425,8 @@ class FavedStickers:
     def to_bytes(self) -> bytes:
         out = b'\x97\x10\xb5,'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.packs), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
+        out += _tl._serialize_field(self.packs, 'Vector<StickerPack>', _SCHEMA)
+        out += _tl._serialize_field(self.stickers, 'Vector<Document>', _SCHEMA)
         return out
 
     @classmethod
@@ -1434,8 +1434,8 @@ class FavedStickers:
         obj = {"_": "messages.favedStickers"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["packs"], pos = _tl._read_typed(data, pos, "Vector<StickerPack>", _SCHEMA_BY_CID)
-        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        obj["packs"], pos = _tl._read_vector(data, pos, 'StickerPack', _SCHEMA_BY_CID)
+        obj["stickers"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1483,7 +1483,7 @@ class FoundStickerSets:
     def to_bytes(self) -> bytes:
         out = b'\xd2\x9d\xf0\x8a'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        out += _tl._serialize_field(self.sets, 'Vector<StickerSetCovered>', _SCHEMA)
         return out
 
     @classmethod
@@ -1491,7 +1491,7 @@ class FoundStickerSets:
         obj = {"_": "messages.foundStickerSets"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
+        obj["sets"], pos = _tl._read_vector(data, pos, 'StickerSetCovered', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1521,7 +1521,7 @@ class SearchCounter:
         out = b'\xff\xebD\xe8'
         _flags_word = ((1 << 1) if self.inexact else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+        out += _tl._ser(self.filter, _SCHEMA)
         out += _struct.pack('<i', self.count)
         return out
 
@@ -1532,7 +1532,7 @@ class SearchCounter:
         pos += 4
         if _flags_word & (1 << 1):
             obj["inexact"] = True
-        obj["filter"], pos = _tl._read_typed(data, pos, "MessagesFilter", _SCHEMA_BY_CID)
+        obj["filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1562,17 +1562,17 @@ class InactiveChats:
 
     def to_bytes(self) -> bytes:
         out = b"\xc5\xfe'\xa9"
-        out += _tl.serialize(_tl._resolve(self.dates), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.dates, 'Vector<int>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.inactiveChats"}
-        obj["dates"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["dates"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1609,9 +1609,9 @@ class VotesList:
         _flags_word = (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.votes), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.votes, 'Vector<MessagePeerVote>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
         return out
@@ -1623,11 +1623,11 @@ class VotesList:
         pos += 4
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["votes"], pos = _tl._read_typed(data, pos, "Vector<MessagePeerVote>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["votes"], pos = _tl._read_vector(data, pos, 'MessagePeerVote', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1655,17 +1655,17 @@ class MessageViews:
 
     def to_bytes(self) -> bytes:
         out = b'C\xf5\xc4\xb6'
-        out += _tl.serialize(_tl._resolve(self.views), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.views, 'Vector<MessageViews>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.messageViews"}
-        obj["views"], pos = _tl._read_typed(data, pos, "Vector<MessageViews>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["views"], pos = _tl._read_vector(data, pos, 'MessageViews', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1707,7 +1707,7 @@ class DiscussionMessage:
         out = b'\x82\x174\xa6'
         _flags_word = (0 if self.max_id is None else (1 << 0)) | (0 if self.read_inbox_max_id is None else (1 << 1)) | (0 if self.read_outbox_max_id is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.max_id)
         if _flags_word & (1 << 1):
@@ -1715,8 +1715,8 @@ class DiscussionMessage:
         if _flags_word & (1 << 2):
             out += _struct.pack('<i', self.read_outbox_max_id)
         out += _struct.pack('<i', self.unread_count)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -1724,7 +1724,7 @@ class DiscussionMessage:
         obj = {"_": "messages.discussionMessage"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["max_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -1736,8 +1736,8 @@ class DiscussionMessage:
             pos = pos + 4
         obj["unread_count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1810,7 +1810,7 @@ class HistoryImportParsed:
         if _flags_word & (1 << 1):
             obj["group"] = True
         if _flags_word & (1 << 2):
-            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["title"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1842,7 +1842,7 @@ class AffectedFoundMessages:
     def to_bytes(self) -> bytes:
         out = b'l>\x8d\xef'
         out += _struct.pack('<iii', self.pts, self.pts_count, self.offset)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
@@ -1850,7 +1850,7 @@ class AffectedFoundMessages:
         obj = {"_": "messages.affectedFoundMessages"}
         obj["pts"], obj["pts_count"], obj["offset"], = _struct.unpack_from('<iii', data, pos)
         pos += 12
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1879,8 +1879,8 @@ class ExportedChatInvites:
     def to_bytes(self) -> bytes:
         out = b'\xcc-\xc6\xbd'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.invites), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.invites, 'Vector<ExportedChatInvite>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -1888,8 +1888,8 @@ class ExportedChatInvites:
         obj = {"_": "messages.exportedChatInvites"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["invites"], pos = _tl._read_typed(data, pos, "Vector<ExportedChatInvite>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["invites"], pos = _tl._read_vector(data, pos, 'ExportedChatInvite', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1914,15 +1914,15 @@ class ExportedChatInvite:
 
     def to_bytes(self) -> bytes:
         out = b'P\xbeq\x18'
-        out += _tl.serialize(_tl._resolve(self.invite), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.invite, _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.exportedChatInvite"}
-        obj["invite"], pos = _tl._read_typed(data, pos, "ExportedChatInvite", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["invite"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1950,17 +1950,17 @@ class ExportedChatInviteReplaced:
 
     def to_bytes(self) -> bytes:
         out = b'\xef\x00&"'
-        out += _tl.serialize(_tl._resolve(self.invite), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.new_invite), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.invite, _SCHEMA)
+        out += _tl._ser(self.new_invite, _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.exportedChatInviteReplaced"}
-        obj["invite"], pos = _tl._read_typed(data, pos, "ExportedChatInvite", _SCHEMA_BY_CID)
-        obj["new_invite"], pos = _tl._read_typed(data, pos, "ExportedChatInvite", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["invite"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["new_invite"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1989,8 +1989,8 @@ class ChatInviteImporters:
     def to_bytes(self) -> bytes:
         out = b'\n\xb0\xb6\x81'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.importers), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.importers, 'Vector<ChatInviteImporter>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -1998,8 +1998,8 @@ class ChatInviteImporters:
         obj = {"_": "messages.chatInviteImporters"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["importers"], pos = _tl._read_typed(data, pos, "Vector<ChatInviteImporter>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["importers"], pos = _tl._read_vector(data, pos, 'ChatInviteImporter', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2024,15 +2024,15 @@ class ChatAdminsWithInvites:
 
     def to_bytes(self) -> bytes:
         out = b'\xd7r\x9b\xb6'
-        out += _tl.serialize(_tl._resolve(self.admins), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.admins, 'Vector<ChatAdminWithInvites>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.chatAdminsWithInvites"}
-        obj["admins"], pos = _tl._read_typed(data, pos, "Vector<ChatAdminWithInvites>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["admins"], pos = _tl._read_vector(data, pos, 'ChatAdminWithInvites', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2060,7 +2060,7 @@ class CheckedHistoryImportPeer:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.checkedHistoryImportPeer"}
-        obj["confirm_text"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["confirm_text"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2105,9 +2105,9 @@ class SponsoredMessages:
             out += _struct.pack('<i', self.start_delay)
         if _flags_word & (1 << 2):
             out += _struct.pack('<i', self.between_delay)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<SponsoredMessage>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -2124,9 +2124,9 @@ class SponsoredMessages:
         if _flags_word & (1 << 2):
             obj["between_delay"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<SponsoredMessage>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'SponsoredMessage', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2199,10 +2199,10 @@ class SearchResultsCalendar:
         out += _struct.pack('<iii', self.count, self.min_date, self.min_msg_id)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.offset_id_offset)
-        out += _tl.serialize(_tl._resolve(self.periods), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.periods, 'Vector<SearchResultsCalendarPeriod>', _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -2217,10 +2217,10 @@ class SearchResultsCalendar:
         if _flags_word & (1 << 1):
             obj["offset_id_offset"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
-        obj["periods"], pos = _tl._read_typed(data, pos, "Vector<SearchResultsCalendarPeriod>", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["periods"], pos = _tl._read_vector(data, pos, 'SearchResultsCalendarPeriod', _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2246,7 +2246,7 @@ class SearchResultsPositions:
     def to_bytes(self) -> bytes:
         out = b'\xaf+\xb2S'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.positions), _SCHEMA)
+        out += _tl._serialize_field(self.positions, 'Vector<SearchResultsPosition>', _SCHEMA)
         return out
 
     @classmethod
@@ -2254,7 +2254,7 @@ class SearchResultsPositions:
         obj = {"_": "messages.searchResultsPositions"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["positions"], pos = _tl._read_typed(data, pos, "Vector<SearchResultsPosition>", _SCHEMA_BY_CID)
+        obj["positions"], pos = _tl._read_vector(data, pos, 'SearchResultsPosition', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2282,17 +2282,17 @@ class PeerSettings:
 
     def to_bytes(self) -> bytes:
         out = b'M\xb9\x80h'
-        out += _tl.serialize(_tl._resolve(self.settings), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.settings, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.peerSettings"}
-        obj["settings"], pos = _tl._read_typed(data, pos, "PeerSettings", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2329,9 +2329,9 @@ class MessageReactionsList:
         _flags_word = (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.reactions), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.reactions, 'Vector<MessagePeerReaction>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
         return out
@@ -2343,11 +2343,11 @@ class MessageReactionsList:
         pos += 4
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["reactions"], pos = _tl._read_typed(data, pos, "Vector<MessagePeerReaction>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["reactions"], pos = _tl._read_vector(data, pos, 'MessagePeerReaction', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2395,7 +2395,7 @@ class AvailableReactions:
     def to_bytes(self) -> bytes:
         out = b'\xad:\x8ev'
         out += _struct.pack('<i', self.hash)
-        out += _tl.serialize(_tl._resolve(self.reactions), _SCHEMA)
+        out += _tl._serialize_field(self.reactions, 'Vector<AvailableReaction>', _SCHEMA)
         return out
 
     @classmethod
@@ -2403,7 +2403,7 @@ class AvailableReactions:
         obj = {"_": "messages.availableReactions"}
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["reactions"], pos = _tl._read_typed(data, pos, "Vector<AvailableReaction>", _SCHEMA_BY_CID)
+        obj["reactions"], pos = _tl._read_vector(data, pos, 'AvailableReaction', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2456,7 +2456,7 @@ class TranscribedAudio:
             obj["pending"] = True
         obj["transcription_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["text"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["text"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
             obj["trial_remains_num"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -2510,7 +2510,7 @@ class Reactions:
     def to_bytes(self) -> bytes:
         out = b'\x16\xf7\xfd\xea'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.reactions), _SCHEMA)
+        out += _tl._serialize_field(self.reactions, 'Vector<Reaction>', _SCHEMA)
         return out
 
     @classmethod
@@ -2518,7 +2518,7 @@ class Reactions:
         obj = {"_": "messages.reactions"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["reactions"], pos = _tl._read_typed(data, pos, "Vector<Reaction>", _SCHEMA_BY_CID)
+        obj["reactions"], pos = _tl._read_vector(data, pos, 'Reaction', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2561,10 +2561,10 @@ class ForumTopics:
         _flags_word = ((1 << 0) if self.order_by_create_date else 0)
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.topics), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.topics, 'Vector<ForumTopic>', _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         out += _struct.pack('<i', self.pts)
         return out
 
@@ -2577,10 +2577,10 @@ class ForumTopics:
             obj["order_by_create_date"] = True
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["topics"], pos = _tl._read_typed(data, pos, "Vector<ForumTopic>", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["topics"], pos = _tl._read_vector(data, pos, 'ForumTopic', _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         obj["pts"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -2630,7 +2630,7 @@ class EmojiGroups:
     def to_bytes(self) -> bytes:
         out = b'K\xb9\x1f\x88'
         out += _struct.pack('<i', self.hash)
-        out += _tl.serialize(_tl._resolve(self.groups), _SCHEMA)
+        out += _tl._serialize_field(self.groups, 'Vector<EmojiGroup>', _SCHEMA)
         return out
 
     @classmethod
@@ -2638,7 +2638,7 @@ class EmojiGroups:
         obj = {"_": "messages.emojiGroups"}
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["groups"], pos = _tl._read_typed(data, pos, "Vector<EmojiGroup>", _SCHEMA_BY_CID)
+        obj["groups"], pos = _tl._read_vector(data, pos, 'EmojiGroup', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2660,13 +2660,13 @@ class TranslateResult:
 
     def to_bytes(self) -> bytes:
         out = b'\xf82\xdb3'
-        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        out += _tl._serialize_field(self.result, 'Vector<TextWithEntities>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.translateResult"}
-        obj["result"], pos = _tl._read_typed(data, pos, "Vector<TextWithEntities>", _SCHEMA_BY_CID)
+        obj["result"], pos = _tl._read_vector(data, pos, 'TextWithEntities', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2699,7 +2699,7 @@ class BotApp:
         out = b'\xf5\xadP\xeb'
         _flags_word = ((1 << 0) if self.inactive else 0) | ((1 << 1) if self.request_write_access else 0) | ((1 << 2) if self.has_settings else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.app), _SCHEMA)
+        out += _tl._ser(self.app, _SCHEMA)
         return out
 
     @classmethod
@@ -2713,7 +2713,7 @@ class BotApp:
             obj["request_write_access"] = True
         if _flags_word & (1 << 2):
             obj["has_settings"] = True
-        obj["app"], pos = _tl._read_typed(data, pos, "BotApp", _SCHEMA_BY_CID)
+        obj["app"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2741,17 +2741,17 @@ class WebPage:
 
     def to_bytes(self) -> bytes:
         out = b'\xbd\x12^\xfd'
-        out += _tl.serialize(_tl._resolve(self.webpage), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.webpage, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.webPage"}
-        obj["webpage"], pos = _tl._read_typed(data, pos, "WebPage", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["webpage"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2782,19 +2782,19 @@ class SavedDialogs:
 
     def to_bytes(self) -> bytes:
         out = b'!\xe2:\xf8'
-        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.dialogs, 'Vector<SavedDialog>', _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.savedDialogs"}
-        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<SavedDialog>", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["dialogs"], pos = _tl._read_vector(data, pos, 'SavedDialog', _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2829,10 +2829,10 @@ class SavedDialogsSlice:
     def to_bytes(self) -> bytes:
         out = b'\xd9\x9d\xbaD'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.dialogs), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.dialogs, 'Vector<SavedDialog>', _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -2840,10 +2840,10 @@ class SavedDialogsSlice:
         obj = {"_": "messages.savedDialogsSlice"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["dialogs"], pos = _tl._read_typed(data, pos, "Vector<SavedDialog>", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["dialogs"], pos = _tl._read_vector(data, pos, 'SavedDialog', _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2919,14 +2919,14 @@ class SavedReactionTags:
 
     def to_bytes(self) -> bytes:
         out = b'\n\x95Y2'
-        out += _tl.serialize(_tl._resolve(self.tags), _SCHEMA)
+        out += _tl._serialize_field(self.tags, 'Vector<SavedReactionTag>', _SCHEMA)
         out += _struct.pack('<q', self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.savedReactionTags"}
-        obj["tags"], pos = _tl._read_typed(data, pos, "Vector<SavedReactionTag>", _SCHEMA_BY_CID)
+        obj["tags"], pos = _tl._read_vector(data, pos, 'SavedReactionTag', _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -2959,19 +2959,19 @@ class QuickReplies:
 
     def to_bytes(self) -> bytes:
         out = b'\x95f\x8d\xc6'
-        out += _tl.serialize(_tl._resolve(self.quick_replies), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.quick_replies, 'Vector<QuickReply>', _SCHEMA)
+        out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.quickReplies"}
-        obj["quick_replies"], pos = _tl._read_typed(data, pos, "Vector<QuickReply>", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "Vector<Message>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["quick_replies"], pos = _tl._read_vector(data, pos, 'QuickReply', _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3020,7 +3020,7 @@ class DialogFilters:
         out = b'\x197\xd9*'
         _flags_word = ((1 << 0) if self.tags_enabled else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.filters), _SCHEMA)
+        out += _tl._serialize_field(self.filters, 'Vector<DialogFilter>', _SCHEMA)
         return out
 
     @classmethod
@@ -3030,7 +3030,7 @@ class DialogFilters:
         pos += 4
         if _flags_word & (1 << 0):
             obj["tags_enabled"] = True
-        obj["filters"], pos = _tl._read_typed(data, pos, "Vector<DialogFilter>", _SCHEMA_BY_CID)
+        obj["filters"], pos = _tl._read_vector(data, pos, 'DialogFilter', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3056,7 +3056,7 @@ class MyStickers:
     def to_bytes(self) -> bytes:
         out = b'\x9db\xff\xfa'
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.sets), _SCHEMA)
+        out += _tl._serialize_field(self.sets, 'Vector<StickerSetCovered>', _SCHEMA)
         return out
 
     @classmethod
@@ -3064,7 +3064,7 @@ class MyStickers:
         obj = {"_": "messages.myStickers"}
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["sets"], pos = _tl._read_typed(data, pos, "Vector<StickerSetCovered>", _SCHEMA_BY_CID)
+        obj["sets"], pos = _tl._read_vector(data, pos, 'StickerSetCovered', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3089,15 +3089,15 @@ class InvitedUsers:
 
     def to_bytes(self) -> bytes:
         out = b'\xa6\xef]\x7f'
-        out += _tl.serialize(_tl._resolve(self.updates), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.missing_invitees), _SCHEMA)
+        out += _tl._ser(self.updates, _SCHEMA)
+        out += _tl._serialize_field(self.missing_invitees, 'Vector<MissingInvitee>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.invitedUsers"}
-        obj["updates"], pos = _tl._read_typed(data, pos, "Updates", _SCHEMA_BY_CID)
-        obj["missing_invitees"], pos = _tl._read_typed(data, pos, "Vector<MissingInvitee>", _SCHEMA_BY_CID)
+        obj["updates"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["missing_invitees"], pos = _tl._read_vector(data, pos, 'MissingInvitee', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3148,8 +3148,8 @@ class AvailableEffects:
     def to_bytes(self) -> bytes:
         out = b'na\xdb\xbd'
         out += _struct.pack('<i', self.hash)
-        out += _tl.serialize(_tl._resolve(self.effects), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.documents), _SCHEMA)
+        out += _tl._serialize_field(self.effects, 'Vector<AvailableEffect>', _SCHEMA)
+        out += _tl._serialize_field(self.documents, 'Vector<Document>', _SCHEMA)
         return out
 
     @classmethod
@@ -3157,8 +3157,8 @@ class AvailableEffects:
         obj = {"_": "messages.availableEffects"}
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["effects"], pos = _tl._read_typed(data, pos, "Vector<AvailableEffect>", _SCHEMA_BY_CID)
-        obj["documents"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        obj["effects"], pos = _tl._read_vector(data, pos, 'AvailableEffect', _SCHEMA_BY_CID)
+        obj["documents"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3190,7 +3190,7 @@ class BotPreparedInlineMessage:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.botPreparedInlineMessage"}
-        obj["id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_string(data, pos)
         obj["expire_date"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -3227,10 +3227,10 @@ class PreparedInlineMessage:
     def to_bytes(self) -> bytes:
         out = b'\x8dpW\xff'
         out += _struct.pack('<q', self.query_id)
-        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer_types), _SCHEMA)
+        out += _tl._ser(self.result, _SCHEMA)
+        out += _tl._serialize_field(self.peer_types, 'Vector<InlineQueryPeerType>', _SCHEMA)
         out += _struct.pack('<i', self.cache_time)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -3238,11 +3238,11 @@ class PreparedInlineMessage:
         obj = {"_": "messages.preparedInlineMessage"}
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["result"], pos = _tl._read_typed(data, pos, "BotInlineResult", _SCHEMA_BY_CID)
-        obj["peer_types"], pos = _tl._read_typed(data, pos, "Vector<InlineQueryPeerType>", _SCHEMA_BY_CID)
+        obj["result"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer_types"], pos = _tl._read_vector(data, pos, 'InlineQueryPeerType', _SCHEMA_BY_CID)
         obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3310,7 +3310,7 @@ class FoundStickers:
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.next_offset)
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
+        out += _tl._serialize_field(self.stickers, 'Vector<Document>', _SCHEMA)
         return out
 
     @classmethod
@@ -3323,7 +3323,7 @@ class FoundStickers:
             pos = pos + 4
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<Document>", _SCHEMA_BY_CID)
+        obj["stickers"], pos = _tl._read_vector(data, pos, 'Document', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3351,17 +3351,17 @@ class WebPagePreview:
 
     def to_bytes(self) -> bytes:
         out = b'\xac\x88\x9a\x8c'
-        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.media, _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.webPagePreview"}
-        obj["media"], pos = _tl._read_typed(data, pos, "MessageMedia", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3396,7 +3396,7 @@ class EmojiGameOutcome:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.emojiGameOutcome"}
-        obj["seed"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["seed"], pos = _tl._read_bytes(data, pos)
         obj["stake_ton_amount"], obj["ton_amount"], = _struct.unpack_from('<qq', data, pos)
         pos += 16
         return obj, pos
@@ -3458,7 +3458,7 @@ class EmojiGameDiceInfo:
         out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.game_hash)
         out += _struct.pack('<qi', self.prev_stake, self.current_streak)
-        out += _tl.serialize(_tl._resolve(self.params), _SCHEMA)
+        out += _tl._serialize_field(self.params, 'Vector<int>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.plays_left)
         return out
@@ -3468,10 +3468,10 @@ class EmojiGameDiceInfo:
         obj = {"_": "messages.emojiGameDiceInfo"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["game_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["game_hash"], pos = _tl._read_string(data, pos)
         obj["prev_stake"], obj["current_streak"], = _struct.unpack_from('<qi', data, pos)
         pos += 12
-        obj["params"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["params"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["plays_left"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -3501,9 +3501,9 @@ class ComposedMessageWithAI:
         out = b'\xfa\xad\xd7\x90'
         _flags_word = (0 if self.diff_text is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.result_text), _SCHEMA)
+        out += _tl._ser(self.result_text, _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.diff_text), _SCHEMA)
+            out += _tl._ser(self.diff_text, _SCHEMA)
         return out
 
     @classmethod
@@ -3511,9 +3511,9 @@ class ComposedMessageWithAI:
         obj = {"_": "messages.composedMessageWithAI"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["result_text"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+        obj["result_text"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["diff_text"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+            obj["diff_text"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3535,13 +3535,13 @@ class ChatInviteJoinResultOk:
 
     def to_bytes(self) -> bytes:
         out = b'\xa7cVD'
-        out += _tl.serialize(_tl._resolve(self.updates), _SCHEMA)
+        out += _tl._ser(self.updates, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.chatInviteJoinResultOk"}
-        obj["updates"], pos = _tl._read_typed(data, pos, "Updates", _SCHEMA_BY_CID)
+        obj["updates"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3570,7 +3570,7 @@ class ChatInviteJoinResultWebView:
     def to_bytes(self) -> bytes:
         out = b'\xd3)\xcaa'
         out += _struct.pack('<qq', self.bot_id, self.query_id)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -3578,7 +3578,7 @@ class ChatInviteJoinResultWebView:
         obj = {"_": "messages.chatInviteJoinResultWebView"}
         obj["bot_id"], obj["query_id"], = _struct.unpack_from('<qq', data, pos)
         pos += 16
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3600,13 +3600,13 @@ class TranslatedRichMessage:
 
     def to_bytes(self) -> bytes:
         out = b'\x8f\x99\x03B'
-        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        out += _tl._serialize_field(self.result, 'Vector<RichMessage>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.translatedRichMessage"}
-        obj["result"], pos = _tl._read_typed(data, pos, "Vector<RichMessage>", _SCHEMA_BY_CID)
+        obj["result"], pos = _tl._read_vector(data, pos, 'RichMessage', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3628,13 +3628,13 @@ class ComposedRichMessageWithAI:
 
     def to_bytes(self) -> bytes:
         out = b'\xc87EL'
-        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        out += _tl._ser(self.result, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.composedRichMessageWithAI"}
-        obj["result"], pos = _tl._read_typed(data, pos, "RichMessage", _SCHEMA_BY_CID)
+        obj["result"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3668,7 +3668,7 @@ class BotWidgetQueryAnswer:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["result"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["result"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3735,7 +3735,7 @@ class WidgetPublicData:
         obj = {"_": "messages.widgetPublicData"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["data"], pos = _tl._read_string(data, pos)
         obj["period"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos

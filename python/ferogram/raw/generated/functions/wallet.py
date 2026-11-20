@@ -67,8 +67,8 @@ class GetUserAddresses:
         out = b'\xdd\xdfuR'
         _flags_word = ((1 << 0) if self.force else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.addresses), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputUser>', _SCHEMA)
+        out += _tl._serialize_field(self.addresses, 'Vector<string>', _SCHEMA)
         return out
 
     @classmethod
@@ -78,8 +78,8 @@ class GetUserAddresses:
         pos += 4
         if _flags_word & (1 << 0):
             obj["force"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
-        obj["addresses"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputUser', _SCHEMA_BY_CID)
+        obj["addresses"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -125,7 +125,7 @@ class GetTransactions:
             obj["inbound"] = True
         if _flags_word & (1 << 1):
             obj["outbound"] = True
-        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -149,13 +149,13 @@ class GetTransactionsByIDs:
 
     def to_bytes(self) -> bytes:
         out = b'\xb6\xea\x1c\x81'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<string>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "wallet.getTransactionsByIDs"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -177,13 +177,13 @@ class GetTransactionsByMsgHash:
 
     def to_bytes(self) -> bytes:
         out = b']y\xbb\xa6'
-        out += _tl.serialize(_tl._resolve(self.msg_hash), _SCHEMA)
+        out += _tl._serialize_field(self.msg_hash, 'Vector<string>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "wallet.getTransactionsByMsgHash"}
-        obj["msg_hash"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        obj["msg_hash"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -208,7 +208,7 @@ class ExportSecretPhrase:
         _flags_word = (0 if self.password is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.password), _SCHEMA)
+            out += _tl._ser(self.password, _SCHEMA)
         return out
 
     @classmethod
@@ -217,7 +217,7 @@ class ExportSecretPhrase:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["password"], pos = _tl._read_typed(data, pos, "InputCheckPasswordSRP", _SCHEMA_BY_CID)
+            obj["password"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -249,8 +249,8 @@ class FetchEncryptedSecretPhrasePart:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "wallet.fetchEncryptedSecretPhrasePart"}
-        obj["token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["public_key"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["token"], pos = _tl._read_string(data, pos)
+        obj["public_key"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -277,9 +277,9 @@ class ReplaceWallet:
         out = b'\xec.\xc7\xd8'
         _flags_word = (0 if self.password is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.wallet), _SCHEMA)
+        out += _tl._ser(self.wallet, _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.password), _SCHEMA)
+            out += _tl._ser(self.password, _SCHEMA)
         return out
 
     @classmethod
@@ -287,9 +287,9 @@ class ReplaceWallet:
         obj = {"_": "wallet.replaceWallet"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["wallet"], pos = _tl._read_typed(data, pos, "InputWalletReplacement", _SCHEMA_BY_CID)
+        obj["wallet"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["password"], pos = _tl._read_typed(data, pos, "InputCheckPasswordSRP", _SCHEMA_BY_CID)
+            obj["password"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -320,11 +320,11 @@ class DisableBackup:
         _flags_word = (0 if self.password is None else (1 << 0)) | (0 if self.new_public_key is None else (1 << 1)) | (0 if self.proof is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.password), _SCHEMA)
+            out += _tl._ser(self.password, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_bytes(self.new_public_key)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.proof), _SCHEMA)
+            out += _tl._ser(self.proof, _SCHEMA)
         return out
 
     @classmethod
@@ -333,11 +333,11 @@ class DisableBackup:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["password"], pos = _tl._read_typed(data, pos, "InputCheckPasswordSRP", _SCHEMA_BY_CID)
+            obj["password"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["new_public_key"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["new_public_key"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 2):
-            obj["proof"], pos = _tl._read_typed(data, pos, "WalletOwnershipProof", _SCHEMA_BY_CID)
+            obj["proof"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -389,11 +389,11 @@ class EnableBackup:
         out = b'%\xc5\x00E'
         _flags_word = (0 if self.new_public_key is None else (1 << 1)) | (0 if self.proof is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.parts), _SCHEMA)
+        out += _tl._serialize_field(self.parts, 'Vector<bytes>', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_bytes(self.new_public_key)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.proof), _SCHEMA)
+            out += _tl._ser(self.proof, _SCHEMA)
         return out
 
     @classmethod
@@ -401,11 +401,11 @@ class EnableBackup:
         obj = {"_": "wallet.enableBackup"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["parts"], pos = _tl._read_typed(data, pos, "Vector<bytes>", _SCHEMA_BY_CID)
+        obj["parts"], pos = _tl._read_vector(data, pos, 'bytes', _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["new_public_key"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["new_public_key"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 2):
-            obj["proof"], pos = _tl._read_typed(data, pos, "WalletOwnershipProof", _SCHEMA_BY_CID)
+            obj["proof"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -463,7 +463,7 @@ class SendTransfer:
         out += _tl._pack_bytes(self.data_normal)
         if _flags_word & (1 << 0):
             out += _tl._pack_bytes(self.data_gasless)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _struct.pack('<q', self.random_id)
         return out
 
@@ -472,10 +472,10 @@ class SendTransfer:
         obj = {"_": "wallet.sendTransfer"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["data_normal"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["data_normal"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 0):
-            obj["data_gasless"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+            obj["data_gasless"], pos = _tl._read_bytes(data, pos)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -553,7 +553,7 @@ class GetNfts:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "wallet.getNfts"}
-        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -587,8 +587,8 @@ class TonConnectCreateSession:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "wallet.tonConnectCreateSession"}
-        obj["dapp_client_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["manifest_url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["dapp_client_id"], pos = _tl._read_string(data, pos)
+        obj["manifest_url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -622,7 +622,7 @@ class TonConnectRegisterKey:
         obj = {"_": "wallet.tonConnectRegisterKey"}
         obj["session_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["client_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["client_id"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -674,10 +674,10 @@ class TonConnectSubmitConnectResult:
             obj["error"] = True
         obj["session_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["challenge_answer"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["body"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["challenge_answer"], pos = _tl._read_bytes(data, pos)
+        obj["body"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 1):
-            obj["trace_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["trace_id"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -716,7 +716,7 @@ class TonConnectGetPending:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["dapp_client_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["dapp_client_id"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
             obj["session_id"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -770,9 +770,9 @@ class TonConnectClaimRequest:
             obj["declined"] = True
         obj["session_id"], obj["msg_id"], = _struct.unpack_from('<qi', data, pos)
         pos += 12
-        obj["app_request_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["app_request_id"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["challenge_answer"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["challenge_answer"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -818,9 +818,9 @@ class TonConnectSubmitResponse:
         pos += 4
         obj["session_id"], obj["msg_id"], = _struct.unpack_from('<qi', data, pos)
         pos += 12
-        obj["body"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["body"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 0):
-            obj["trace_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["trace_id"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -889,7 +889,7 @@ class TonConnectCloseSession:
         obj["session_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 0):
-            obj["body"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["body"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -938,7 +938,7 @@ class SetCardStickers:
         out = b'\xac\t\x85\x06'
         _flags_word = (0 if self.bg_nft_address is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.stickers), _SCHEMA)
+        out += _tl._serialize_field(self.stickers, 'Vector<InputWalletCardSticker>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.bg_nft_address)
         return out
@@ -948,9 +948,9 @@ class SetCardStickers:
         obj = {"_": "wallet.setCardStickers"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["stickers"], pos = _tl._read_typed(data, pos, "Vector<InputWalletCardSticker>", _SCHEMA_BY_CID)
+        obj["stickers"], pos = _tl._read_vector(data, pos, 'InputWalletCardSticker', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["bg_nft_address"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["bg_nft_address"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

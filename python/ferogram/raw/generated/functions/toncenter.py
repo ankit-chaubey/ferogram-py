@@ -62,11 +62,11 @@ class PerformApiRequest:
         pos += 4
         if _flags_word & (1 << 0):
             obj["post"] = True
-        obj["endpoint"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["endpoint"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["query"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["query"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["payload"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["payload"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

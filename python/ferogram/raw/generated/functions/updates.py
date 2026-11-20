@@ -139,8 +139,8 @@ class GetChannelDifference:
         out = b'x=\x17\x03'
         _flags_word = ((1 << 0) if self.force else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser(self.filter, _SCHEMA)
         out += _struct.pack('<ii', self.pts, self.limit)
         return out
 
@@ -151,8 +151,8 @@ class GetChannelDifference:
         pos += 4
         if _flags_word & (1 << 0):
             obj["force"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["filter"], pos = _tl._read_typed(data, pos, "ChannelMessagesFilter", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["pts"], obj["limit"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         return obj, pos

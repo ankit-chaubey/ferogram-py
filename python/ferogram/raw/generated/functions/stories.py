@@ -37,13 +37,13 @@ class CanSendStory:
 
     def to_bytes(self) -> bytes:
         out = b'\xf0c\xeb0'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.canSendStory"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -109,26 +109,26 @@ class SendStory:
         out = b'\x98h\x9e\x8f'
         _flags_word = ((1 << 2) if self.pinned else 0) | ((1 << 4) if self.noforwards else 0) | ((1 << 7) if self.fwd_modified else 0) | (0 if self.media_areas is None else (1 << 5)) | (0 if self.caption is None else (1 << 0)) | (0 if self.entities is None else (1 << 1)) | (0 if self.period is None else (1 << 3)) | (0 if self.fwd_from_id is None else (1 << 6)) | (0 if self.fwd_from_story is None else (1 << 6)) | (0 if self.albums is None else (1 << 8)) | (0 if self.music is None else (1 << 9))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.media, _SCHEMA)
         if _flags_word & (1 << 5):
-            out += _tl.serialize(_tl._resolve(self.media_areas), _SCHEMA)
+            out += _tl._serialize_field(self.media_areas, 'Vector<MediaArea>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.caption)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.privacy_rules), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
+        out += _tl._serialize_field(self.privacy_rules, 'Vector<InputPrivacyRule>', _SCHEMA)
         out += _struct.pack('<q', self.random_id)
         if _flags_word & (1 << 3):
             out += _struct.pack('<i', self.period)
         if _flags_word & (1 << 6):
-            out += _tl.serialize(_tl._resolve(self.fwd_from_id), _SCHEMA)
+            out += _tl._ser_peer(self.fwd_from_id, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 6):
             out += _struct.pack('<i', self.fwd_from_story)
         if _flags_word & (1 << 8):
-            out += _tl.serialize(_tl._resolve(self.albums), _SCHEMA)
+            out += _tl._serialize_field(self.albums, 'Vector<int>', _SCHEMA)
         if _flags_word & (1 << 9):
-            out += _tl.serialize(_tl._resolve(self.music), _SCHEMA)
+            out += _tl._ser(self.music, _SCHEMA)
         return out
 
     @classmethod
@@ -142,29 +142,29 @@ class SendStory:
             obj["noforwards"] = True
         if _flags_word & (1 << 7):
             obj["fwd_modified"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 5):
-            obj["media_areas"], pos = _tl._read_typed(data, pos, "Vector<MediaArea>", _SCHEMA_BY_CID)
+            obj["media_areas"], pos = _tl._read_vector(data, pos, 'MediaArea', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["caption"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["caption"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
-        obj["privacy_rules"], pos = _tl._read_typed(data, pos, "Vector<InputPrivacyRule>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
+        obj["privacy_rules"], pos = _tl._read_vector(data, pos, 'InputPrivacyRule', _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 3):
             obj["period"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 6):
-            obj["fwd_from_id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["fwd_from_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 6):
             obj["fwd_from_story"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 8):
-            obj["albums"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+            obj["albums"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         if _flags_word & (1 << 9):
-            obj["music"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
+            obj["music"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -209,20 +209,20 @@ class EditStory:
         out = b'+\xa7c,'
         _flags_word = (0 if self.media is None else (1 << 0)) | (0 if self.media_areas is None else (1 << 3)) | (0 if self.caption is None else (1 << 1)) | (0 if self.entities is None else (1 << 1)) | (0 if self.privacy_rules is None else (1 << 2)) | (0 if self.music is None else (1 << 4))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+            out += _tl._ser(self.media, _SCHEMA)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.media_areas), _SCHEMA)
+            out += _tl._serialize_field(self.media_areas, 'Vector<MediaArea>', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.caption)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.privacy_rules), _SCHEMA)
+            out += _tl._serialize_field(self.privacy_rules, 'Vector<InputPrivacyRule>', _SCHEMA)
         if _flags_word & (1 << 4):
-            out += _tl.serialize(_tl._resolve(self.music), _SCHEMA)
+            out += _tl._ser(self.music, _SCHEMA)
         return out
 
     @classmethod
@@ -230,21 +230,21 @@ class EditStory:
         obj = {"_": "stories.editStory"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+            obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["media_areas"], pos = _tl._read_typed(data, pos, "Vector<MediaArea>", _SCHEMA_BY_CID)
+            obj["media_areas"], pos = _tl._read_vector(data, pos, 'MediaArea', _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["caption"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["caption"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["privacy_rules"], pos = _tl._read_typed(data, pos, "Vector<InputPrivacyRule>", _SCHEMA_BY_CID)
+            obj["privacy_rules"], pos = _tl._read_vector(data, pos, 'InputPrivacyRule', _SCHEMA_BY_CID)
         if _flags_word & (1 << 4):
-            obj["music"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
+            obj["music"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -269,15 +269,15 @@ class DeleteStories:
 
     def to_bytes(self) -> bytes:
         out = b'_\xdbY\xae'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.deleteStories"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -305,17 +305,17 @@ class TogglePinned:
 
     def to_bytes(self) -> bytes:
         out = b'\xef\xa1u\x9a'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         out += _tl._pack_bool(self.pinned)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.togglePinned"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["pinned"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["pinned"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -359,7 +359,7 @@ class GetAllStories:
         if _flags_word & (1 << 2):
             obj["hidden"] = True
         if _flags_word & (1 << 0):
-            obj["state"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["state"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -387,14 +387,14 @@ class GetPinnedStories:
 
     def to_bytes(self) -> bytes:
         out = b'\xdc\xa5!X'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<ii', self.offset_id, self.limit)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.getPinnedStories"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_id"], obj["limit"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         return obj, pos
@@ -424,14 +424,14 @@ class GetStoriesArchive:
 
     def to_bytes(self) -> bytes:
         out = b'\x16 5\xb4'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<ii', self.offset_id, self.limit)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.getStoriesArchive"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_id"], obj["limit"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         return obj, pos
@@ -458,15 +458,15 @@ class GetStoriesByID:
 
     def to_bytes(self) -> bytes:
         out = b't\xcatW'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.getStoriesByID"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -494,7 +494,7 @@ class ToggleAllStoriesHidden:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.toggleAllStoriesHidden"}
-        obj["hidden"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["hidden"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -519,14 +519,14 @@ class ReadStories:
 
     def to_bytes(self) -> bytes:
         out = b'\xc8\xdaV\xa5'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.max_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.readStories"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["max_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -553,15 +553,15 @@ class IncrementStoryViews:
 
     def to_bytes(self) -> bytes:
         out = b'\xfb\x8a\x02\xb2'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.incrementStoryViews"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -606,7 +606,7 @@ class GetStoryViewsList:
         out = b'W<\xd2~'
         _flags_word = ((1 << 0) if self.just_contacts else 0) | ((1 << 2) if self.reactions_first else 0) | ((1 << 3) if self.forwards_first else 0) | (0 if self.q is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.q)
         out += _struct.pack('<i', self.id)
@@ -625,12 +625,12 @@ class GetStoryViewsList:
             obj["reactions_first"] = True
         if _flags_word & (1 << 3):
             obj["forwards_first"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["q"], pos = _tl._read_string(data, pos)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -657,15 +657,15 @@ class GetStoriesViews:
 
     def to_bytes(self) -> bytes:
         out = b'\xc8l\xe1('
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.getStoriesViews"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -690,14 +690,14 @@ class ExportStoryLink:
 
     def to_bytes(self) -> bytes:
         out = b' \xef\x8d{'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.exportStoryLink"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -730,8 +730,8 @@ class Report:
 
     def to_bytes(self) -> bytes:
         out = b'E\xeb\xd8\x19'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         out += _tl._pack_bytes(self.option)
         out += _tl._pack_string(self.message)
         return out
@@ -739,10 +739,10 @@ class Report:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.report"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["option"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["option"], pos = _tl._read_bytes(data, pos)
+        obj["message"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -812,9 +812,9 @@ class SendReaction:
         out = b'\xb26\xd7\x7f'
         _flags_word = ((1 << 0) if self.add_to_recent else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.story_id)
-        out += _tl.serialize(_tl._resolve(self.reaction), _SCHEMA)
+        out += _tl._ser(self.reaction, _SCHEMA)
         return out
 
     @classmethod
@@ -824,10 +824,10 @@ class SendReaction:
         pos += 4
         if _flags_word & (1 << 0):
             obj["add_to_recent"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["story_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["reaction"], pos = _tl._read_typed(data, pos, "Reaction", _SCHEMA_BY_CID)
+        obj["reaction"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -849,13 +849,13 @@ class GetPeerStories:
 
     def to_bytes(self) -> bytes:
         out = b'P\xdaJ,'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.getPeerStories"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -899,13 +899,13 @@ class GetPeerMaxIDs:
 
     def to_bytes(self) -> bytes:
         out = b'p\x91Ix'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputPeer>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.getPeerMaxIDs"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputPeer', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -952,15 +952,15 @@ class TogglePeerStoriesHidden:
 
     def to_bytes(self) -> bytes:
         out = b'\xc4\x15\x04\xbd'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_bool(self.hidden)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.togglePeerStoriesHidden"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["hidden"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["hidden"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -999,10 +999,10 @@ class GetStoryReactionsList:
         out = b'\x1f\x88\xb2\xb9'
         _flags_word = ((1 << 2) if self.forwards_first else 0) | (0 if self.reaction is None else (1 << 0)) | (0 if self.offset is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.reaction), _SCHEMA)
+            out += _tl._ser(self.reaction, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.offset)
         out += _struct.pack('<i', self.limit)
@@ -1015,13 +1015,13 @@ class GetStoryReactionsList:
         pos += 4
         if _flags_word & (1 << 2):
             obj["forwards_first"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["reaction"], pos = _tl._read_typed(data, pos, "Reaction", _SCHEMA_BY_CID)
+            obj["reaction"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1048,15 +1048,15 @@ class TogglePinnedToTop:
 
     def to_bytes(self) -> bytes:
         out = b'\x9b~)\x0b'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.togglePinnedToTop"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1095,9 +1095,9 @@ class SearchPosts:
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.hashtag)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.area), _SCHEMA)
+            out += _tl._ser(self.area, _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.offset)
         out += _struct.pack('<i', self.limit)
         return out
@@ -1108,12 +1108,12 @@ class SearchPosts:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["hashtag"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["hashtag"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["area"], pos = _tl._read_typed(data, pos, "MediaArea", _SCHEMA_BY_CID)
+            obj["area"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1143,17 +1143,17 @@ class CreateAlbum:
 
     def to_bytes(self) -> bytes:
         out = b'\xe5\x96c\xa3'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.title)
-        out += _tl.serialize(_tl._resolve(self.stories), _SCHEMA)
+        out += _tl._serialize_field(self.stories, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.createAlbum"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["stories"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
+        obj["stories"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1192,16 +1192,16 @@ class UpdateAlbum:
         out = b'\xb6YR^'
         _flags_word = (0 if self.title is None else (1 << 0)) | (0 if self.delete_stories is None else (1 << 1)) | (0 if self.add_stories is None else (1 << 2)) | (0 if self.order is None else (1 << 3))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.album_id)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.title)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.delete_stories), _SCHEMA)
+            out += _tl._serialize_field(self.delete_stories, 'Vector<int>', _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.add_stories), _SCHEMA)
+            out += _tl._serialize_field(self.add_stories, 'Vector<int>', _SCHEMA)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+            out += _tl._serialize_field(self.order, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
@@ -1209,17 +1209,17 @@ class UpdateAlbum:
         obj = {"_": "stories.updateAlbum"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["album_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["title"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["delete_stories"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+            obj["delete_stories"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["add_stories"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+            obj["add_stories"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["order"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+            obj["order"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1244,15 +1244,15 @@ class ReorderAlbums:
 
     def to_bytes(self) -> bytes:
         out = b'\xd9\xfb5\x85'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.order, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.reorderAlbums"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["order"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1277,14 +1277,14 @@ class DeleteAlbum:
 
     def to_bytes(self) -> bytes:
         out = b'\xd0V4\x8d'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.album_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.deleteAlbum"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["album_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1311,14 +1311,14 @@ class GetAlbums:
 
     def to_bytes(self) -> bytes:
         out = b'\xc7\xea\xb3%'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<q', self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.getAlbums"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -1351,14 +1351,14 @@ class GetAlbumStories:
 
     def to_bytes(self) -> bytes:
         out = b'am\x80\xac'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iii', self.album_id, self.offset, self.limit)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stories.getAlbumStories"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["album_id"], obj["offset"], obj["limit"], = _struct.unpack_from('<iii', data, pos)
         pos += 12
         return obj, pos
@@ -1411,12 +1411,12 @@ class StartLive:
         out = b'\xde\xcci\xd0'
         _flags_word = ((1 << 2) if self.pinned else 0) | ((1 << 4) if self.noforwards else 0) | ((1 << 5) if self.rtmp_stream else 0) | (0 if self.caption is None else (1 << 0)) | (0 if self.entities is None else (1 << 1)) | (0 if self.messages_enabled is None else (1 << 6)) | (0 if self.send_paid_messages_stars is None else (1 << 7))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.caption)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.privacy_rules), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
+        out += _tl._serialize_field(self.privacy_rules, 'Vector<InputPrivacyRule>', _SCHEMA)
         out += _struct.pack('<q', self.random_id)
         if _flags_word & (1 << 6):
             out += _tl._pack_bool(self.messages_enabled)
@@ -1435,16 +1435,16 @@ class StartLive:
             obj["noforwards"] = True
         if _flags_word & (1 << 5):
             obj["rtmp_stream"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["caption"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["caption"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
-        obj["privacy_rules"], pos = _tl._read_typed(data, pos, "Vector<InputPrivacyRule>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
+        obj["privacy_rules"], pos = _tl._read_vector(data, pos, 'InputPrivacyRule', _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 6):
-            obj["messages_enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["messages_enabled"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 7):
             obj["send_paid_messages_stars"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8

@@ -100,55 +100,55 @@ class BroadcastStats:
 
     def to_bytes(self) -> bytes:
         out = b'\xfc\xa5l9'
-        out += _tl.serialize(_tl._resolve(self.period), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.followers), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.views_per_post), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.shares_per_post), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.reactions_per_post), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.views_per_story), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.shares_per_story), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.reactions_per_story), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.enabled_notifications), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.growth_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.followers_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.mute_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.top_hours_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.interactions_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.iv_interactions_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.views_by_source_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.new_followers_by_source_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.languages_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.reactions_by_emotion_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.story_interactions_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.story_reactions_by_emotion_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.recent_posts_interactions), _SCHEMA)
+        out += _tl._ser(self.period, _SCHEMA)
+        out += _tl._ser(self.followers, _SCHEMA)
+        out += _tl._ser(self.views_per_post, _SCHEMA)
+        out += _tl._ser(self.shares_per_post, _SCHEMA)
+        out += _tl._ser(self.reactions_per_post, _SCHEMA)
+        out += _tl._ser(self.views_per_story, _SCHEMA)
+        out += _tl._ser(self.shares_per_story, _SCHEMA)
+        out += _tl._ser(self.reactions_per_story, _SCHEMA)
+        out += _tl._ser(self.enabled_notifications, _SCHEMA)
+        out += _tl._ser(self.growth_graph, _SCHEMA)
+        out += _tl._ser(self.followers_graph, _SCHEMA)
+        out += _tl._ser(self.mute_graph, _SCHEMA)
+        out += _tl._ser(self.top_hours_graph, _SCHEMA)
+        out += _tl._ser(self.interactions_graph, _SCHEMA)
+        out += _tl._ser(self.iv_interactions_graph, _SCHEMA)
+        out += _tl._ser(self.views_by_source_graph, _SCHEMA)
+        out += _tl._ser(self.new_followers_by_source_graph, _SCHEMA)
+        out += _tl._ser(self.languages_graph, _SCHEMA)
+        out += _tl._ser(self.reactions_by_emotion_graph, _SCHEMA)
+        out += _tl._ser(self.story_interactions_graph, _SCHEMA)
+        out += _tl._ser(self.story_reactions_by_emotion_graph, _SCHEMA)
+        out += _tl._serialize_field(self.recent_posts_interactions, 'Vector<PostInteractionCounters>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stats.broadcastStats"}
-        obj["period"], pos = _tl._read_typed(data, pos, "StatsDateRangeDays", _SCHEMA_BY_CID)
-        obj["followers"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["views_per_post"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["shares_per_post"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["reactions_per_post"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["views_per_story"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["shares_per_story"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["reactions_per_story"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["enabled_notifications"], pos = _tl._read_typed(data, pos, "StatsPercentValue", _SCHEMA_BY_CID)
-        obj["growth_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["followers_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["mute_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["top_hours_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["interactions_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["iv_interactions_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["views_by_source_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["new_followers_by_source_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["languages_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["reactions_by_emotion_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["story_interactions_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["story_reactions_by_emotion_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["recent_posts_interactions"], pos = _tl._read_typed(data, pos, "Vector<PostInteractionCounters>", _SCHEMA_BY_CID)
+        obj["period"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["followers"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["views_per_post"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["shares_per_post"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["reactions_per_post"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["views_per_story"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["shares_per_story"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["reactions_per_story"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled_notifications"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["growth_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["followers_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["mute_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["top_hours_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["interactions_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["iv_interactions_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["views_by_source_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["new_followers_by_source_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["languages_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["reactions_by_emotion_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["story_interactions_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["story_reactions_by_emotion_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["recent_posts_interactions"], pos = _tl._read_vector(data, pos, 'PostInteractionCounters', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -218,45 +218,45 @@ class MegagroupStats:
 
     def to_bytes(self) -> bytes:
         out = b'\x16\xf9\x7f\xef'
-        out += _tl.serialize(_tl._resolve(self.period), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.members), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.viewers), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.posters), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.growth_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.members_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.new_members_by_source_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.languages_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.messages_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.actions_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.top_hours_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.weekdays_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.top_posters), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.top_admins), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.top_inviters), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser(self.period, _SCHEMA)
+        out += _tl._ser(self.members, _SCHEMA)
+        out += _tl._ser(self.messages, _SCHEMA)
+        out += _tl._ser(self.viewers, _SCHEMA)
+        out += _tl._ser(self.posters, _SCHEMA)
+        out += _tl._ser(self.growth_graph, _SCHEMA)
+        out += _tl._ser(self.members_graph, _SCHEMA)
+        out += _tl._ser(self.new_members_by_source_graph, _SCHEMA)
+        out += _tl._ser(self.languages_graph, _SCHEMA)
+        out += _tl._ser(self.messages_graph, _SCHEMA)
+        out += _tl._ser(self.actions_graph, _SCHEMA)
+        out += _tl._ser(self.top_hours_graph, _SCHEMA)
+        out += _tl._ser(self.weekdays_graph, _SCHEMA)
+        out += _tl._serialize_field(self.top_posters, 'Vector<StatsGroupTopPoster>', _SCHEMA)
+        out += _tl._serialize_field(self.top_admins, 'Vector<StatsGroupTopAdmin>', _SCHEMA)
+        out += _tl._serialize_field(self.top_inviters, 'Vector<StatsGroupTopInviter>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stats.megagroupStats"}
-        obj["period"], pos = _tl._read_typed(data, pos, "StatsDateRangeDays", _SCHEMA_BY_CID)
-        obj["members"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["messages"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["viewers"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["posters"], pos = _tl._read_typed(data, pos, "StatsAbsValueAndPrev", _SCHEMA_BY_CID)
-        obj["growth_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["members_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["new_members_by_source_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["languages_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["messages_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["actions_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["top_hours_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["weekdays_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["top_posters"], pos = _tl._read_typed(data, pos, "Vector<StatsGroupTopPoster>", _SCHEMA_BY_CID)
-        obj["top_admins"], pos = _tl._read_typed(data, pos, "Vector<StatsGroupTopAdmin>", _SCHEMA_BY_CID)
-        obj["top_inviters"], pos = _tl._read_typed(data, pos, "Vector<StatsGroupTopInviter>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["period"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["members"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["messages"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["viewers"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["posters"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["growth_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["members_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["new_members_by_source_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["languages_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["messages_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["actions_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["top_hours_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["weekdays_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["top_posters"], pos = _tl._read_vector(data, pos, 'StatsGroupTopPoster', _SCHEMA_BY_CID)
+        obj["top_admins"], pos = _tl._read_vector(data, pos, 'StatsGroupTopAdmin', _SCHEMA_BY_CID)
+        obj["top_inviters"], pos = _tl._read_vector(data, pos, 'StatsGroupTopInviter', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -281,15 +281,15 @@ class MessageStats:
 
     def to_bytes(self) -> bytes:
         out = b'\x14\x1c\xe9\x7f'
-        out += _tl.serialize(_tl._resolve(self.views_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.reactions_by_emotion_graph), _SCHEMA)
+        out += _tl._ser(self.views_graph, _SCHEMA)
+        out += _tl._ser(self.reactions_by_emotion_graph, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stats.messageStats"}
-        obj["views_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["reactions_by_emotion_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
+        obj["views_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["reactions_by_emotion_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -314,15 +314,15 @@ class StoryStats:
 
     def to_bytes(self) -> bytes:
         out = b'|\x06\xcdP'
-        out += _tl.serialize(_tl._resolve(self.views_graph), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.reactions_by_emotion_graph), _SCHEMA)
+        out += _tl._ser(self.views_graph, _SCHEMA)
+        out += _tl._ser(self.reactions_by_emotion_graph, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stats.storyStats"}
-        obj["views_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
-        obj["reactions_by_emotion_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
+        obj["views_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["reactions_by_emotion_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -359,11 +359,11 @@ class PublicForwards:
         _flags_word = (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
-        out += _tl.serialize(_tl._resolve(self.forwards), _SCHEMA)
+        out += _tl._serialize_field(self.forwards, 'Vector<PublicForward>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -373,11 +373,11 @@ class PublicForwards:
         pos += 4
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["forwards"], pos = _tl._read_typed(data, pos, "Vector<PublicForward>", _SCHEMA_BY_CID)
+        obj["forwards"], pos = _tl._read_vector(data, pos, 'PublicForward', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -399,13 +399,13 @@ class PollStats:
 
     def to_bytes(self) -> bytes:
         out = b'\xed\xbe\x99)'
-        out += _tl.serialize(_tl._resolve(self.votes_graph), _SCHEMA)
+        out += _tl._ser(self.votes_graph, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "stats.pollStats"}
-        obj["votes_graph"], pos = _tl._read_typed(data, pos, "StatsGraph", _SCHEMA_BY_CID)
+        obj["votes_graph"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

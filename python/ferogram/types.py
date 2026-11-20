@@ -285,26 +285,28 @@ class Message:
 
     @classmethod
     def from_tl(cls, d: dict) -> "Message":
-        reply_to = d.get("reply_to") or {}
-        fwd = d.get("fwd_from") or {}
+        get = d.get
+        reply_to = get("reply_to") or {}
+        fwd = get("fwd_from") or {}
+        from_id = get("from_id")
         return cls(
-            id=_int(d, "id"),
-            text=_str(d, "message"),
-            sender_id=_peer_to_id(d.get("from_id")),
-            peer_id=d.get("peer_id") or {},
-            date=_int(d, "date"),
-            edit_date=d.get("edit_date"),
+            id=get("id") or 0,
+            text=get("message") or "",
+            sender_id=_peer_to_id(from_id) if from_id else None,
+            peer_id=get("peer_id") or {},
+            date=get("date") or 0,
+            edit_date=get("edit_date"),
             reply_to_msg_id=reply_to.get("reply_to_msg_id") if isinstance(reply_to, dict) else None,
             forward_from_id=_peer_to_id(fwd.get("from_id")) if isinstance(fwd, dict) else None,
-            media=d.get("media"),
-            entities=d.get("entities") or [],
-            views=d.get("views"),
-            via_bot_id=d.get("via_bot_id"),
-            grouped_id=d.get("grouped_id"),
-            out=_bool(d, "out"),
-            mentioned=_bool(d, "mentioned"),
-            silent=_bool(d, "silent"),
-            pinned=_bool(d, "pinned"),
+            media=get("media"),
+            entities=get("entities") or [],
+            views=get("views"),
+            via_bot_id=get("via_bot_id"),
+            grouped_id=get("grouped_id"),
+            out=bool(get("out")),
+            mentioned=bool(get("mentioned")),
+            silent=bool(get("silent")),
+            pinned=bool(get("pinned")),
             _raw=d,
         )
 

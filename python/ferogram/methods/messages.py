@@ -17,15 +17,16 @@
 
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING, Any
 
 from ..raw import tl as _tl
+from ..types import _peer_to_id
 from ..raw.generated._tl_schema import _SCHEMA
 from ..types import (
     ChatAction, Message,
 )
 from .._internal import (
+    _rand_i64,
     _as_input_channel,
     _markup_to_dict,
 )
@@ -62,7 +63,7 @@ class MessageMethods:
             "_": "messages.sendMessage",
             "peer": input_peer,
             "message": plain,
-            "random_id": random.randint(-(2**63), 2**63 - 1),
+            "random_id": _rand_i64(),
             "entities": entities,
         }
         if no_webpage:
@@ -119,10 +120,13 @@ class MessageMethods:
             req["reply_markup"] = _markup_to_dict(reply_markup)
         await self._rpc(req)
 
-    async def delete_message(self, message_id: int, revoke: bool = True) -> None:
-        await self.delete_messages([message_id], revoke)
+    async def delete_message(self, message_id: int, revoke: bool = True, *, peer: Any = None) -> None:
+        await self.delete_messages([message_id], revoke, peer=peer)
 
-    async def delete_messages(self, message_ids: list[int], revoke: bool = True) -> None:
+    async def delete_messages(self, message_ids: list[int], revoke: bool = True, *, peer: Any = None) -> None:
+        if peer is not None:
+            await self.delete_messages_in(peer, message_ids, revoke)
+            return
         await self._rpc({
             "_": "messages.deleteMessages",
             "id": message_ids,
@@ -171,7 +175,7 @@ class MessageMethods:
             "from_peer": from_peer,
             "to_peer": to_peer,
             "id": message_ids,
-            "random_id": [random.randint(-(2**63), 2**63 - 1) for _ in message_ids],
+            "random_id": [_rand_i64() for _ in message_ids],
         }
         if silent:
             req["silent"] = True
@@ -216,6 +220,9 @@ class MessageMethods:
 
     async def mark_dialog_read(self, peer: str) -> None:
         input_peer = await self._resolve_peer(peer)
+        if input_peer.get("_") == "inputPeerChannel":
+            await self._rpc({"_": "channels.readHistory", "channel": input_peer, "max_id": 0})
+            return
         await self._rpc({"_": "messages.readHistory", "peer": input_peer, "max_id": 0})
 
     async def clear_mentions(self, peer: str) -> None:
@@ -249,10 +256,13 @@ class MessageMethods:
             "cancel": "sendMessageCancelAction",
         }
         tl_action = action_map.get(action_str, action_str)
+        action_obj: dict = {"_": tl_action}
+        if tl_action.startswith("sendMessageUpload"):
+            action_obj["progress"] = 0
         await self._rpc({
             "_": "messages.setTyping",
             "peer": input_peer,
-            "action": {"_": tl_action},
+            "action": action_obj,
         })
 
     async def send_dice(self, peer: str, emoticon: str = "🎲") -> None:
@@ -262,7 +272,7 @@ class MessageMethods:
             "peer": input_peer,
             "media": {"_": "inputMediaDice", "emoticon": emoticon},
             "message": "",
-            "random_id": random.randint(-(2**63), 2**63 - 1),
+            "random_id": _rand_i64(),
         })
 
     async def get_messages_by_id(self, peer: str, message_ids: list[int]) -> list[dict]:
@@ -280,50 +290,89 @@ class MessageMethods:
 
     async def get_message_history(self, peer: str, limit: int = 100, offset_id: int = 0) -> list[dict]:
         input_peer = await self._resolve_peer(peer)
-        result = await self._rpc({
-            "_": "messages.getHistory",
-            "peer": input_peer,
-            "offset_id": offset_id,
-            "offset_date": 0,
-            "add_offset": 0,
-            "limit": limit,
-            "max_id": 0,
-            "min_id": 0,
-            "hash": 0,
-        })
-        return result.get("messages", []) if isinstance(result, dict) else []
+        out: list[dict] = []
+        cur = offset_id
+        while len(out) < limit:
+            batch = min(100, limit - len(out))
+            result = await self._rpc({
+                "_": "messages.getHistory",
+                "peer": input_peer,
+                "offset_id": cur,
+                "offset_date": 0,
+                "add_offset": 0,
+                "limit": batch,
+                "max_id": 0,
+                "min_id": 0,
+                "hash": 0,
+            })
+            page = result.get("messages", []) if isinstance(result, dict) else []
+            out.extend(page)
+            cur = page[-1].get("id", 0) if page else 0
+            if len(page) < batch or not cur:
+                break
+        return out
 
     async def search_messages(self, peer: str, query: str, limit: int = 100) -> list[dict]:
         input_peer = await self._resolve_peer(peer)
-        result = await self._rpc({
-            "_": "messages.search",
-            "peer": input_peer,
-            "q": query,
-            "filter": {"_": "inputMessagesFilterEmpty"},
-            "min_date": 0,
-            "max_date": 0,
-            "offset_id": 0,
-            "add_offset": 0,
-            "limit": limit,
-            "max_id": 0,
-            "min_id": 0,
-            "hash": 0,
-        })
-        return result.get("messages", []) if isinstance(result, dict) else []
+        out: list[dict] = []
+        cur = 0
+        while len(out) < limit:
+            batch = min(100, limit - len(out))
+            result = await self._rpc({
+                "_": "messages.search",
+                "peer": input_peer,
+                "q": query,
+                "filter": {"_": "inputMessagesFilterEmpty"},
+                "min_date": 0,
+                "max_date": 0,
+                "offset_id": cur,
+                "add_offset": 0,
+                "limit": batch,
+                "max_id": 0,
+                "min_id": 0,
+                "hash": 0,
+            })
+            page = result.get("messages", []) if isinstance(result, dict) else []
+            out.extend(page)
+            cur = page[-1].get("id", 0) if page else 0
+            if len(page) < batch or not cur:
+                break
+        return out
 
     async def search_global(self, query: str, limit: int = 100) -> list[dict]:
-        result = await self._rpc({
-            "_": "messages.searchGlobal",
-            "q": query,
-            "filter": {"_": "inputMessagesFilterEmpty"},
-            "min_date": 0,
-            "max_date": 0,
-            "offset_rate": 0,
-            "offset_peer": {"_": "inputPeerEmpty"},
-            "offset_id": 0,
-            "limit": limit,
-        })
-        return result.get("messages", []) if isinstance(result, dict) else []
+        out: list[dict] = []
+        rate = 0
+        offset_peer: dict = {"_": "inputPeerEmpty"}
+        offset_id = 0
+        while len(out) < limit:
+            batch = min(100, limit - len(out))
+            result = await self._rpc({
+                "_": "messages.searchGlobal",
+                "q": query,
+                "filter": {"_": "inputMessagesFilterEmpty"},
+                "min_date": 0,
+                "max_date": 0,
+                "offset_rate": rate,
+                "offset_peer": offset_peer,
+                "offset_id": offset_id,
+                "limit": batch,
+            })
+            page = result.get("messages", []) if isinstance(result, dict) else []
+            out.extend(page)
+            if len(page) < batch:
+                break
+            last = page[-1]
+            next_rate = result.get("next_rate")
+            rate = next_rate if next_rate is not None else last.get("date", 0)
+            offset_id = last.get("id", 0)
+            pid = _peer_to_id(last.get("peer_id"))
+            if not pid:
+                break
+            try:
+                offset_peer = await self._resolve_peer(pid)
+            except Exception:
+                break
+        return out
 
     async def get_pinned_message(self, peer: str) -> dict | None:
         input_peer = await self._resolve_peer(peer)
@@ -388,7 +437,7 @@ class MessageMethods:
         input_peer = await self._resolve_peer(peer)
         poll: dict = {
             "_": "poll",
-            "id": random.randint(0, 2**63 - 1),
+            "id": (_rand_i64() & 0x7FFFFFFFFFFFFFFF),
             "question": {"_": "textWithEntities", "text": question, "entities": []},
             "answers": [
                 {"_": "pollAnswer",
@@ -418,7 +467,7 @@ class MessageMethods:
             "peer": input_peer,
             "media": media,
             "message": "",
-            "random_id": random.randint(-(2**63), 2**63 - 1),
+            "random_id": _rand_i64(),
         })
 
     async def send_vote(self, peer: str, msg_id: int, options: list[bytes]) -> None:

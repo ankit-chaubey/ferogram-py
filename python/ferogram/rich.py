@@ -72,7 +72,8 @@ import asyncio
 import logging
 import mimetypes
 import os
-import random
+
+from ._internal import _rand_i64
 import re
 import tempfile
 import urllib.request
@@ -275,7 +276,7 @@ class _RichMixin:
             "_": "messages.sendMessage",
             "peer": input_peer,
             "message": "",
-            "random_id": random.randint(-(2**63), 2**63 - 1),
+            "random_id": _rand_i64(),
             "rich_message": rich,
         }
         if silent:

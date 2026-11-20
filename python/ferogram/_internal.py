@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import random
 import struct
 from typing import Any, Callable
 
@@ -98,6 +99,14 @@ _CID_HELP_GET_CONFIG       = 0xc4f9186b
 
 
 _CID_IMPORT_AUTHORIZATION  = 0xa57a7dad
+
+
+_getrandbits = random.getrandbits
+
+
+def _rand_i64() -> int:
+    x = _getrandbits(64)
+    return x - (1 << 64) if x >> 63 else x
 
 
 def _pack_u32(v: int) -> bytes: return struct.pack("<I", v & 0xFFFFFFFF)

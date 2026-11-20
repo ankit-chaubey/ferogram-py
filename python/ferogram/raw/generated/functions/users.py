@@ -37,13 +37,13 @@ class GetUsers:
 
     def to_bytes(self) -> bytes:
         out = b'H\xa5\x91\r'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputUser>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "users.getUsers"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputUser', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -65,13 +65,13 @@ class GetFullUser:
 
     def to_bytes(self) -> bytes:
         out = b'\x18Y\x0f\xb6'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "users.getFullUser"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -96,15 +96,15 @@ class SetSecureValueErrors:
 
     def to_bytes(self) -> bytes:
         out = b'\xb5\x94\xc8\x90'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.errors), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputUser', _SCHEMA)
+        out += _tl._serialize_field(self.errors, 'Vector<SecureValueError>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "users.setSecureValueErrors"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["errors"], pos = _tl._read_typed(data, pos, "Vector<SecureValueError>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["errors"], pos = _tl._read_vector(data, pos, 'SecureValueError', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -126,13 +126,13 @@ class GetRequirementsToContact:
 
     def to_bytes(self) -> bytes:
         out = b'\xa3\x83\x9a\xd8'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputUser>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "users.getRequirementsToContact"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputUser', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -163,14 +163,14 @@ class GetSavedMusic:
 
     def to_bytes(self) -> bytes:
         out = b'\xe3\x7f\x8dx'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputUser', _SCHEMA)
         out += _struct.pack('<iiq', self.offset, self.limit, self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "users.getSavedMusic"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset"], obj["limit"], obj["hash"], = _struct.unpack_from('<iiq', data, pos)
         pos += 16
         return obj, pos
@@ -197,15 +197,15 @@ class GetSavedMusicByID:
 
     def to_bytes(self) -> bytes:
         out = b'\xe9\xa4su'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.documents), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputUser', _SCHEMA)
+        out += _tl._serialize_field(self.documents, 'Vector<InputDocument>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "users.getSavedMusicByID"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["documents"], pos = _tl._read_typed(data, pos, "Vector<InputDocument>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["documents"], pos = _tl._read_vector(data, pos, 'InputDocument', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -230,15 +230,15 @@ class SuggestBirthday:
 
     def to_bytes(self) -> bytes:
         out = b'r3S\xfc'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.birthday), _SCHEMA)
+        out += _tl._ser_peer(self.id, 'InputUser', _SCHEMA)
+        out += _tl._ser(self.birthday, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "users.suggestBirthday"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["birthday"], pos = _tl._read_typed(data, pos, "Birthday", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["birthday"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

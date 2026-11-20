@@ -46,8 +46,8 @@ class UpdateProfilePhoto:
         _flags_word = ((1 << 0) if self.fallback else 0) | (0 if self.bot is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+            out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
         return out
 
     @classmethod
@@ -58,8 +58,8 @@ class UpdateProfilePhoto:
         if _flags_word & (1 << 0):
             obj["fallback"] = True
         if _flags_word & (1 << 1):
-            obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "InputPhoto", _SCHEMA_BY_CID)
+            obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -99,15 +99,15 @@ class UploadProfilePhoto:
         _flags_word = ((1 << 3) if self.fallback else 0) | (0 if self.bot is None else (1 << 5)) | (0 if self.file is None else (1 << 0)) | (0 if self.video is None else (1 << 1)) | (0 if self.video_start_ts is None else (1 << 2)) | (0 if self.video_emoji_markup is None else (1 << 4))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 5):
-            out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+            out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+            out += _tl._ser(self.file, _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.video), _SCHEMA)
+            out += _tl._ser(self.video, _SCHEMA)
         if _flags_word & (1 << 2):
             out += _struct.pack('<d', self.video_start_ts)
         if _flags_word & (1 << 4):
-            out += _tl.serialize(_tl._resolve(self.video_emoji_markup), _SCHEMA)
+            out += _tl._ser(self.video_emoji_markup, _SCHEMA)
         return out
 
     @classmethod
@@ -118,16 +118,16 @@ class UploadProfilePhoto:
         if _flags_word & (1 << 3):
             obj["fallback"] = True
         if _flags_word & (1 << 5):
-            obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+            obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["file"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+            obj["file"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["video"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+            obj["video"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
             obj["video_start_ts"] = _struct.unpack_from('<d', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 4):
-            obj["video_emoji_markup"], pos = _tl._read_typed(data, pos, "VideoSize", _SCHEMA_BY_CID)
+            obj["video_emoji_markup"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -149,13 +149,13 @@ class DeletePhotos:
 
     def to_bytes(self) -> bytes:
         out = b'/\x7f\xcf\x87'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputPhoto>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "photos.deletePhotos"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputPhoto>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputPhoto', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -186,14 +186,14 @@ class GetUserPhotos:
 
     def to_bytes(self) -> bytes:
         out = b'\xa82\xcd\x91'
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _struct.pack('<iqi', self.offset, self.max_id, self.limit)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "photos.getUserPhotos"}
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset"], obj["max_id"], obj["limit"], = _struct.unpack_from('<iqi', data, pos)
         pos += 16
         return obj, pos
@@ -237,15 +237,15 @@ class UploadContactProfilePhoto:
         out = b'qJL\xe1'
         _flags_word = ((1 << 3) if self.suggest else 0) | ((1 << 4) if self.save else 0) | (0 if self.file is None else (1 << 0)) | (0 if self.video is None else (1 << 1)) | (0 if self.video_start_ts is None else (1 << 2)) | (0 if self.video_emoji_markup is None else (1 << 5))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+            out += _tl._ser(self.file, _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.video), _SCHEMA)
+            out += _tl._ser(self.video, _SCHEMA)
         if _flags_word & (1 << 2):
             out += _struct.pack('<d', self.video_start_ts)
         if _flags_word & (1 << 5):
-            out += _tl.serialize(_tl._resolve(self.video_emoji_markup), _SCHEMA)
+            out += _tl._ser(self.video_emoji_markup, _SCHEMA)
         return out
 
     @classmethod
@@ -257,16 +257,16 @@ class UploadContactProfilePhoto:
             obj["suggest"] = True
         if _flags_word & (1 << 4):
             obj["save"] = True
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["file"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+            obj["file"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["video"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+            obj["video"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
             obj["video_start_ts"] = _struct.unpack_from('<d', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 5):
-            obj["video_emoji_markup"], pos = _tl._read_typed(data, pos, "VideoSize", _SCHEMA_BY_CID)
+            obj["video_emoji_markup"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

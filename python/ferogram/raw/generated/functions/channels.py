@@ -40,14 +40,14 @@ class ReadHistory:
 
     def to_bytes(self) -> bytes:
         out = b'7I\x10\xcc'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<i', self.max_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.readHistory"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["max_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -74,15 +74,15 @@ class DeleteMessages:
 
     def to_bytes(self) -> bytes:
         out = b'N\xfd\xc1\x84'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.deleteMessages"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -110,17 +110,17 @@ class ReportSpam:
 
     def to_bytes(self) -> bytes:
         out = b'\x15\x83J\xf4'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.reportSpam"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -145,15 +145,15 @@ class GetMessages:
 
     def to_bytes(self) -> bytes:
         out = b'#\x9a\x8c\xad'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputMessage>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.getMessages"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputMessage>", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputMessage', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -187,16 +187,16 @@ class GetParticipants:
 
     def to_bytes(self) -> bytes:
         out = b'\xd0\xd9\xcew'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser(self.filter, _SCHEMA)
         out += _struct.pack('<iiq', self.offset, self.limit, self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.getParticipants"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["filter"], pos = _tl._read_typed(data, pos, "ChannelParticipantsFilter", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset"], obj["limit"], obj["hash"], = _struct.unpack_from('<iiq', data, pos)
         pos += 16
         return obj, pos
@@ -223,15 +223,15 @@ class GetParticipant:
 
     def to_bytes(self) -> bytes:
         out = b'\xc6l\xab\xa0'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.getParticipant"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -253,13 +253,13 @@ class GetChannels:
 
     def to_bytes(self) -> bytes:
         out = b'\xbbk\x7f\n'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputChannel>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.getChannels"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputChannel>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputChannel', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -281,13 +281,13 @@ class GetFullChannel:
 
     def to_bytes(self) -> bytes:
         out = b'\tjs\x08'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.getFullChannel"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -338,7 +338,7 @@ class CreateChannel:
         out += _tl._pack_string(self.title)
         out += _tl._pack_string(self.about)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.geo_point), _SCHEMA)
+            out += _tl._ser(self.geo_point, _SCHEMA)
         if _flags_word & (1 << 2):
             out += _tl._pack_string(self.address)
         if _flags_word & (1 << 4):
@@ -358,12 +358,12 @@ class CreateChannel:
             obj["for_import"] = True
         if _flags_word & (1 << 5):
             obj["forum"] = True
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["about"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
+        obj["about"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["geo_point"], pos = _tl._read_typed(data, pos, "InputGeoPoint", _SCHEMA_BY_CID)
+            obj["geo_point"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["address"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["address"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 4):
             obj["ttl_period"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -399,9 +399,9 @@ class EditAdmin:
         out = b'h\xad\x98\x9a'
         _flags_word = (0 if self.rank is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.admin_rights), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
+        out += _tl._ser(self.admin_rights, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.rank)
         return out
@@ -411,11 +411,11 @@ class EditAdmin:
         obj = {"_": "channels.editAdmin"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["admin_rights"], pos = _tl._read_typed(data, pos, "ChatAdminRights", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["admin_rights"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["rank"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["rank"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -440,15 +440,15 @@ class EditTitle:
 
     def to_bytes(self) -> bytes:
         out = b'\xd0\xecmV'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_string(self.title)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.editTitle"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -473,15 +473,15 @@ class EditPhoto:
 
     def to_bytes(self) -> bytes:
         out = b'\xc9W.\xf1'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.photo), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser(self.photo, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.editPhoto"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["photo"], pos = _tl._read_typed(data, pos, "InputChatPhoto", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["photo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -506,15 +506,15 @@ class CheckUsername:
 
     def to_bytes(self) -> bytes:
         out = b',\xbd\xe6\x10'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_string(self.username)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.checkUsername"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["username"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["username"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -539,15 +539,15 @@ class UpdateUsername:
 
     def to_bytes(self) -> bytes:
         out = b'\xde\xb3\x145'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_string(self.username)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.updateUsername"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["username"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["username"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -569,13 +569,13 @@ class JoinChannel:
 
     def to_bytes(self) -> bytes:
         out = b'"\x1ej\x7f'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.joinChannel"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -597,13 +597,13 @@ class LeaveChannel:
 
     def to_bytes(self) -> bytes:
         out = b'\x95\xaa6\xf8'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.leaveChannel"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -628,15 +628,15 @@ class InviteToChannel:
 
     def to_bytes(self) -> bytes:
         out = b'T=\xe3\xc9'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<InputUser>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.inviteToChannel"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'InputUser', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -658,13 +658,13 @@ class DeleteChannel:
 
     def to_bytes(self) -> bytes:
         out = b'\xe3\x1f\x11\xc0'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.deleteChannel"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -697,7 +697,7 @@ class ExportMessageLink:
         out = b'\xeb\xad?\xe6'
         _flags_word = ((1 << 0) if self.grouped else 0) | ((1 << 1) if self.thread else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<i', self.id)
         return out
 
@@ -710,7 +710,7 @@ class ExportMessageLink:
             obj["grouped"] = True
         if _flags_word & (1 << 1):
             obj["thread"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -742,7 +742,7 @@ class ToggleSignatures:
         out = b'\x9cT\x8dA'
         _flags_word = ((1 << 0) if self.signatures_enabled else 0) | ((1 << 1) if self.profiles_enabled else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
@@ -754,7 +754,7 @@ class ToggleSignatures:
             obj["signatures_enabled"] = True
         if _flags_word & (1 << 1):
             obj["profiles_enabled"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -829,17 +829,17 @@ class EditBanned:
 
     def to_bytes(self) -> bytes:
         out = b'\x81\xcd\xe6\x96'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.banned_rights), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.banned_rights, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.editBanned"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["banned_rights"], pos = _tl._read_typed(data, pos, "ChatBannedRights", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["banned_rights"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -881,12 +881,12 @@ class GetAdminLog:
         out = b'\x80\xf4\xdd3'
         _flags_word = (0 if self.events_filter is None else (1 << 0)) | (0 if self.admins is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_string(self.q)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.events_filter), _SCHEMA)
+            out += _tl._ser(self.events_filter, _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.admins), _SCHEMA)
+            out += _tl._serialize_field(self.admins, 'Vector<InputUser>', _SCHEMA)
         out += _struct.pack('<qqi', self.max_id, self.min_id, self.limit)
         return out
 
@@ -895,12 +895,12 @@ class GetAdminLog:
         obj = {"_": "channels.getAdminLog"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["q"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["events_filter"], pos = _tl._read_typed(data, pos, "ChannelAdminLogEventsFilter", _SCHEMA_BY_CID)
+            obj["events_filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["admins"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
+            obj["admins"], pos = _tl._read_vector(data, pos, 'InputUser', _SCHEMA_BY_CID)
         obj["max_id"], obj["min_id"], obj["limit"], = _struct.unpack_from('<qqi', data, pos)
         pos += 20
         return obj, pos
@@ -927,15 +927,15 @@ class SetStickers:
 
     def to_bytes(self) -> bytes:
         out = b'\xf9\xa4\x8c\xea'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.stickerset), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser(self.stickerset, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.setStickers"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["stickerset"], pos = _tl._read_typed(data, pos, "InputStickerSet", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["stickerset"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -960,15 +960,15 @@ class ReadMessageContents:
 
     def to_bytes(self) -> bytes:
         out = b'8\xdc\xb5\xea'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.readMessageContents"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -998,7 +998,7 @@ class DeleteHistory:
         out = b'G\x96\xaa\x9b'
         _flags_word = ((1 << 0) if self.for_everyone else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<i', self.max_id)
         return out
 
@@ -1009,7 +1009,7 @@ class DeleteHistory:
         pos += 4
         if _flags_word & (1 << 0):
             obj["for_everyone"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["max_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1036,15 +1036,15 @@ class TogglePreHistoryHidden:
 
     def to_bytes(self) -> bytes:
         out = b'L\xb9\xbb\xea'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.togglePreHistoryHidden"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1120,15 +1120,15 @@ class SetDiscussionGroup:
 
     def to_bytes(self) -> bytes:
         out = b'\xb2+X@'
-        out += _tl.serialize(_tl._resolve(self.broadcast), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.group), _SCHEMA)
+        out += _tl._ser_peer(self.broadcast, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.group, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.setDiscussionGroup"}
-        obj["broadcast"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["group"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["broadcast"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["group"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1156,17 +1156,17 @@ class EditLocation:
 
     def to_bytes(self) -> bytes:
         out = b'm?\xe6X'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.geo_point), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser(self.geo_point, _SCHEMA)
         out += _tl._pack_string(self.address)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.editLocation"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["geo_point"], pos = _tl._read_typed(data, pos, "InputGeoPoint", _SCHEMA_BY_CID)
-        obj["address"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["geo_point"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["address"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1191,14 +1191,14 @@ class ToggleSlowMode:
 
     def to_bytes(self) -> bytes:
         out = b'\xf0\x9e\xd4\xed'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<i', self.seconds)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.toggleSlowMode"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["seconds"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1244,13 +1244,13 @@ class ConvertToGigagroup:
 
     def to_bytes(self) -> bytes:
         out = b'i\x0c)\x0b'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.convertToGigagroup"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1280,7 +1280,7 @@ class GetSendAs:
         out = b'?\xa4\x85\xe7'
         _flags_word = ((1 << 0) if self.for_paid_reactions else 0) | ((1 << 1) if self.for_live_stories else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -1292,7 +1292,7 @@ class GetSendAs:
             obj["for_paid_reactions"] = True
         if _flags_word & (1 << 1):
             obj["for_live_stories"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1317,15 +1317,15 @@ class DeleteParticipantHistory:
 
     def to_bytes(self) -> bytes:
         out = b'\xdbDu6'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.deleteParticipantHistory"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1350,15 +1350,15 @@ class ToggleJoinToSend:
 
     def to_bytes(self) -> bytes:
         out = b'\x80\x95\xcb\xe4'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.toggleJoinToSend"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1391,10 +1391,10 @@ class ToggleJoinRequest:
         out = b'\x18&\xcc\x0e'
         _flags_word = ((1 << 1) if self.apply_to_invites else 0) | (0 if self.guard_bot is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.guard_bot), _SCHEMA)
+            out += _tl._ser_peer(self.guard_bot, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
@@ -1404,10 +1404,10 @@ class ToggleJoinRequest:
         pos += 4
         if _flags_word & (1 << 1):
             obj["apply_to_invites"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 0):
-            obj["guard_bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+            obj["guard_bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1432,15 +1432,15 @@ class ReorderUsernames:
 
     def to_bytes(self) -> bytes:
         out = b'\x1d\xed\\\xb4'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._serialize_field(self.order, 'Vector<string>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.reorderUsernames"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["order"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1468,7 +1468,7 @@ class ToggleUsername:
 
     def to_bytes(self) -> bytes:
         out = b'\x05A\xf2P'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_string(self.username)
         out += _tl._pack_bool(self.active)
         return out
@@ -1476,9 +1476,9 @@ class ToggleUsername:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.toggleUsername"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["username"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["active"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["username"], pos = _tl._read_string(data, pos)
+        obj["active"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1500,13 +1500,13 @@ class DeactivateAllUsernames:
 
     def to_bytes(self) -> bytes:
         out = b'\xd3]$\n'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.deactivateAllUsernames"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1537,7 +1537,7 @@ class ToggleForum:
 
     def to_bytes(self) -> bytes:
         out = b'T+\x95\xa2'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         out += _tl._pack_bool(self.tabs)
         out += _tl._pack_bool(self.sidebar)
@@ -1546,10 +1546,10 @@ class ToggleForum:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.toggleForum"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
-        obj["tabs"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
-        obj["sidebar"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
+        obj["tabs"], pos = _tl._read_bool(data, pos)
+        obj["sidebar"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1574,15 +1574,15 @@ class ToggleAntiSpam:
 
     def to_bytes(self) -> bytes:
         out = b'\xeb\xe4\xf3h'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.toggleAntiSpam"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1607,14 +1607,14 @@ class ReportAntiSpamFalsePositive:
 
     def to_bytes(self) -> bytes:
         out = b'\x93\xa6P\xa8'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.reportAntiSpamFalsePositive"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1641,15 +1641,15 @@ class ToggleParticipantsHidden:
 
     def to_bytes(self) -> bytes:
         out = b'Txnj'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.toggleParticipantsHidden"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1682,7 +1682,7 @@ class UpdateColor:
         out = b'q6\xaa\xd8'
         _flags_word = ((1 << 1) if self.for_profile else 0) | (0 if self.color is None else (1 << 2)) | (0 if self.background_emoji_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         if _flags_word & (1 << 2):
             out += _struct.pack('<i', self.color)
         if _flags_word & (1 << 0):
@@ -1696,7 +1696,7 @@ class UpdateColor:
         pos += 4
         if _flags_word & (1 << 1):
             obj["for_profile"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
             obj["color"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -1727,15 +1727,15 @@ class ToggleViewForumAsMessages:
 
     def to_bytes(self) -> bytes:
         out = b'\x15\xbb8\x97'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.toggleViewForumAsMessages"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1760,7 +1760,7 @@ class GetChannelRecommendations:
         _flags_word = (0 if self.channel is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+            out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         return out
 
     @classmethod
@@ -1769,7 +1769,7 @@ class GetChannelRecommendations:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+            obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1794,15 +1794,15 @@ class UpdateEmojiStatus:
 
     def to_bytes(self) -> bytes:
         out = b'\xa8\xe6\xd3\xf0'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.emoji_status), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser(self.emoji_status, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.updateEmojiStatus"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["emoji_status"], pos = _tl._read_typed(data, pos, "EmojiStatus", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["emoji_status"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1827,14 +1827,14 @@ class SetBoostsToUnblockRestrictions:
 
     def to_bytes(self) -> bytes:
         out = b'\xee\x9c9\xad'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<i', self.boosts)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.setBoostsToUnblockRestrictions"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["boosts"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1861,15 +1861,15 @@ class SetEmojiStickers:
 
     def to_bytes(self) -> bytes:
         out = b'\xb70\xd9<'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.stickerset), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser(self.stickerset, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.setEmojiStickers"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["stickerset"], pos = _tl._read_typed(data, pos, "InputStickerSet", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["stickerset"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1894,15 +1894,15 @@ class RestrictSponsoredMessages:
 
     def to_bytes(self) -> bytes:
         out = b'\x19\x15\xe9\x9a'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_bool(self.restricted)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.restrictSponsoredMessages"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["restricted"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["restricted"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1949,7 +1949,7 @@ class SearchPosts:
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.query)
         out += _struct.pack('<i', self.offset_rate)
-        out += _tl.serialize(_tl._resolve(self.offset_peer), _SCHEMA)
+        out += _tl._ser_peer(self.offset_peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<ii', self.offset_id, self.limit)
         if _flags_word & (1 << 2):
             out += _struct.pack('<q', self.allow_paid_stars)
@@ -1961,12 +1961,12 @@ class SearchPosts:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["hashtag"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["hashtag"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["query"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["query"], pos = _tl._read_string(data, pos)
         obj["offset_rate"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["offset_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["offset_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_id"], obj["limit"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         if _flags_word & (1 << 2):
@@ -2001,7 +2001,7 @@ class UpdatePaidMessagesPrice:
         out = b'{2\x12K'
         _flags_word = ((1 << 0) if self.broadcast_messages_allowed else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<q', self.send_paid_messages_stars)
         return out
 
@@ -2012,7 +2012,7 @@ class UpdatePaidMessagesPrice:
         pos += 4
         if _flags_word & (1 << 0):
             obj["broadcast_messages_allowed"] = True
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["send_paid_messages_stars"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -2039,15 +2039,15 @@ class ToggleAutotranslation:
 
     def to_bytes(self) -> bytes:
         out = b'\xa1\xc0\x7f\x16'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.toggleAutotranslation"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2072,14 +2072,14 @@ class GetMessageAuthor:
 
     def to_bytes(self) -> bytes:
         out = b'\xe6\xa0\xe2\xec'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
         out += _struct.pack('<i', self.id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.getMessageAuthor"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -2115,7 +2115,7 @@ class CheckSearchPostsFlood:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["query"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["query"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2140,15 +2140,15 @@ class SetMainProfileTab:
 
     def to_bytes(self) -> bytes:
         out = b'\xb1\xfc\x835'
-        out += _tl.serialize(_tl._resolve(self.channel), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.tab), _SCHEMA)
+        out += _tl._ser_peer(self.channel, 'InputChannel', _SCHEMA)
+        out += _tl._ser(self.tab, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "channels.setMainProfileTab"}
-        obj["channel"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["tab"], pos = _tl._read_typed(data, pos, "ProfileTab", _SCHEMA_BY_CID)
+        obj["channel"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["tab"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

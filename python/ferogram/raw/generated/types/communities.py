@@ -52,11 +52,11 @@ class PeerLinkRequests:
         _flags_word = (0 if self.next_offset is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.total_count)
-        out += _tl.serialize(_tl._resolve(self.requests), _SCHEMA)
+        out += _tl._serialize_field(self.requests, 'Vector<CommunityPeerRequest>', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.next_offset)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -66,11 +66,11 @@ class PeerLinkRequests:
         pos += 4
         obj["total_count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["requests"], pos = _tl._read_typed(data, pos, "Vector<CommunityPeerRequest>", _SCHEMA_BY_CID)
+        obj["requests"], pos = _tl._read_vector(data, pos, 'CommunityPeerRequest', _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -101,19 +101,19 @@ class ParticipantJoinedChats:
 
     def to_bytes(self) -> bytes:
         out = b'*Qx\x8d'
-        out += _tl.serialize(_tl._resolve(self.creator_chat_ids), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.joined_chat_ids), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.chats), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.creator_chat_ids, 'Vector<long>', _SCHEMA)
+        out += _tl._serialize_field(self.joined_chat_ids, 'Vector<long>', _SCHEMA)
+        out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "communities.participantJoinedChats"}
-        obj["creator_chat_ids"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
-        obj["joined_chat_ids"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
-        obj["chats"], pos = _tl._read_typed(data, pos, "Vector<Chat>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["creator_chat_ids"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
+        obj["joined_chat_ids"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
+        obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

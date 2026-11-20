@@ -66,8 +66,8 @@ class Tones:
     def to_bytes(self) -> bytes:
         out = b'\xfe\x0e\x9dl'
         out += _struct.pack('<q', self.hash)
-        out += _tl.serialize(_tl._resolve(self.tones), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.tones, 'Vector<AiComposeTone>', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<User>', _SCHEMA)
         return out
 
     @classmethod
@@ -75,8 +75,8 @@ class Tones:
         obj = {"_": "aicompose.tones"}
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["tones"], pos = _tl._read_typed(data, pos, "Vector<AiComposeTone>", _SCHEMA_BY_CID)
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<User>", _SCHEMA_BY_CID)
+        obj["tones"], pos = _tl._read_vector(data, pos, 'AiComposeTone', _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'User', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

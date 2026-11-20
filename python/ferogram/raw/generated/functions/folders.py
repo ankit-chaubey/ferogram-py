@@ -37,13 +37,13 @@ class EditPeerFolders:
 
     def to_bytes(self) -> bytes:
         out = b'\xab\xd0Gh'
-        out += _tl.serialize(_tl._resolve(self.folder_peers), _SCHEMA)
+        out += _tl._serialize_field(self.folder_peers, 'Vector<InputFolderPeer>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "folders.editPeerFolders"}
-        obj["folder_peers"], pos = _tl._read_typed(data, pos, "Vector<InputFolderPeer>", _SCHEMA_BY_CID)
+        obj["folder_peers"], pos = _tl._read_vector(data, pos, 'InputFolderPeer', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:

@@ -88,9 +88,8 @@ def test_true_flag_false_means_absent():
     explicit_false = {"_": "inputBotInlineMessageText", "message": "a", "no_webpage": False}
     omitted = {"_": "inputBotInlineMessageText", "message": "a"}
     assert tl.serialize_object(explicit_false, SCHEMA) == tl.serialize_object(omitted, SCHEMA)
-    # still holds on the generic path (an unknown extra key forces it)
-    generic = dict(explicit_false, bogus=1)
-    assert tl.serialize_object(generic, SCHEMA) == tl.serialize_object(omitted, SCHEMA)
+    cid, fields = SCHEMA["inputBotInlineMessageText"]
+    assert tl._serialize_generic(explicit_false, cid, fields, SCHEMA) == tl.serialize_object(omitted, SCHEMA)
 
 
 def test_bool_valued_flag_keeps_false():

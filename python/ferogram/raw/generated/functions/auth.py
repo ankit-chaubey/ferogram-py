@@ -49,17 +49,17 @@ class SendCode:
         out += _tl._pack_string(self.phone_number)
         out += _struct.pack('<i', self.api_id)
         out += _tl._pack_string(self.api_hash)
-        out += _tl.serialize(_tl._resolve(self.settings), _SCHEMA)
+        out += _tl._ser(self.settings, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.sendCode"}
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
         obj["api_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["settings"], pos = _tl._read_typed(data, pos, "CodeSettings", _SCHEMA_BY_CID)
+        obj["api_hash"], pos = _tl._read_string(data, pos)
+        obj["settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -108,10 +108,10 @@ class SignUp:
         pos += 4
         if _flags_word & (1 << 0):
             obj["no_joined_notifications"] = True
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["first_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["last_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
+        obj["first_name"], pos = _tl._read_string(data, pos)
+        obj["last_name"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -149,7 +149,7 @@ class SignIn:
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.phone_code)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.email_verification), _SCHEMA)
+            out += _tl._ser(self.email_verification, _SCHEMA)
         return out
 
     @classmethod
@@ -157,12 +157,12 @@ class SignIn:
         obj = {"_": "auth.signIn"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["phone_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["phone_code"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["email_verification"], pos = _tl._read_typed(data, pos, "EmailVerification", _SCHEMA_BY_CID)
+            obj["email_verification"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -269,7 +269,7 @@ class ImportAuthorization:
         obj = {"_": "auth.importAuthorization"}
         obj["id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["bytes"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["bytes"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -309,7 +309,7 @@ class BindTempAuthKey:
         obj = {"_": "auth.bindTempAuthKey"}
         obj["perm_auth_key_id"], obj["nonce"], obj["expires_at"], = _struct.unpack_from('<qqi', data, pos)
         pos += 20
-        obj["encrypted_message"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["encrypted_message"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -350,8 +350,8 @@ class ImportBotAuthorization:
         obj = {"_": "auth.importBotAuthorization"}
         obj["flags"], obj["api_id"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
-        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["bot_auth_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["api_hash"], pos = _tl._read_string(data, pos)
+        obj["bot_auth_token"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -373,13 +373,13 @@ class CheckPassword:
 
     def to_bytes(self) -> bytes:
         out = b'\x16M\x8b\xd1'
-        out += _tl.serialize(_tl._resolve(self.password), _SCHEMA)
+        out += _tl._ser(self.password, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.checkPassword"}
-        obj["password"], pos = _tl._read_typed(data, pos, "InputCheckPasswordSRP", _SCHEMA_BY_CID)
+        obj["password"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -430,7 +430,7 @@ class RecoverPassword:
         out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.code)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.new_settings), _SCHEMA)
+            out += _tl._ser(self.new_settings, _SCHEMA)
         return out
 
     @classmethod
@@ -438,9 +438,9 @@ class RecoverPassword:
         obj = {"_": "auth.recoverPassword"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["code"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["new_settings"], pos = _tl._read_typed(data, pos, "account.PasswordInputSettings", _SCHEMA_BY_CID)
+            obj["new_settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -481,10 +481,10 @@ class ResendCode:
         obj = {"_": "auth.resendCode"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["reason"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["reason"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -516,8 +516,8 @@ class CancelCode:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.cancelCode"}
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -539,13 +539,13 @@ class DropTempAuthKeys:
 
     def to_bytes(self) -> bytes:
         out = b'\x88\xa1H\x8e'
-        out += _tl.serialize(_tl._resolve(self.except_auth_keys), _SCHEMA)
+        out += _tl._serialize_field(self.except_auth_keys, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.dropTempAuthKeys"}
-        obj["except_auth_keys"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["except_auth_keys"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -575,7 +575,7 @@ class ExportLoginToken:
         out = b'\xfe\x85\xe0\xb7'
         out += _struct.pack('<i', self.api_id)
         out += _tl._pack_string(self.api_hash)
-        out += _tl.serialize(_tl._resolve(self.except_ids), _SCHEMA)
+        out += _tl._serialize_field(self.except_ids, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
@@ -583,8 +583,8 @@ class ExportLoginToken:
         obj = {"_": "auth.exportLoginToken"}
         obj["api_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["except_ids"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["api_hash"], pos = _tl._read_string(data, pos)
+        obj["except_ids"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -612,7 +612,7 @@ class ImportLoginToken:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.importLoginToken"}
-        obj["token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["token"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -640,7 +640,7 @@ class AcceptLoginToken:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.acceptLoginToken"}
-        obj["token"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["token"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -668,7 +668,7 @@ class CheckRecoveryPassword:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.checkRecoveryPassword"}
-        obj["code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["code"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -706,8 +706,8 @@ class ImportWebTokenAuthorization:
         obj = {"_": "auth.importWebTokenAuthorization"}
         obj["api_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["web_auth_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["api_hash"], pos = _tl._read_string(data, pos)
+        obj["web_auth_token"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -758,14 +758,14 @@ class RequestFirebaseSms:
         obj = {"_": "auth.requestFirebaseSms"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["safety_net_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["safety_net_token"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["play_integrity_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["play_integrity_token"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["ios_push_secret"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["ios_push_secret"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -797,8 +797,8 @@ class ResetLoginEmail:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.resetLoginEmail"}
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -834,9 +834,9 @@ class ReportMissingCode:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.reportMissingCode"}
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["mnc"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
+        obj["mnc"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -872,8 +872,8 @@ class CheckPaidAuth:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.checkPaidAuth"}
-        obj["phone_number"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["phone_code_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["phone_number"], pos = _tl._read_string(data, pos)
+        obj["phone_code_hash"], pos = _tl._read_string(data, pos)
         obj["form_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -909,7 +909,7 @@ class InitPasskeyLogin:
         obj = {"_": "auth.initPasskeyLogin"}
         obj["api_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["api_hash"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -939,7 +939,7 @@ class FinishPasskeyLogin:
         out = b'\x07\xadW\x98'
         _flags_word = (0 if self.from_dc_id is None else (1 << 0)) | (0 if self.from_auth_key_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.credential), _SCHEMA)
+        out += _tl._ser(self.credential, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.from_dc_id)
         if _flags_word & (1 << 0):
@@ -951,7 +951,7 @@ class FinishPasskeyLogin:
         obj = {"_": "auth.finishPasskeyLogin"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["credential"], pos = _tl._read_typed(data, pos, "InputPasskeyCredential", _SCHEMA_BY_CID)
+        obj["credential"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["from_dc_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -985,7 +985,7 @@ class CancelWebTokenAuthorization:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.cancelWebTokenAuthorization"}
-        obj["web_auth_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["web_auth_token"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1016,7 +1016,7 @@ class InitFirebasePnvLogin:
         _flags_word = (0 if self.except_ids is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.except_ids), _SCHEMA)
+            out += _tl._serialize_field(self.except_ids, 'Vector<long>', _SCHEMA)
         out += _struct.pack('<i', self.api_id)
         out += _tl._pack_string(self.api_hash)
         return out
@@ -1027,10 +1027,10 @@ class InitFirebasePnvLogin:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["except_ids"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+            obj["except_ids"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         obj["api_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["api_hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["api_hash"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1058,7 +1058,7 @@ class FinishFirebasePnvLogin:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "auth.finishFirebasePnvLogin"}
-        obj["google_token"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["google_token"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1099,8 +1099,8 @@ class FirebasePnvSignUp:
         pos += 4
         if _flags_word & (1 << 0):
             obj["no_joined_notifications"] = True
-        obj["first_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["last_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["first_name"], pos = _tl._read_string(data, pos)
+        obj["last_name"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

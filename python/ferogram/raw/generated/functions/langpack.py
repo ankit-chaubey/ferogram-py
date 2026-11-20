@@ -47,8 +47,8 @@ class GetLangPack:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "langpack.getLangPack"}
-        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_pack"], pos = _tl._read_string(data, pos)
+        obj["lang_code"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -78,15 +78,15 @@ class GetStrings:
         out = b'\x038\xea\xef'
         out += _tl._pack_string(self.lang_pack)
         out += _tl._pack_string(self.lang_code)
-        out += _tl.serialize(_tl._resolve(self.keys), _SCHEMA)
+        out += _tl._serialize_field(self.keys, 'Vector<string>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "langpack.getStrings"}
-        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["keys"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        obj["lang_pack"], pos = _tl._read_string(data, pos)
+        obj["lang_code"], pos = _tl._read_string(data, pos)
+        obj["keys"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -122,8 +122,8 @@ class GetDifference:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "langpack.getDifference"}
-        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_pack"], pos = _tl._read_string(data, pos)
+        obj["lang_code"], pos = _tl._read_string(data, pos)
         obj["from_version"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -153,7 +153,7 @@ class GetLanguages:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "langpack.getLanguages"}
-        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_pack"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -185,8 +185,8 @@ class GetLanguage:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "langpack.getLanguage"}
-        obj["lang_pack"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_pack"], pos = _tl._read_string(data, pos)
+        obj["lang_code"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:

@@ -37,13 +37,13 @@ class GetMessages:
 
     def to_bytes(self) -> bytes:
         out = b'\x06e\xc6c'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<InputMessage>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getMessages"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<InputMessage>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'InputMessage', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -88,7 +88,7 @@ class GetDialogs:
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.folder_id)
         out += _struct.pack('<ii', self.offset_date, self.offset_id)
-        out += _tl.serialize(_tl._resolve(self.offset_peer), _SCHEMA)
+        out += _tl._ser_peer(self.offset_peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iq', self.limit, self.hash)
         return out
 
@@ -104,7 +104,7 @@ class GetDialogs:
             pos = pos + 4
         obj["offset_date"], obj["offset_id"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
-        obj["offset_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["offset_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["limit"], obj["hash"], = _struct.unpack_from('<iq', data, pos)
         pos += 12
         return obj, pos
@@ -149,14 +149,14 @@ class GetHistory:
 
     def to_bytes(self) -> bytes:
         out = b'\xc5\xe6#D'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iiiiiiq', self.offset_id, self.offset_date, self.add_offset, self.limit, self.max_id, self.min_id, self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getHistory"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_id"], obj["offset_date"], obj["add_offset"], obj["limit"], obj["max_id"], obj["min_id"], obj["hash"], = _struct.unpack_from('<iiiiiiq', data, pos)
         pos += 32
         return obj, pos
@@ -224,17 +224,17 @@ class Search:
         out = b'z\x84\xee)'
         _flags_word = (0 if self.from_id is None else (1 << 0)) | (0 if self.saved_peer_id is None else (1 << 2)) | (0 if self.saved_reaction is None else (1 << 3)) | (0 if self.top_msg_id is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.q)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.from_id), _SCHEMA)
+            out += _tl._ser_peer(self.from_id, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.saved_peer_id), _SCHEMA)
+            out += _tl._ser_peer(self.saved_peer_id, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.saved_reaction), _SCHEMA)
+            out += _tl._serialize_field(self.saved_reaction, 'Vector<Reaction>', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.top_msg_id)
-        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+        out += _tl._ser(self.filter, _SCHEMA)
         out += _struct.pack('<iiiiiiiq', self.min_date, self.max_date, self.offset_id, self.add_offset, self.limit, self.max_id, self.min_id, self.hash)
         return out
 
@@ -243,18 +243,18 @@ class Search:
         obj = {"_": "messages.search"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["q"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["from_id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["from_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["saved_peer_id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["saved_peer_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["saved_reaction"], pos = _tl._read_typed(data, pos, "Vector<Reaction>", _SCHEMA_BY_CID)
+            obj["saved_reaction"], pos = _tl._read_vector(data, pos, 'Reaction', _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
-        obj["filter"], pos = _tl._read_typed(data, pos, "MessagesFilter", _SCHEMA_BY_CID)
+        obj["filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["min_date"], obj["max_date"], obj["offset_id"], obj["add_offset"], obj["limit"], obj["max_id"], obj["min_id"], obj["hash"], = _struct.unpack_from('<iiiiiiiq', data, pos)
         pos += 36
         return obj, pos
@@ -281,14 +281,14 @@ class ReadHistory:
 
     def to_bytes(self) -> bytes:
         out = b':m0\x0e'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.max_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.readHistory"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["max_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -329,7 +329,7 @@ class DeleteHistory:
         out = b'*\x92\x8f\xb0'
         _flags_word = ((1 << 0) if self.just_clear else 0) | ((1 << 1) if self.revoke else 0) | (0 if self.min_date is None else (1 << 2)) | (0 if self.max_date is None else (1 << 3))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.max_id)
         if _flags_word & (1 << 2):
             out += _struct.pack('<i', self.min_date)
@@ -346,7 +346,7 @@ class DeleteHistory:
             obj["just_clear"] = True
         if _flags_word & (1 << 1):
             obj["revoke"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["max_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 2):
@@ -381,7 +381,7 @@ class DeleteMessages:
         out = b'\xd2\x95\x8e\xe5'
         _flags_word = ((1 << 0) if self.revoke else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
@@ -391,7 +391,7 @@ class DeleteMessages:
         pos += 4
         if _flags_word & (1 << 0):
             obj["revoke"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -450,10 +450,10 @@ class SetTyping:
         out = b'\xe2>\x94X'
         _flags_word = (0 if self.top_msg_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.top_msg_id)
-        out += _tl.serialize(_tl._resolve(self.action), _SCHEMA)
+        out += _tl._ser(self.action, _SCHEMA)
         return out
 
     @classmethod
@@ -461,11 +461,11 @@ class SetTyping:
         obj = {"_": "messages.setTyping"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
-        obj["action"], pos = _tl._read_typed(data, pos, "SendMessageAction", _SCHEMA_BY_CID)
+        obj["action"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -552,31 +552,31 @@ class SendMessage:
         out = b'b\x8f\xf4\xfe'
         _flags_word = ((1 << 1) if self.no_webpage else 0) | ((1 << 5) if self.silent else 0) | ((1 << 6) if self.background else 0) | ((1 << 7) if self.clear_draft else 0) | ((1 << 14) if self.noforwards else 0) | ((1 << 15) if self.update_stickersets_order else 0) | ((1 << 16) if self.invert_media else 0) | ((1 << 19) if self.allow_paid_floodskip else 0) | (0 if self.reply_to is None else (1 << 0)) | (0 if self.reply_markup is None else (1 << 2)) | (0 if self.entities is None else (1 << 3)) | (0 if self.schedule_date is None else (1 << 10)) | (0 if self.schedule_repeat_period is None else (1 << 24)) | (0 if self.send_as is None else (1 << 13)) | (0 if self.quick_reply_shortcut is None else (1 << 17)) | (0 if self.effect is None else (1 << 18)) | (0 if self.allow_paid_stars is None else (1 << 21)) | (0 if self.suggested_post is None else (1 << 22)) | (0 if self.rich_message is None else (1 << 23))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
+            out += _tl._ser(self.reply_to, _SCHEMA)
         out += _tl._pack_string(self.message)
         out += _struct.pack('<q', self.random_id)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.reply_markup), _SCHEMA)
+            out += _tl._ser(self.reply_markup, _SCHEMA)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         if _flags_word & (1 << 10):
             out += _struct.pack('<i', self.schedule_date)
         if _flags_word & (1 << 24):
             out += _struct.pack('<i', self.schedule_repeat_period)
         if _flags_word & (1 << 13):
-            out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+            out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 17):
-            out += _tl.serialize(_tl._resolve(self.quick_reply_shortcut), _SCHEMA)
+            out += _tl._ser(self.quick_reply_shortcut, _SCHEMA)
         if _flags_word & (1 << 18):
             out += _struct.pack('<q', self.effect)
         if _flags_word & (1 << 21):
             out += _struct.pack('<q', self.allow_paid_stars)
         if _flags_word & (1 << 22):
-            out += _tl.serialize(_tl._resolve(self.suggested_post), _SCHEMA)
+            out += _tl._ser(self.suggested_post, _SCHEMA)
         if _flags_word & (1 << 23):
-            out += _tl.serialize(_tl._resolve(self.rich_message), _SCHEMA)
+            out += _tl._ser(self.rich_message, _SCHEMA)
         return out
 
     @classmethod
@@ -600,16 +600,16 @@ class SendMessage:
             obj["invert_media"] = True
         if _flags_word & (1 << 19):
             obj["allow_paid_floodskip"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["reply_to"], pos = _tl._read_typed(data, pos, "InputReplyTo", _SCHEMA_BY_CID)
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["reply_to"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 2):
-            obj["reply_markup"], pos = _tl._read_typed(data, pos, "ReplyMarkup", _SCHEMA_BY_CID)
+            obj["reply_markup"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         if _flags_word & (1 << 10):
             obj["schedule_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -617,9 +617,9 @@ class SendMessage:
             obj["schedule_repeat_period"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 13):
-            obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 17):
-            obj["quick_reply_shortcut"], pos = _tl._read_typed(data, pos, "InputQuickReplyShortcut", _SCHEMA_BY_CID)
+            obj["quick_reply_shortcut"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 18):
             obj["effect"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -627,9 +627,9 @@ class SendMessage:
             obj["allow_paid_stars"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 22):
-            obj["suggested_post"], pos = _tl._read_typed(data, pos, "SuggestedPost", _SCHEMA_BY_CID)
+            obj["suggested_post"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 23):
-            obj["rich_message"], pos = _tl._read_typed(data, pos, "InputRichMessage", _SCHEMA_BY_CID)
+            obj["rich_message"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -713,30 +713,30 @@ class SendMedia:
         out = b'\x7f\xe70\x03'
         _flags_word = ((1 << 5) if self.silent else 0) | ((1 << 6) if self.background else 0) | ((1 << 7) if self.clear_draft else 0) | ((1 << 14) if self.noforwards else 0) | ((1 << 15) if self.update_stickersets_order else 0) | ((1 << 16) if self.invert_media else 0) | ((1 << 19) if self.allow_paid_floodskip else 0) | (0 if self.reply_to is None else (1 << 0)) | (0 if self.reply_markup is None else (1 << 2)) | (0 if self.entities is None else (1 << 3)) | (0 if self.schedule_date is None else (1 << 10)) | (0 if self.schedule_repeat_period is None else (1 << 24)) | (0 if self.send_as is None else (1 << 13)) | (0 if self.quick_reply_shortcut is None else (1 << 17)) | (0 if self.effect is None else (1 << 18)) | (0 if self.allow_paid_stars is None else (1 << 21)) | (0 if self.suggested_post is None else (1 << 22))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+            out += _tl._ser(self.reply_to, _SCHEMA)
+        out += _tl._ser(self.media, _SCHEMA)
         out += _tl._pack_string(self.message)
         out += _struct.pack('<q', self.random_id)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.reply_markup), _SCHEMA)
+            out += _tl._ser(self.reply_markup, _SCHEMA)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         if _flags_word & (1 << 10):
             out += _struct.pack('<i', self.schedule_date)
         if _flags_word & (1 << 24):
             out += _struct.pack('<i', self.schedule_repeat_period)
         if _flags_word & (1 << 13):
-            out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+            out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 17):
-            out += _tl.serialize(_tl._resolve(self.quick_reply_shortcut), _SCHEMA)
+            out += _tl._ser(self.quick_reply_shortcut, _SCHEMA)
         if _flags_word & (1 << 18):
             out += _struct.pack('<q', self.effect)
         if _flags_word & (1 << 21):
             out += _struct.pack('<q', self.allow_paid_stars)
         if _flags_word & (1 << 22):
-            out += _tl.serialize(_tl._resolve(self.suggested_post), _SCHEMA)
+            out += _tl._ser(self.suggested_post, _SCHEMA)
         return out
 
     @classmethod
@@ -758,17 +758,17 @@ class SendMedia:
             obj["invert_media"] = True
         if _flags_word & (1 << 19):
             obj["allow_paid_floodskip"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["reply_to"], pos = _tl._read_typed(data, pos, "InputReplyTo", _SCHEMA_BY_CID)
-        obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["reply_to"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 2):
-            obj["reply_markup"], pos = _tl._read_typed(data, pos, "ReplyMarkup", _SCHEMA_BY_CID)
+            obj["reply_markup"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         if _flags_word & (1 << 10):
             obj["schedule_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -776,9 +776,9 @@ class SendMedia:
             obj["schedule_repeat_period"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 13):
-            obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 17):
-            obj["quick_reply_shortcut"], pos = _tl._read_typed(data, pos, "InputQuickReplyShortcut", _SCHEMA_BY_CID)
+            obj["quick_reply_shortcut"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 18):
             obj["effect"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -786,7 +786,7 @@ class SendMedia:
             obj["allow_paid_stars"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 22):
-            obj["suggested_post"], pos = _tl._read_typed(data, pos, "SuggestedPost", _SCHEMA_BY_CID)
+            obj["suggested_post"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -873,22 +873,22 @@ class ForwardMessages:
         out = b'|Jp\x13'
         _flags_word = ((1 << 5) if self.silent else 0) | ((1 << 6) if self.background else 0) | ((1 << 8) if self.with_my_score else 0) | ((1 << 11) if self.drop_author else 0) | ((1 << 12) if self.drop_media_captions else 0) | ((1 << 14) if self.noforwards else 0) | ((1 << 19) if self.allow_paid_floodskip else 0) | ((1 << 25) if self.from_ephemeral else 0) | (0 if self.top_msg_id is None else (1 << 9)) | (0 if self.reply_to is None else (1 << 22)) | (0 if self.schedule_date is None else (1 << 10)) | (0 if self.schedule_repeat_period is None else (1 << 24)) | (0 if self.send_as is None else (1 << 13)) | (0 if self.quick_reply_shortcut is None else (1 << 17)) | (0 if self.effect is None else (1 << 18)) | (0 if self.video_timestamp is None else (1 << 20)) | (0 if self.allow_paid_stars is None else (1 << 21)) | (0 if self.suggested_post is None else (1 << 23))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.from_peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.random_id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.to_peer), _SCHEMA)
+        out += _tl._ser_peer(self.from_peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
+        out += _tl._serialize_field(self.random_id, 'Vector<long>', _SCHEMA)
+        out += _tl._ser_peer(self.to_peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 9):
             out += _struct.pack('<i', self.top_msg_id)
         if _flags_word & (1 << 22):
-            out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
+            out += _tl._ser(self.reply_to, _SCHEMA)
         if _flags_word & (1 << 10):
             out += _struct.pack('<i', self.schedule_date)
         if _flags_word & (1 << 24):
             out += _struct.pack('<i', self.schedule_repeat_period)
         if _flags_word & (1 << 13):
-            out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+            out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 17):
-            out += _tl.serialize(_tl._resolve(self.quick_reply_shortcut), _SCHEMA)
+            out += _tl._ser(self.quick_reply_shortcut, _SCHEMA)
         if _flags_word & (1 << 18):
             out += _struct.pack('<q', self.effect)
         if _flags_word & (1 << 20):
@@ -896,7 +896,7 @@ class ForwardMessages:
         if _flags_word & (1 << 21):
             out += _struct.pack('<q', self.allow_paid_stars)
         if _flags_word & (1 << 23):
-            out += _tl.serialize(_tl._resolve(self.suggested_post), _SCHEMA)
+            out += _tl._ser(self.suggested_post, _SCHEMA)
         return out
 
     @classmethod
@@ -920,15 +920,15 @@ class ForwardMessages:
             obj["allow_paid_floodskip"] = True
         if _flags_word & (1 << 25):
             obj["from_ephemeral"] = True
-        obj["from_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["random_id"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
-        obj["to_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["from_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["random_id"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
+        obj["to_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 9):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 22):
-            obj["reply_to"], pos = _tl._read_typed(data, pos, "InputReplyTo", _SCHEMA_BY_CID)
+            obj["reply_to"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 10):
             obj["schedule_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -936,9 +936,9 @@ class ForwardMessages:
             obj["schedule_repeat_period"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 13):
-            obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 17):
-            obj["quick_reply_shortcut"], pos = _tl._read_typed(data, pos, "InputQuickReplyShortcut", _SCHEMA_BY_CID)
+            obj["quick_reply_shortcut"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 18):
             obj["effect"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -949,7 +949,7 @@ class ForwardMessages:
             obj["allow_paid_stars"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 23):
-            obj["suggested_post"], pos = _tl._read_typed(data, pos, "SuggestedPost", _SCHEMA_BY_CID)
+            obj["suggested_post"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -971,13 +971,13 @@ class ReportSpam:
 
     def to_bytes(self) -> bytes:
         out = b'\xdb\x92\x15\xcf'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.reportSpam"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -999,13 +999,13 @@ class GetPeerSettings:
 
     def to_bytes(self) -> bytes:
         out = b'\xa2\xa6\xd9\xef'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getPeerSettings"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1036,8 +1036,8 @@ class Report:
 
     def to_bytes(self) -> bytes:
         out = b'\x9b\xafx\xfc'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         out += _tl._pack_bytes(self.option)
         out += _tl._pack_string(self.message)
         return out
@@ -1045,10 +1045,10 @@ class Report:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.report"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["option"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["option"], pos = _tl._read_bytes(data, pos)
+        obj["message"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1070,13 +1070,13 @@ class GetChats:
 
     def to_bytes(self) -> bytes:
         out = b'\x8fR\xe9I'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getChats"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1139,7 +1139,7 @@ class EditChatTitle:
         obj = {"_": "messages.editChatTitle"}
         obj["chat_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1165,7 +1165,7 @@ class EditChatPhoto:
     def to_bytes(self) -> bytes:
         out = b't\xd6\xdd5'
         out += _struct.pack('<q', self.chat_id)
-        out += _tl.serialize(_tl._resolve(self.photo), _SCHEMA)
+        out += _tl._ser(self.photo, _SCHEMA)
         return out
 
     @classmethod
@@ -1173,7 +1173,7 @@ class EditChatPhoto:
         obj = {"_": "messages.editChatPhoto"}
         obj["chat_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["photo"], pos = _tl._read_typed(data, pos, "InputChatPhoto", _SCHEMA_BY_CID)
+        obj["photo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1202,7 +1202,7 @@ class AddChatUser:
     def to_bytes(self) -> bytes:
         out = b'\x07\xd1\xc6\xcb'
         out += _struct.pack('<q', self.chat_id)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _struct.pack('<i', self.fwd_limit)
         return out
 
@@ -1211,7 +1211,7 @@ class AddChatUser:
         obj = {"_": "messages.addChatUser"}
         obj["chat_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["fwd_limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1244,7 +1244,7 @@ class DeleteChatUser:
         _flags_word = ((1 << 0) if self.revoke_history else 0)
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.chat_id)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
@@ -1256,7 +1256,7 @@ class DeleteChatUser:
             obj["revoke_history"] = True
         obj["chat_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1286,7 +1286,7 @@ class CreateChat:
         out = b'\xd4\xdd\xce\x92'
         _flags_word = (0 if self.ttl_period is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.users), _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<InputUser>', _SCHEMA)
         out += _tl._pack_string(self.title)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.ttl_period)
@@ -1297,8 +1297,8 @@ class CreateChat:
         obj = {"_": "messages.createChat"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["users"], pos = _tl._read_typed(data, pos, "Vector<InputUser>", _SCHEMA_BY_CID)
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'InputUser', _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
             obj["ttl_period"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -1361,7 +1361,7 @@ class RequestEncryption:
 
     def to_bytes(self) -> bytes:
         out = b'C\xafM\xf6'
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _struct.pack('<i', self.random_id)
         out += _tl._pack_bytes(self.g_a)
         return out
@@ -1369,10 +1369,10 @@ class RequestEncryption:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.requestEncryption"}
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["g_a"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["g_a"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1400,7 +1400,7 @@ class AcceptEncryption:
 
     def to_bytes(self) -> bytes:
         out = b'\x15\x04\xbc='
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _tl._pack_bytes(self.g_b)
         out += _struct.pack('<q', self.key_fingerprint)
         return out
@@ -1408,8 +1408,8 @@ class AcceptEncryption:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.acceptEncryption"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputEncryptedChat", _SCHEMA_BY_CID)
-        obj["g_b"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["g_b"], pos = _tl._read_bytes(data, pos)
         obj["key_fingerprint"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -1474,15 +1474,15 @@ class SetEncryptedTyping:
 
     def to_bytes(self) -> bytes:
         out = b'\xedQ\x14y'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _tl._pack_bool(self.typing)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.setEncryptedTyping"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputEncryptedChat", _SCHEMA_BY_CID)
-        obj["typing"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["typing"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1507,14 +1507,14 @@ class ReadEncryptedHistory:
 
     def to_bytes(self) -> bytes:
         out = b'\niK\x7f'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _struct.pack('<i', self.max_date)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.readEncryptedHistory"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputEncryptedChat", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["max_date"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -1549,7 +1549,7 @@ class SendEncrypted:
         out = b'\x15z\xfaD'
         _flags_word = ((1 << 0) if self.silent else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _struct.pack('<q', self.random_id)
         out += _tl._pack_bytes(self.data)
         return out
@@ -1561,10 +1561,10 @@ class SendEncrypted:
         pos += 4
         if _flags_word & (1 << 0):
             obj["silent"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputEncryptedChat", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["data"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1600,10 +1600,10 @@ class SendEncryptedFile:
         out = b'\x1dHYU'
         _flags_word = ((1 << 0) if self.silent else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _struct.pack('<q', self.random_id)
         out += _tl._pack_bytes(self.data)
-        out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        out += _tl._ser(self.file, _SCHEMA)
         return out
 
     @classmethod
@@ -1613,11 +1613,11 @@ class SendEncryptedFile:
         pos += 4
         if _flags_word & (1 << 0):
             obj["silent"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputEncryptedChat", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["file"], pos = _tl._read_typed(data, pos, "InputEncryptedFile", _SCHEMA_BY_CID)
+        obj["data"], pos = _tl._read_bytes(data, pos)
+        obj["file"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1645,7 +1645,7 @@ class SendEncryptedService:
 
     def to_bytes(self) -> bytes:
         out = b'\xa49\xd42'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         out += _struct.pack('<q', self.random_id)
         out += _tl._pack_bytes(self.data)
         return out
@@ -1653,10 +1653,10 @@ class SendEncryptedService:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.sendEncryptedService"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputEncryptedChat", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["data"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1707,13 +1707,13 @@ class ReportEncryptedSpam:
 
     def to_bytes(self) -> bytes:
         out = b'\x0f\x8c\x0cK'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.reportEncryptedSpam"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputEncryptedChat", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1735,13 +1735,13 @@ class ReadMessageContents:
 
     def to_bytes(self) -> bytes:
         out = b'w?\xa76'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.readMessageContents"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1773,7 +1773,7 @@ class GetStickers:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getStickers"}
-        obj["emoticon"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["emoticon"], pos = _tl._read_string(data, pos)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -1833,7 +1833,7 @@ class GetWebPagePreview:
         out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.message)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         return out
 
     @classmethod
@@ -1841,9 +1841,9 @@ class GetWebPagePreview:
         obj = {"_": "messages.getWebPagePreview"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 3):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1885,7 +1885,7 @@ class ExportChatInvite:
         out = b'\x90\xdeU\xa4'
         _flags_word = ((1 << 2) if self.legacy_revoke_permanent else 0) | ((1 << 3) if self.request_needed else 0) | (0 if self.expire_date is None else (1 << 0)) | (0 if self.usage_limit is None else (1 << 1)) | (0 if self.title is None else (1 << 4)) | (0 if self.subscription_pricing is None else (1 << 5))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.expire_date)
         if _flags_word & (1 << 1):
@@ -1893,7 +1893,7 @@ class ExportChatInvite:
         if _flags_word & (1 << 4):
             out += _tl._pack_string(self.title)
         if _flags_word & (1 << 5):
-            out += _tl.serialize(_tl._resolve(self.subscription_pricing), _SCHEMA)
+            out += _tl._ser(self.subscription_pricing, _SCHEMA)
         return out
 
     @classmethod
@@ -1905,7 +1905,7 @@ class ExportChatInvite:
             obj["legacy_revoke_permanent"] = True
         if _flags_word & (1 << 3):
             obj["request_needed"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["expire_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -1913,9 +1913,9 @@ class ExportChatInvite:
             obj["usage_limit"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 4):
-            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["title"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 5):
-            obj["subscription_pricing"], pos = _tl._read_typed(data, pos, "StarsSubscriptionPricing", _SCHEMA_BY_CID)
+            obj["subscription_pricing"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1943,7 +1943,7 @@ class CheckChatInvite:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.checkChatInvite"}
-        obj["hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["hash"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1971,7 +1971,7 @@ class ImportChatInvite:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.importChatInvite"}
-        obj["hash"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["hash"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -1996,14 +1996,14 @@ class GetStickerSet:
 
     def to_bytes(self) -> bytes:
         out = b't\xec\xa0\xc8'
-        out += _tl.serialize(_tl._resolve(self.stickerset), _SCHEMA)
+        out += _tl._ser(self.stickerset, _SCHEMA)
         out += _struct.pack('<i', self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getStickerSet"}
-        obj["stickerset"], pos = _tl._read_typed(data, pos, "InputStickerSet", _SCHEMA_BY_CID)
+        obj["stickerset"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -2030,15 +2030,15 @@ class InstallStickerSet:
 
     def to_bytes(self) -> bytes:
         out = b'`\xe4\x8f\xc7'
-        out += _tl.serialize(_tl._resolve(self.stickerset), _SCHEMA)
+        out += _tl._ser(self.stickerset, _SCHEMA)
         out += _tl._pack_bool(self.archived)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.installStickerSet"}
-        obj["stickerset"], pos = _tl._read_typed(data, pos, "InputStickerSet", _SCHEMA_BY_CID)
-        obj["archived"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["stickerset"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["archived"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2060,13 +2060,13 @@ class UninstallStickerSet:
 
     def to_bytes(self) -> bytes:
         out = b'\xdeUn\xf9'
-        out += _tl.serialize(_tl._resolve(self.stickerset), _SCHEMA)
+        out += _tl._ser(self.stickerset, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.uninstallStickerSet"}
-        obj["stickerset"], pos = _tl._read_typed(data, pos, "InputStickerSet", _SCHEMA_BY_CID)
+        obj["stickerset"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2097,8 +2097,8 @@ class StartBot:
 
     def to_bytes(self) -> bytes:
         out = b'xs\xdf\xe6'
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<q', self.random_id)
         out += _tl._pack_string(self.start_param)
         return out
@@ -2106,11 +2106,11 @@ class StartBot:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.startBot"}
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["start_param"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["start_param"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2138,17 +2138,17 @@ class GetMessagesViews:
 
     def to_bytes(self) -> bytes:
         out = b'\xe1\xd3\x84W'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         out += _tl._pack_bool(self.increment)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getMessagesViews"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["increment"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["increment"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2177,7 +2177,7 @@ class EditChatAdmin:
     def to_bytes(self) -> bytes:
         out = b'\xc2\xd1[\xa8'
         out += _struct.pack('<q', self.chat_id)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _tl._pack_bool(self.is_admin)
         return out
 
@@ -2186,8 +2186,8 @@ class EditChatAdmin:
         obj = {"_": "messages.editChatAdmin"}
         obj["chat_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["is_admin"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["is_admin"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2279,11 +2279,11 @@ class SearchGlobal:
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.folder_id)
         if _flags_word & (1 << 4):
-            out += _tl.serialize(_tl._resolve(self.community), _SCHEMA)
+            out += _tl._ser_peer(self.community, 'InputChannel', _SCHEMA)
         out += _tl._pack_string(self.q)
-        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+        out += _tl._ser(self.filter, _SCHEMA)
         out += _struct.pack('<iii', self.min_date, self.max_date, self.offset_rate)
-        out += _tl.serialize(_tl._resolve(self.offset_peer), _SCHEMA)
+        out += _tl._ser_peer(self.offset_peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<ii', self.offset_id, self.limit)
         return out
 
@@ -2302,12 +2302,12 @@ class SearchGlobal:
             obj["folder_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 4):
-            obj["community"], pos = _tl._read_typed(data, pos, "InputChannel", _SCHEMA_BY_CID)
-        obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["filter"], pos = _tl._read_typed(data, pos, "MessagesFilter", _SCHEMA_BY_CID)
+            obj["community"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["q"], pos = _tl._read_string(data, pos)
+        obj["filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["min_date"], obj["max_date"], obj["offset_rate"], = _struct.unpack_from('<iii', data, pos)
         pos += 12
-        obj["offset_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["offset_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_id"], obj["limit"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         return obj, pos
@@ -2339,7 +2339,7 @@ class ReorderStickerSets:
         out = b'9w3x'
         _flags_word = ((1 << 0) if self.masks else 0) | ((1 << 1) if self.emojis else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        out += _tl._serialize_field(self.order, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
@@ -2351,7 +2351,7 @@ class ReorderStickerSets:
             obj["masks"] = True
         if _flags_word & (1 << 1):
             obj["emojis"] = True
-        obj["order"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2387,10 +2387,10 @@ class GetDocumentByHash:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getDocumentByHash"}
-        obj["sha256"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["sha256"], pos = _tl._read_bytes(data, pos)
         obj["size"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["mime_type"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["mime_type"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2444,15 +2444,15 @@ class SaveGif:
 
     def to_bytes(self) -> bytes:
         out = b'\xcb0z2'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
         out += _tl._pack_bool(self.unsave)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.saveGif"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
-        obj["unsave"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["unsave"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2488,10 +2488,10 @@ class GetInlineBotResults:
         out = b'\x9d\x99NQ'
         _flags_word = (0 if self.geo_point is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.geo_point), _SCHEMA)
+            out += _tl._ser(self.geo_point, _SCHEMA)
         out += _tl._pack_string(self.query)
         out += _tl._pack_string(self.offset)
         return out
@@ -2501,12 +2501,12 @@ class GetInlineBotResults:
         obj = {"_": "messages.getInlineBotResults"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["geo_point"], pos = _tl._read_typed(data, pos, "InputGeoPoint", _SCHEMA_BY_CID)
-        obj["query"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["geo_point"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["query"], pos = _tl._read_string(data, pos)
+        obj["offset"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2552,14 +2552,14 @@ class SetInlineBotResults:
         _flags_word = ((1 << 0) if self.gallery else 0) | ((1 << 1) if self.private else 0) | (0 if self.next_offset is None else (1 << 2)) | (0 if self.switch_pm is None else (1 << 3)) | (0 if self.switch_webview is None else (1 << 4))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.query_id)
-        out += _tl.serialize(_tl._resolve(self.results), _SCHEMA)
+        out += _tl._serialize_field(self.results, 'Vector<InputBotInlineResult>', _SCHEMA)
         out += _struct.pack('<i', self.cache_time)
         if _flags_word & (1 << 2):
             out += _tl._pack_string(self.next_offset)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.switch_pm), _SCHEMA)
+            out += _tl._ser(self.switch_pm, _SCHEMA)
         if _flags_word & (1 << 4):
-            out += _tl.serialize(_tl._resolve(self.switch_webview), _SCHEMA)
+            out += _tl._ser(self.switch_webview, _SCHEMA)
         return out
 
     @classmethod
@@ -2573,15 +2573,15 @@ class SetInlineBotResults:
             obj["private"] = True
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["results"], pos = _tl._read_typed(data, pos, "Vector<InputBotInlineResult>", _SCHEMA_BY_CID)
+        obj["results"], pos = _tl._read_vector(data, pos, 'InputBotInlineResult', _SCHEMA_BY_CID)
         obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 2):
-            obj["next_offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["next_offset"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 3):
-            obj["switch_pm"], pos = _tl._read_typed(data, pos, "InlineBotSwitchPM", _SCHEMA_BY_CID)
+            obj["switch_pm"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 4):
-            obj["switch_webview"], pos = _tl._read_typed(data, pos, "InlineBotWebView", _SCHEMA_BY_CID)
+            obj["switch_webview"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2641,17 +2641,17 @@ class SendInlineBotResult:
         out = b'Fv\xcf\xc0'
         _flags_word = ((1 << 5) if self.silent else 0) | ((1 << 6) if self.background else 0) | ((1 << 7) if self.clear_draft else 0) | ((1 << 11) if self.hide_via else 0) | (0 if self.reply_to is None else (1 << 0)) | (0 if self.schedule_date is None else (1 << 10)) | (0 if self.send_as is None else (1 << 13)) | (0 if self.quick_reply_shortcut is None else (1 << 17)) | (0 if self.allow_paid_stars is None else (1 << 21))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
+            out += _tl._ser(self.reply_to, _SCHEMA)
         out += _struct.pack('<qq', self.random_id, self.query_id)
         out += _tl._pack_string(self.id)
         if _flags_word & (1 << 10):
             out += _struct.pack('<i', self.schedule_date)
         if _flags_word & (1 << 13):
-            out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+            out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 17):
-            out += _tl.serialize(_tl._resolve(self.quick_reply_shortcut), _SCHEMA)
+            out += _tl._ser(self.quick_reply_shortcut, _SCHEMA)
         if _flags_word & (1 << 21):
             out += _struct.pack('<q', self.allow_paid_stars)
         return out
@@ -2669,19 +2669,19 @@ class SendInlineBotResult:
             obj["clear_draft"] = True
         if _flags_word & (1 << 11):
             obj["hide_via"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["reply_to"], pos = _tl._read_typed(data, pos, "InputReplyTo", _SCHEMA_BY_CID)
+            obj["reply_to"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"], obj["query_id"], = _struct.unpack_from('<qq', data, pos)
         pos += 16
-        obj["id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 10):
             obj["schedule_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 13):
-            obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 17):
-            obj["quick_reply_shortcut"], pos = _tl._read_typed(data, pos, "InputQuickReplyShortcut", _SCHEMA_BY_CID)
+            obj["quick_reply_shortcut"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 21):
             obj["allow_paid_stars"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -2709,14 +2709,14 @@ class GetMessageEditData:
 
     def to_bytes(self) -> bytes:
         out = b'6\x8d\xa6\xfd'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getMessageEditData"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -2775,16 +2775,16 @@ class EditMessage:
         out = b'l\xe6\x06\xb1'
         _flags_word = ((1 << 1) if self.no_webpage else 0) | ((1 << 16) if self.invert_media else 0) | (0 if self.message is None else (1 << 11)) | (0 if self.media is None else (1 << 14)) | (0 if self.reply_markup is None else (1 << 2)) | (0 if self.entities is None else (1 << 3)) | (0 if self.schedule_date is None else (1 << 15)) | (0 if self.schedule_repeat_period is None else (1 << 18)) | (0 if self.quick_reply_shortcut_id is None else (1 << 17)) | (0 if self.rich_message is None else (1 << 23))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         if _flags_word & (1 << 11):
             out += _tl._pack_string(self.message)
         if _flags_word & (1 << 14):
-            out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+            out += _tl._ser(self.media, _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.reply_markup), _SCHEMA)
+            out += _tl._ser(self.reply_markup, _SCHEMA)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         if _flags_word & (1 << 15):
             out += _struct.pack('<i', self.schedule_date)
         if _flags_word & (1 << 18):
@@ -2792,7 +2792,7 @@ class EditMessage:
         if _flags_word & (1 << 17):
             out += _struct.pack('<i', self.quick_reply_shortcut_id)
         if _flags_word & (1 << 23):
-            out += _tl.serialize(_tl._resolve(self.rich_message), _SCHEMA)
+            out += _tl._ser(self.rich_message, _SCHEMA)
         return out
 
     @classmethod
@@ -2804,17 +2804,17 @@ class EditMessage:
             obj["no_webpage"] = True
         if _flags_word & (1 << 16):
             obj["invert_media"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 11):
-            obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["message"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 14):
-            obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+            obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["reply_markup"], pos = _tl._read_typed(data, pos, "ReplyMarkup", _SCHEMA_BY_CID)
+            obj["reply_markup"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         if _flags_word & (1 << 15):
             obj["schedule_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -2825,7 +2825,7 @@ class EditMessage:
             obj["quick_reply_shortcut_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 23):
-            obj["rich_message"], pos = _tl._read_typed(data, pos, "InputRichMessage", _SCHEMA_BY_CID)
+            obj["rich_message"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2870,17 +2870,17 @@ class EditInlineBotMessage:
         out = b'Q\xbb#\xa4'
         _flags_word = ((1 << 1) if self.no_webpage else 0) | ((1 << 16) if self.invert_media else 0) | (0 if self.message is None else (1 << 11)) | (0 if self.media is None else (1 << 14)) | (0 if self.reply_markup is None else (1 << 2)) | (0 if self.entities is None else (1 << 3)) | (0 if self.rich_message is None else (1 << 23))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
         if _flags_word & (1 << 11):
             out += _tl._pack_string(self.message)
         if _flags_word & (1 << 14):
-            out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+            out += _tl._ser(self.media, _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.reply_markup), _SCHEMA)
+            out += _tl._ser(self.reply_markup, _SCHEMA)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         if _flags_word & (1 << 23):
-            out += _tl.serialize(_tl._resolve(self.rich_message), _SCHEMA)
+            out += _tl._ser(self.rich_message, _SCHEMA)
         return out
 
     @classmethod
@@ -2892,17 +2892,17 @@ class EditInlineBotMessage:
             obj["no_webpage"] = True
         if _flags_word & (1 << 16):
             obj["invert_media"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "InputBotInlineMessageID", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 11):
-            obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["message"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 14):
-            obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+            obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["reply_markup"], pos = _tl._read_typed(data, pos, "ReplyMarkup", _SCHEMA_BY_CID)
+            obj["reply_markup"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         if _flags_word & (1 << 23):
-            obj["rich_message"], pos = _tl._read_typed(data, pos, "InputRichMessage", _SCHEMA_BY_CID)
+            obj["rich_message"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -2938,12 +2938,12 @@ class GetBotCallbackAnswer:
         out = b'\x07\xcaB\x93'
         _flags_word = ((1 << 1) if self.game else 0) | (0 if self.data is None else (1 << 0)) | (0 if self.password is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         if _flags_word & (1 << 0):
             out += _tl._pack_bytes(self.data)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.password), _SCHEMA)
+            out += _tl._ser(self.password, _SCHEMA)
         return out
 
     @classmethod
@@ -2953,13 +2953,13 @@ class GetBotCallbackAnswer:
         pos += 4
         if _flags_word & (1 << 1):
             obj["game"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["data"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 2):
-            obj["password"], pos = _tl._read_typed(data, pos, "InputCheckPasswordSRP", _SCHEMA_BY_CID)
+            obj["password"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3013,9 +3013,9 @@ class SetBotCallbackAnswer:
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 0):
-            obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["message"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["url"], pos = _tl._read_string(data, pos)
         obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -3039,13 +3039,13 @@ class GetPeerDialogs:
 
     def to_bytes(self) -> bytes:
         out = b'\xfd\xbcp\xe4'
-        out += _tl.serialize(_tl._resolve(self.peers), _SCHEMA)
+        out += _tl._serialize_field(self.peers, 'Vector<InputDialogPeer>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getPeerDialogs"}
-        obj["peers"], pos = _tl._read_typed(data, pos, "Vector<InputDialogPeer>", _SCHEMA_BY_CID)
+        obj["peers"], pos = _tl._read_vector(data, pos, 'InputDialogPeer', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3097,19 +3097,19 @@ class SaveDraft:
         _flags_word = ((1 << 1) if self.no_webpage else 0) | ((1 << 6) if self.invert_media else 0) | (0 if self.reply_to is None else (1 << 4)) | (0 if self.entities is None else (1 << 3)) | (0 if self.media is None else (1 << 5)) | (0 if self.effect is None else (1 << 7)) | (0 if self.suggested_post is None else (1 << 8)) | (0 if self.rich_message is None else (1 << 9))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 4):
-            out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser(self.reply_to, _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.message)
         if _flags_word & (1 << 3):
-            out += _tl.serialize(_tl._resolve(self.entities), _SCHEMA)
+            out += _tl._serialize_field(self.entities, 'Vector<MessageEntity>', _SCHEMA)
         if _flags_word & (1 << 5):
-            out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+            out += _tl._ser(self.media, _SCHEMA)
         if _flags_word & (1 << 7):
             out += _struct.pack('<q', self.effect)
         if _flags_word & (1 << 8):
-            out += _tl.serialize(_tl._resolve(self.suggested_post), _SCHEMA)
+            out += _tl._ser(self.suggested_post, _SCHEMA)
         if _flags_word & (1 << 9):
-            out += _tl.serialize(_tl._resolve(self.rich_message), _SCHEMA)
+            out += _tl._ser(self.rich_message, _SCHEMA)
         return out
 
     @classmethod
@@ -3122,20 +3122,20 @@ class SaveDraft:
         if _flags_word & (1 << 6):
             obj["invert_media"] = True
         if _flags_word & (1 << 4):
-            obj["reply_to"], pos = _tl._read_typed(data, pos, "InputReplyTo", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["message"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["reply_to"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["message"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 3):
-            obj["entities"], pos = _tl._read_typed(data, pos, "Vector<MessageEntity>", _SCHEMA_BY_CID)
+            obj["entities"], pos = _tl._read_vector(data, pos, 'MessageEntity', _SCHEMA_BY_CID)
         if _flags_word & (1 << 5):
-            obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+            obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 7):
             obj["effect"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 8):
-            obj["suggested_post"], pos = _tl._read_typed(data, pos, "SuggestedPost", _SCHEMA_BY_CID)
+            obj["suggested_post"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 9):
-            obj["rich_message"], pos = _tl._read_typed(data, pos, "InputRichMessage", _SCHEMA_BY_CID)
+            obj["rich_message"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3208,13 +3208,13 @@ class ReadFeaturedStickers:
 
     def to_bytes(self) -> bytes:
         out = b'&\x81\x11['
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.readFeaturedStickers"}
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3282,7 +3282,7 @@ class SaveRecentSticker:
         out = b"\xf8\x18'9"
         _flags_word = ((1 << 0) if self.attached else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
         out += _tl._pack_bool(self.unsave)
         return out
 
@@ -3293,8 +3293,8 @@ class SaveRecentSticker:
         pos += 4
         if _flags_word & (1 << 0):
             obj["attached"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
-        obj["unsave"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["unsave"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3423,13 +3423,13 @@ class GetAttachedStickers:
 
     def to_bytes(self) -> bytes:
         out = b'\xccg[\xcc'
-        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+        out += _tl._ser(self.media, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getAttachedStickers"}
-        obj["media"], pos = _tl._read_typed(data, pos, "InputStickeredMedia", _SCHEMA_BY_CID)
+        obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3468,9 +3468,9 @@ class SetGameScore:
         out = b'\xc0\xec\xf8\x8e'
         _flags_word = ((1 << 0) if self.edit_message else 0) | ((1 << 1) if self.force else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _struct.pack('<i', self.score)
         return out
 
@@ -3483,10 +3483,10 @@ class SetGameScore:
             obj["edit_message"] = True
         if _flags_word & (1 << 1):
             obj["force"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["score"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -3524,8 +3524,8 @@ class SetInlineGameScore:
         out = b'd\x9f\xad\x15'
         _flags_word = ((1 << 0) if self.edit_message else 0) | ((1 << 1) if self.force else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _struct.pack('<i', self.score)
         return out
 
@@ -3538,8 +3538,8 @@ class SetInlineGameScore:
             obj["edit_message"] = True
         if _flags_word & (1 << 1):
             obj["force"] = True
-        obj["id"], pos = _tl._read_typed(data, pos, "InputBotInlineMessageID", _SCHEMA_BY_CID)
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["score"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -3569,18 +3569,18 @@ class GetGameHighScores:
 
     def to_bytes(self) -> bytes:
         out = b'\x9dd"\xe8'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getGameHighScores"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3605,15 +3605,15 @@ class GetInlineGameHighScores:
 
     def to_bytes(self) -> bytes:
         out = b'\x1b^c\x0f'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getInlineGameHighScores"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputBotInlineMessageID", _SCHEMA_BY_CID)
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3641,14 +3641,14 @@ class GetCommonChats:
 
     def to_bytes(self) -> bytes:
         out = b'\x04\xa1\x0c\xe4'
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _struct.pack('<qi', self.max_id, self.limit)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getCommonChats"}
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["max_id"], obj["limit"], = _struct.unpack_from('<qi', data, pos)
         pos += 12
         return obj, pos
@@ -3682,7 +3682,7 @@ class GetWebPage:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getWebPage"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         obj["hash"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -3711,7 +3711,7 @@ class ToggleDialogPin:
         out = b'W\xe21\xa7'
         _flags_word = ((1 << 0) if self.pinned else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         return out
 
     @classmethod
@@ -3721,7 +3721,7 @@ class ToggleDialogPin:
         pos += 4
         if _flags_word & (1 << 0):
             obj["pinned"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputDialogPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3752,7 +3752,7 @@ class ReorderPinnedDialogs:
         _flags_word = ((1 << 0) if self.force else 0)
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.folder_id)
-        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        out += _tl._serialize_field(self.order, 'Vector<InputDialogPeer>', _SCHEMA)
         return out
 
     @classmethod
@@ -3764,7 +3764,7 @@ class ReorderPinnedDialogs:
             obj["force"] = True
         obj["folder_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["order"], pos = _tl._read_typed(data, pos, "Vector<InputDialogPeer>", _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_vector(data, pos, 'InputDialogPeer', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3827,7 +3827,7 @@ class SetBotShippingResults:
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.error)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.shipping_options), _SCHEMA)
+            out += _tl._serialize_field(self.shipping_options, 'Vector<ShippingOption>', _SCHEMA)
         return out
 
     @classmethod
@@ -3838,9 +3838,9 @@ class SetBotShippingResults:
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 0):
-            obj["error"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["error"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["shipping_options"], pos = _tl._read_typed(data, pos, "Vector<ShippingOption>", _SCHEMA_BY_CID)
+            obj["shipping_options"], pos = _tl._read_vector(data, pos, 'ShippingOption', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3885,7 +3885,7 @@ class SetBotPrecheckoutResults:
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 0):
-            obj["error"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["error"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3917,8 +3917,8 @@ class UploadMedia:
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.business_connection_id)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.media, _SCHEMA)
         return out
 
     @classmethod
@@ -3927,9 +3927,9 @@ class UploadMedia:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["business_connection_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+            obj["business_connection_id"], pos = _tl._read_string(data, pos)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -3957,16 +3957,16 @@ class SendScreenshotNotification:
 
     def to_bytes(self) -> bytes:
         out = b'\x17X@\xa1'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.reply_to, _SCHEMA)
         out += _struct.pack('<q', self.random_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.sendScreenshotNotification"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["reply_to"], pos = _tl._read_typed(data, pos, "InputReplyTo", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["reply_to"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -4022,15 +4022,15 @@ class FaveSticker:
 
     def to_bytes(self) -> bytes:
         out = b'[\xc5\xff\xb9'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
         out += _tl._pack_bool(self.unfave)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.faveSticker"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
-        obj["unfave"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["unfave"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4072,7 +4072,7 @@ class GetUnreadMentions:
         out = b'\x90\xe7\x07\xf1'
         _flags_word = (0 if self.top_msg_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.top_msg_id)
         out += _struct.pack('<iiiii', self.offset_id, self.add_offset, self.limit, self.max_id, self.min_id)
@@ -4083,7 +4083,7 @@ class GetUnreadMentions:
         obj = {"_": "messages.getUnreadMentions"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -4115,7 +4115,7 @@ class ReadMentions:
         out = b'M\xbf\xe56'
         _flags_word = (0 if self.top_msg_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.top_msg_id)
         return out
@@ -4125,7 +4125,7 @@ class ReadMentions:
         obj = {"_": "messages.readMentions"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -4156,14 +4156,14 @@ class GetRecentLocations:
 
     def to_bytes(self) -> bytes:
         out = b'\xe0@*p'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iq', self.limit, self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getRecentLocations"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["limit"], obj["hash"], = _struct.unpack_from('<iq', data, pos)
         pos += 12
         return obj, pos
@@ -4231,16 +4231,16 @@ class SendMultiMedia:
         out = b't\x9d\xf8\x1b'
         _flags_word = ((1 << 5) if self.silent else 0) | ((1 << 6) if self.background else 0) | ((1 << 7) if self.clear_draft else 0) | ((1 << 14) if self.noforwards else 0) | ((1 << 15) if self.update_stickersets_order else 0) | ((1 << 16) if self.invert_media else 0) | ((1 << 19) if self.allow_paid_floodskip else 0) | (0 if self.reply_to is None else (1 << 0)) | (0 if self.schedule_date is None else (1 << 10)) | (0 if self.send_as is None else (1 << 13)) | (0 if self.quick_reply_shortcut is None else (1 << 17)) | (0 if self.effect is None else (1 << 18)) | (0 if self.allow_paid_stars is None else (1 << 21))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.multi_media), _SCHEMA)
+            out += _tl._ser(self.reply_to, _SCHEMA)
+        out += _tl._serialize_field(self.multi_media, 'Vector<InputSingleMedia>', _SCHEMA)
         if _flags_word & (1 << 10):
             out += _struct.pack('<i', self.schedule_date)
         if _flags_word & (1 << 13):
-            out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+            out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 17):
-            out += _tl.serialize(_tl._resolve(self.quick_reply_shortcut), _SCHEMA)
+            out += _tl._ser(self.quick_reply_shortcut, _SCHEMA)
         if _flags_word & (1 << 18):
             out += _struct.pack('<q', self.effect)
         if _flags_word & (1 << 21):
@@ -4266,17 +4266,17 @@ class SendMultiMedia:
             obj["invert_media"] = True
         if _flags_word & (1 << 19):
             obj["allow_paid_floodskip"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["reply_to"], pos = _tl._read_typed(data, pos, "InputReplyTo", _SCHEMA_BY_CID)
-        obj["multi_media"], pos = _tl._read_typed(data, pos, "Vector<InputSingleMedia>", _SCHEMA_BY_CID)
+            obj["reply_to"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["multi_media"], pos = _tl._read_vector(data, pos, 'InputSingleMedia', _SCHEMA_BY_CID)
         if _flags_word & (1 << 10):
             obj["schedule_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 13):
-            obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 17):
-            obj["quick_reply_shortcut"], pos = _tl._read_typed(data, pos, "InputQuickReplyShortcut", _SCHEMA_BY_CID)
+            obj["quick_reply_shortcut"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 18):
             obj["effect"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
@@ -4307,15 +4307,15 @@ class UploadEncryptedFile:
 
     def to_bytes(self) -> bytes:
         out = b'\x97\xc4WP'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
+        out += _tl._ser(self.file, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.uploadEncryptedFile"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputEncryptedChat", _SCHEMA_BY_CID)
-        obj["file"], pos = _tl._read_typed(data, pos, "InputEncryptedFile", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["file"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4356,7 +4356,7 @@ class SearchStickerSets:
         pos += 4
         if _flags_word & (1 << 0):
             obj["exclude_featured"] = True
-        obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["q"], pos = _tl._read_string(data, pos)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -4411,8 +4411,8 @@ class MarkDialogUnread:
         _flags_word = ((1 << 0) if self.unread else 0) | (0 if self.parent_peer is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.parent_peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.parent_peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         return out
 
     @classmethod
@@ -4423,8 +4423,8 @@ class MarkDialogUnread:
         if _flags_word & (1 << 0):
             obj["unread"] = True
         if _flags_word & (1 << 1):
-            obj["parent_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputDialogPeer", _SCHEMA_BY_CID)
+            obj["parent_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4449,7 +4449,7 @@ class GetDialogUnreadMarks:
         _flags_word = (0 if self.parent_peer is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.parent_peer), _SCHEMA)
+            out += _tl._ser_peer(self.parent_peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -4458,7 +4458,7 @@ class GetDialogUnreadMarks:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["parent_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["parent_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4516,7 +4516,7 @@ class UpdatePinnedMessage:
         out = b'\xec\xf7\xaa\xd2'
         _flags_word = ((1 << 0) if self.silent else 0) | ((1 << 1) if self.unpin else 0) | ((1 << 2) if self.pm_oneside else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         return out
 
@@ -4531,7 +4531,7 @@ class UpdatePinnedMessage:
             obj["unpin"] = True
         if _flags_word & (1 << 2):
             obj["pm_oneside"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -4561,18 +4561,18 @@ class SendVote:
 
     def to_bytes(self) -> bytes:
         out = b'\x84a\xea\x10'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
-        out += _tl.serialize(_tl._resolve(self.options), _SCHEMA)
+        out += _tl._serialize_field(self.options, 'Vector<bytes>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.sendVote"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["options"], pos = _tl._read_typed(data, pos, "Vector<bytes>", _SCHEMA_BY_CID)
+        obj["options"], pos = _tl._read_vector(data, pos, 'bytes', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4600,14 +4600,14 @@ class GetPollResults:
 
     def to_bytes(self) -> bytes:
         out = b';\xe3\xa3\xed'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iq', self.msg_id, self.poll_hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getPollResults"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"], obj["poll_hash"], = _struct.unpack_from('<iq', data, pos)
         pos += 12
         return obj, pos
@@ -4631,13 +4631,13 @@ class GetOnlines:
 
     def to_bytes(self) -> bytes:
         out = b'P\xe0+n'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getOnlines"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4662,15 +4662,15 @@ class EditChatAbout:
 
     def to_bytes(self) -> bytes:
         out = b'\x97\x07\xf6\xde'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.about)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.editChatAbout"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["about"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["about"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4695,15 +4695,15 @@ class EditChatDefaultBannedRights:
 
     def to_bytes(self) -> bytes:
         out = b'Ak\x86\xa5'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.banned_rights), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.banned_rights, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.editChatDefaultBannedRights"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["banned_rights"], pos = _tl._read_typed(data, pos, "ChatBannedRights", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["banned_rights"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4731,7 +4731,7 @@ class GetEmojiKeywords:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getEmojiKeywords"}
-        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4763,7 +4763,7 @@ class GetEmojiKeywordsDifference:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getEmojiKeywordsDifference"}
-        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_string(data, pos)
         obj["from_version"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -4787,13 +4787,13 @@ class GetEmojiKeywordsLanguages:
 
     def to_bytes(self) -> bytes:
         out = b'\xb2c\x99N'
-        out += _tl.serialize(_tl._resolve(self.lang_codes), _SCHEMA)
+        out += _tl._serialize_field(self.lang_codes, 'Vector<string>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getEmojiKeywordsLanguages"}
-        obj["lang_codes"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        obj["lang_codes"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4821,7 +4821,7 @@ class GetEmojiURL:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getEmojiURL"}
-        obj["lang_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["lang_code"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4854,12 +4854,12 @@ class GetSearchCounters:
         out = b'\x00\xf3\xbc\x1b'
         _flags_word = (0 if self.saved_peer_id is None else (1 << 2)) | (0 if self.top_msg_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.saved_peer_id), _SCHEMA)
+            out += _tl._ser_peer(self.saved_peer_id, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.top_msg_id)
-        out += _tl.serialize(_tl._resolve(self.filters), _SCHEMA)
+        out += _tl._serialize_field(self.filters, 'Vector<MessagesFilter>', _SCHEMA)
         return out
 
     @classmethod
@@ -4867,13 +4867,13 @@ class GetSearchCounters:
         obj = {"_": "messages.getSearchCounters"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["saved_peer_id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["saved_peer_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
-        obj["filters"], pos = _tl._read_typed(data, pos, "Vector<MessagesFilter>", _SCHEMA_BY_CID)
+        obj["filters"], pos = _tl._read_vector(data, pos, 'MessagesFilter', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4910,7 +4910,7 @@ class RequestUrlAuth:
         _flags_word = (0 if self.peer is None else (1 << 1)) | (0 if self.msg_id is None else (1 << 1)) | (0 if self.button_id is None else (1 << 1)) | (0 if self.url is None else (1 << 2)) | (0 if self.in_app_origin is None else (1 << 3))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.msg_id)
         if _flags_word & (1 << 1):
@@ -4927,7 +4927,7 @@ class RequestUrlAuth:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 1):
-            obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
             obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -4935,9 +4935,9 @@ class RequestUrlAuth:
             obj["button_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 2):
-            obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["url"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 3):
-            obj["in_app_origin"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["in_app_origin"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -4983,7 +4983,7 @@ class AcceptUrlAuth:
         _flags_word = ((1 << 0) if self.write_allowed else 0) | ((1 << 3) if self.share_phone_number else 0) | (0 if self.peer is None else (1 << 1)) | (0 if self.msg_id is None else (1 << 1)) | (0 if self.button_id is None else (1 << 1)) | (0 if self.url is None else (1 << 2)) | (0 if self.match_code is None else (1 << 4)) | (0 if self.tonconnect_session is None else (1 << 5))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.msg_id)
         if _flags_word & (1 << 1):
@@ -4993,7 +4993,7 @@ class AcceptUrlAuth:
         if _flags_word & (1 << 4):
             out += _tl._pack_string(self.match_code)
         if _flags_word & (1 << 5):
-            out += _tl.serialize(_tl._resolve(self.tonconnect_session), _SCHEMA)
+            out += _tl._ser(self.tonconnect_session, _SCHEMA)
         return out
 
     @classmethod
@@ -5006,7 +5006,7 @@ class AcceptUrlAuth:
         if _flags_word & (1 << 3):
             obj["share_phone_number"] = True
         if _flags_word & (1 << 1):
-            obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
             obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -5014,11 +5014,11 @@ class AcceptUrlAuth:
             obj["button_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 2):
-            obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["url"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 4):
-            obj["match_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["match_code"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 5):
-            obj["tonconnect_session"], pos = _tl._read_typed(data, pos, "InputTonConnectOauthSession", _SCHEMA_BY_CID)
+            obj["tonconnect_session"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5040,13 +5040,13 @@ class HidePeerSettingsBar:
 
     def to_bytes(self) -> bytes:
         out = b'8\xb1\xacO'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.hidePeerSettingsBar"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5071,14 +5071,14 @@ class GetScheduledHistory:
 
     def to_bytes(self) -> bytes:
         out = b'\x0bv\x16\xf5'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<q', self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getScheduledHistory"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -5105,15 +5105,15 @@ class GetScheduledMessages:
 
     def to_bytes(self) -> bytes:
         out = b'd\x04\xbb\xbd'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getScheduledMessages"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5138,15 +5138,15 @@ class SendScheduledMessages:
 
     def to_bytes(self) -> bytes:
         out = b'\n\x858\xbd'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.sendScheduledMessages"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5171,15 +5171,15 @@ class DeleteScheduledMessages:
 
     def to_bytes(self) -> bytes:
         out = b'\x16+\xaeY'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.deleteScheduledMessages"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5215,7 +5215,7 @@ class GetPollVotes:
         out = b'\x0e8n\xb8'
         _flags_word = (0 if self.option is None else (1 << 0)) | (0 if self.offset is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         if _flags_word & (1 << 0):
             out += _tl._pack_bytes(self.option)
@@ -5229,13 +5229,13 @@ class GetPollVotes:
         obj = {"_": "messages.getPollVotes"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["option"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+            obj["option"], pos = _tl._read_bytes(data, pos)
         if _flags_word & (1 << 1):
-            obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -5270,7 +5270,7 @@ class ToggleStickerSets:
         out = b'\xea/\x05\xb5'
         _flags_word = ((1 << 0) if self.uninstall else 0) | ((1 << 1) if self.archive else 0) | ((1 << 2) if self.unarchive else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.stickersets), _SCHEMA)
+        out += _tl._serialize_field(self.stickersets, 'Vector<InputStickerSet>', _SCHEMA)
         return out
 
     @classmethod
@@ -5284,7 +5284,7 @@ class ToggleStickerSets:
             obj["archive"] = True
         if _flags_word & (1 << 2):
             obj["unarchive"] = True
-        obj["stickersets"], pos = _tl._read_typed(data, pos, "Vector<InputStickerSet>", _SCHEMA_BY_CID)
+        obj["stickersets"], pos = _tl._read_vector(data, pos, 'InputStickerSet', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5357,7 +5357,7 @@ class UpdateDialogFilter:
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.id)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+            out += _tl._ser(self.filter, _SCHEMA)
         return out
 
     @classmethod
@@ -5368,7 +5368,7 @@ class UpdateDialogFilter:
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["filter"], pos = _tl._read_typed(data, pos, "DialogFilter", _SCHEMA_BY_CID)
+            obj["filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5390,13 +5390,13 @@ class UpdateDialogFiltersOrder:
 
     def to_bytes(self) -> bytes:
         out = b'\xe4\xc1c\xc5'
-        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        out += _tl._serialize_field(self.order, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.updateDialogFiltersOrder"}
-        obj["order"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5477,14 +5477,14 @@ class GetReplies:
 
     def to_bytes(self) -> bytes:
         out = b'\x0c\xd3\xdd"'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iiiiiiiq', self.msg_id, self.offset_id, self.offset_date, self.add_offset, self.limit, self.max_id, self.min_id, self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getReplies"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"], obj["offset_id"], obj["offset_date"], obj["add_offset"], obj["limit"], obj["max_id"], obj["min_id"], obj["hash"], = _struct.unpack_from('<iiiiiiiq', data, pos)
         pos += 36
         return obj, pos
@@ -5511,14 +5511,14 @@ class GetDiscussionMessage:
 
     def to_bytes(self) -> bytes:
         out = b'\xfdriD'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getDiscussionMessage"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -5548,14 +5548,14 @@ class ReadDiscussion:
 
     def to_bytes(self) -> bytes:
         out = b'\xf4\xa91\xf7'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<ii', self.msg_id, self.read_max_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.readDiscussion"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"], obj["read_max_id"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         return obj, pos
@@ -5587,11 +5587,11 @@ class UnpinAllMessages:
         out = b'G\xd7-\x06'
         _flags_word = (0 if self.top_msg_id is None else (1 << 0)) | (0 if self.saved_peer_id is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.top_msg_id)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.saved_peer_id), _SCHEMA)
+            out += _tl._ser_peer(self.saved_peer_id, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -5599,12 +5599,12 @@ class UnpinAllMessages:
         obj = {"_": "messages.unpinAllMessages"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 1):
-            obj["saved_peer_id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["saved_peer_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5693,7 +5693,7 @@ class CheckHistoryImport:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.checkHistoryImport"}
-        obj["import_head"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["import_head"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5721,16 +5721,16 @@ class InitHistoryImport:
 
     def to_bytes(self) -> bytes:
         out = b';\x0c\t4'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.file, _SCHEMA)
         out += _struct.pack('<i', self.media_count)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.initHistoryImport"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["file"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["file"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["media_count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -5763,20 +5763,20 @@ class UploadImportedMedia:
 
     def to_bytes(self) -> bytes:
         out = b'\x92 \x86*'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<q', self.import_id)
         out += _tl._pack_string(self.file_name)
-        out += _tl.serialize(_tl._resolve(self.media), _SCHEMA)
+        out += _tl._ser(self.media, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.uploadImportedMedia"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["import_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["file_name"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["media"], pos = _tl._read_typed(data, pos, "InputMedia", _SCHEMA_BY_CID)
+        obj["file_name"], pos = _tl._read_string(data, pos)
+        obj["media"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5801,14 +5801,14 @@ class StartHistoryImport:
 
     def to_bytes(self) -> bytes:
         out = b'D\xf3=\xb4'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<q', self.import_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.startHistoryImport"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["import_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -5849,8 +5849,8 @@ class GetExportedChatInvites:
         out = b'\xf6\xa3\xb5\xa2'
         _flags_word = ((1 << 3) if self.revoked else 0) | (0 if self.offset_date is None else (1 << 2)) | (0 if self.offset_link is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.admin_id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.admin_id, 'InputUser', _SCHEMA)
         if _flags_word & (1 << 2):
             out += _struct.pack('<i', self.offset_date)
         if _flags_word & (1 << 2):
@@ -5865,13 +5865,13 @@ class GetExportedChatInvites:
         pos += 4
         if _flags_word & (1 << 3):
             obj["revoked"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["admin_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["admin_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
             obj["offset_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 2):
-            obj["offset_link"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["offset_link"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -5898,15 +5898,15 @@ class GetExportedChatInvite:
 
     def to_bytes(self) -> bytes:
         out = b'\\ots'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.link)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getExportedChatInvite"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["link"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["link"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -5948,7 +5948,7 @@ class EditExportedChatInvite:
         out = b'u/\xca\xbd'
         _flags_word = ((1 << 2) if self.revoked else 0) | (0 if self.expire_date is None else (1 << 0)) | (0 if self.usage_limit is None else (1 << 1)) | (0 if self.request_needed is None else (1 << 3)) | (0 if self.title is None else (1 << 4))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.link)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.expire_date)
@@ -5967,8 +5967,8 @@ class EditExportedChatInvite:
         pos += 4
         if _flags_word & (1 << 2):
             obj["revoked"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["link"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["link"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
             obj["expire_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -5976,9 +5976,9 @@ class EditExportedChatInvite:
             obj["usage_limit"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 3):
-            obj["request_needed"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["request_needed"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 4):
-            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["title"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6003,15 +6003,15 @@ class DeleteRevokedExportedChatInvites:
 
     def to_bytes(self) -> bytes:
         out = b'\xd5{\x98V'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.admin_id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.admin_id, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.deleteRevokedExportedChatInvites"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["admin_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["admin_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6036,15 +6036,15 @@ class DeleteExportedChatInvite:
 
     def to_bytes(self) -> bytes:
         out = b'+\xa4d\xd4'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.link)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.deleteExportedChatInvite"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["link"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["link"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6066,13 +6066,13 @@ class GetAdminsWithInvites:
 
     def to_bytes(self) -> bytes:
         out = b'\xef\xe6 9'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getAdminsWithInvites"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6117,13 +6117,13 @@ class GetChatInviteImporters:
         out = b'N\xdd\x04\xdf'
         _flags_word = ((1 << 0) if self.requested else 0) | ((1 << 3) if self.subscription_expired else 0) | (0 if self.link is None else (1 << 1)) | (0 if self.q is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.link)
         if _flags_word & (1 << 2):
             out += _tl._pack_string(self.q)
         out += _struct.pack('<i', self.offset_date)
-        out += _tl.serialize(_tl._resolve(self.offset_user), _SCHEMA)
+        out += _tl._ser_peer(self.offset_user, 'InputUser', _SCHEMA)
         out += _struct.pack('<i', self.limit)
         return out
 
@@ -6136,14 +6136,14 @@ class GetChatInviteImporters:
             obj["requested"] = True
         if _flags_word & (1 << 3):
             obj["subscription_expired"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["link"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["link"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["q"], pos = _tl._read_string(data, pos)
         obj["offset_date"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["offset_user"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["offset_user"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -6170,14 +6170,14 @@ class SetHistoryTTL:
 
     def to_bytes(self) -> bytes:
         out = b'\xe4_\x0e\xb8'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.period)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.setHistoryTTL"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["period"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -6201,13 +6201,13 @@ class CheckHistoryImportPeer:
 
     def to_bytes(self) -> bytes:
         out = b'\x03\x0f\xc6]'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.checkHistoryImportPeer"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6232,15 +6232,15 @@ class SetChatTheme:
 
     def to_bytes(self) -> bytes:
         out = b'\xc9\x02\x12\x08'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.theme), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.theme, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.setChatTheme"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["theme"], pos = _tl._read_typed(data, pos, "InputChatTheme", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["theme"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6265,14 +6265,14 @@ class GetMessageReadParticipants:
 
     def to_bytes(self) -> bytes:
         out = b'O\xc4\xc11'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getMessageReadParticipants"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -6310,10 +6310,10 @@ class GetSearchResultsCalendar:
         out = b'\xbd\xf6\xa3j'
         _flags_word = (0 if self.saved_peer_id is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.saved_peer_id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+            out += _tl._ser_peer(self.saved_peer_id, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.filter, _SCHEMA)
         out += _struct.pack('<ii', self.offset_id, self.offset_date)
         return out
 
@@ -6322,10 +6322,10 @@ class GetSearchResultsCalendar:
         obj = {"_": "messages.getSearchResultsCalendar"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["saved_peer_id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["filter"], pos = _tl._read_typed(data, pos, "MessagesFilter", _SCHEMA_BY_CID)
+            obj["saved_peer_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_id"], obj["offset_date"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         return obj, pos
@@ -6363,10 +6363,10 @@ class GetSearchResultsPositions:
         out = b'\x10/\x7f\x9c'
         _flags_word = (0 if self.saved_peer_id is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.saved_peer_id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+            out += _tl._ser_peer(self.saved_peer_id, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.filter, _SCHEMA)
         out += _struct.pack('<ii', self.offset_id, self.limit)
         return out
 
@@ -6375,10 +6375,10 @@ class GetSearchResultsPositions:
         obj = {"_": "messages.getSearchResultsPositions"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["saved_peer_id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["filter"], pos = _tl._read_typed(data, pos, "MessagesFilter", _SCHEMA_BY_CID)
+            obj["saved_peer_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_id"], obj["limit"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         return obj, pos
@@ -6410,8 +6410,8 @@ class HideChatJoinRequest:
         out = b'\x15\xe8\xe7\x7f'
         _flags_word = ((1 << 0) if self.approved else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
@@ -6421,8 +6421,8 @@ class HideChatJoinRequest:
         pos += 4
         if _flags_word & (1 << 0):
             obj["approved"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6452,7 +6452,7 @@ class HideAllChatJoinRequests:
         out = b'\xea\xf4\x85\xe0'
         _flags_word = ((1 << 0) if self.approved else 0) | (0 if self.link is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.link)
         return out
@@ -6464,9 +6464,9 @@ class HideAllChatJoinRequests:
         pos += 4
         if _flags_word & (1 << 0):
             obj["approved"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["link"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["link"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6496,7 +6496,7 @@ class ToggleNoForwards:
         out = b'5\x1a\x08\xb2'
         _flags_word = (0 if self.request_msg_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.request_msg_id)
@@ -6507,8 +6507,8 @@ class ToggleNoForwards:
         obj = {"_": "messages.toggleNoForwards"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 0):
             obj["request_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -6536,15 +6536,15 @@ class SaveDefaultSendAs:
 
     def to_bytes(self) -> bytes:
         out = b'\x96\xdf\xfd\xcc'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.saveDefaultSendAs"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6580,10 +6580,10 @@ class SendReaction:
         out = b'\xd4x\r\xd3'
         _flags_word = ((1 << 1) if self.big else 0) | ((1 << 2) if self.add_to_recent else 0) | (0 if self.reaction is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.reaction), _SCHEMA)
+            out += _tl._serialize_field(self.reaction, 'Vector<Reaction>', _SCHEMA)
         return out
 
     @classmethod
@@ -6595,11 +6595,11 @@ class SendReaction:
             obj["big"] = True
         if _flags_word & (1 << 2):
             obj["add_to_recent"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["reaction"], pos = _tl._read_typed(data, pos, "Vector<Reaction>", _SCHEMA_BY_CID)
+            obj["reaction"], pos = _tl._read_vector(data, pos, 'Reaction', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6624,15 +6624,15 @@ class GetMessagesReactions:
 
     def to_bytes(self) -> bytes:
         out = b'\xe6\x90\xba\x8b'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getMessagesReactions"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6668,10 +6668,10 @@ class GetMessageReactionsList:
         out = b'H?\x1bF'
         _flags_word = (0 if self.reaction is None else (1 << 0)) | (0 if self.offset is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.reaction), _SCHEMA)
+            out += _tl._ser(self.reaction, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.offset)
         out += _struct.pack('<i', self.limit)
@@ -6682,13 +6682,13 @@ class GetMessageReactionsList:
         obj = {"_": "messages.getMessageReactionsList"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["reaction"], pos = _tl._read_typed(data, pos, "Reaction", _SCHEMA_BY_CID)
+            obj["reaction"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["offset"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["offset"], pos = _tl._read_string(data, pos)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -6723,8 +6723,8 @@ class SetChatAvailableReactions:
         out = b'\x81%K\x86'
         _flags_word = (0 if self.reactions_limit is None else (1 << 0)) | (0 if self.paid_enabled is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.available_reactions), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.available_reactions, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.reactions_limit)
         if _flags_word & (1 << 1):
@@ -6736,13 +6736,13 @@ class SetChatAvailableReactions:
         obj = {"_": "messages.setChatAvailableReactions"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["available_reactions"], pos = _tl._read_typed(data, pos, "ChatReactions", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["available_reactions"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["reactions_limit"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 1):
-            obj["paid_enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["paid_enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6793,13 +6793,13 @@ class SetDefaultReaction:
 
     def to_bytes(self) -> bytes:
         out = b'\x16\xa0GO'
-        out += _tl.serialize(_tl._resolve(self.reaction), _SCHEMA)
+        out += _tl._ser(self.reaction, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.setDefaultReaction"}
-        obj["reaction"], pos = _tl._read_typed(data, pos, "Reaction", _SCHEMA_BY_CID)
+        obj["reaction"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6836,11 +6836,11 @@ class TranslateText:
         _flags_word = (0 if self.peer is None else (1 << 0)) | (0 if self.id is None else (1 << 0)) | (0 if self.text is None else (1 << 1)) | (0 if self.tone is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+            out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.text), _SCHEMA)
+            out += _tl._serialize_field(self.text, 'Vector<TextWithEntities>', _SCHEMA)
         out += _tl._pack_string(self.to_lang)
         if _flags_word & (1 << 2):
             out += _tl._pack_string(self.tone)
@@ -6852,14 +6852,14 @@ class TranslateText:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+            obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["text"], pos = _tl._read_typed(data, pos, "Vector<TextWithEntities>", _SCHEMA_BY_CID)
-        obj["to_lang"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["text"], pos = _tl._read_vector(data, pos, 'TextWithEntities', _SCHEMA_BY_CID)
+        obj["to_lang"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["tone"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["tone"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -6904,11 +6904,11 @@ class GetUnreadReactions:
         out = b'\xac\x90\x7f\xbd'
         _flags_word = (0 if self.top_msg_id is None else (1 << 0)) | (0 if self.saved_peer_id is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.top_msg_id)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.saved_peer_id), _SCHEMA)
+            out += _tl._ser_peer(self.saved_peer_id, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iiiii', self.offset_id, self.add_offset, self.limit, self.max_id, self.min_id)
         return out
 
@@ -6917,12 +6917,12 @@ class GetUnreadReactions:
         obj = {"_": "messages.getUnreadReactions"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 1):
-            obj["saved_peer_id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["saved_peer_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_id"], obj["add_offset"], obj["limit"], obj["max_id"], obj["min_id"], = _struct.unpack_from('<iiiii', data, pos)
         pos += 20
         return obj, pos
@@ -6954,11 +6954,11 @@ class ReadReactions:
         out = b'\x93O\xc4\x9e'
         _flags_word = (0 if self.top_msg_id is None else (1 << 0)) | (0 if self.saved_peer_id is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.top_msg_id)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.saved_peer_id), _SCHEMA)
+            out += _tl._ser_peer(self.saved_peer_id, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -6966,12 +6966,12 @@ class ReadReactions:
         obj = {"_": "messages.readReactions"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 1):
-            obj["saved_peer_id"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["saved_peer_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7000,15 +7000,15 @@ class SearchSentMedia:
     def to_bytes(self) -> bytes:
         out = b'\xa01~\x10'
         out += _tl._pack_string(self.q)
-        out += _tl.serialize(_tl._resolve(self.filter), _SCHEMA)
+        out += _tl._ser(self.filter, _SCHEMA)
         out += _struct.pack('<i', self.limit)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.searchSentMedia"}
-        obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["filter"], pos = _tl._read_typed(data, pos, "MessagesFilter", _SCHEMA_BY_CID)
+        obj["q"], pos = _tl._read_string(data, pos)
+        obj["filter"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["limit"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -7061,13 +7061,13 @@ class GetAttachMenuBot:
 
     def to_bytes(self) -> bytes:
         out = b'\x92a!w'
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getAttachMenuBot"}
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7097,7 +7097,7 @@ class ToggleBotInAttachMenu:
         out = b'i\x9d\xf5i'
         _flags_word = ((1 << 0) if self.write_allowed else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
         out += _tl._pack_bool(self.enabled)
         return out
 
@@ -7108,8 +7108,8 @@ class ToggleBotInAttachMenu:
         pos += 4
         if _flags_word & (1 << 0):
             obj["write_allowed"] = True
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7166,19 +7166,19 @@ class RequestWebView:
         out = b'\xc1\xc2\x9d&'
         _flags_word = ((1 << 4) if self.from_bot_menu else 0) | ((1 << 5) if self.silent else 0) | ((1 << 7) if self.compact else 0) | ((1 << 8) if self.fullscreen else 0) | (0 if self.url is None else (1 << 1)) | (0 if self.start_param is None else (1 << 3)) | (0 if self.theme_params is None else (1 << 2)) | (0 if self.reply_to is None else (1 << 0)) | (0 if self.send_as is None else (1 << 13))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.url)
         if _flags_word & (1 << 3):
             out += _tl._pack_string(self.start_param)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.theme_params), _SCHEMA)
+            out += _tl._ser(self.theme_params, _SCHEMA)
         out += _tl._pack_string(self.platform)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
+            out += _tl._ser(self.reply_to, _SCHEMA)
         if _flags_word & (1 << 13):
-            out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+            out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -7194,19 +7194,19 @@ class RequestWebView:
             obj["compact"] = True
         if _flags_word & (1 << 8):
             obj["fullscreen"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["url"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 3):
-            obj["start_param"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["start_param"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["theme_params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
-        obj["platform"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["theme_params"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["platform"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["reply_to"], pos = _tl._read_typed(data, pos, "InputReplyTo", _SCHEMA_BY_CID)
+            obj["reply_to"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 13):
-            obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7245,13 +7245,13 @@ class ProlongWebView:
         out = b'\x83\x1a\xd8\xb0'
         _flags_word = ((1 << 5) if self.silent else 0) | (0 if self.reply_to is None else (1 << 0)) | (0 if self.send_as is None else (1 << 13))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
         out += _struct.pack('<q', self.query_id)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.reply_to), _SCHEMA)
+            out += _tl._ser(self.reply_to, _SCHEMA)
         if _flags_word & (1 << 13):
-            out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+            out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -7261,14 +7261,14 @@ class ProlongWebView:
         pos += 4
         if _flags_word & (1 << 5):
             obj["silent"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 0):
-            obj["reply_to"], pos = _tl._read_typed(data, pos, "InputReplyTo", _SCHEMA_BY_CID)
+            obj["reply_to"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 13):
-            obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7316,13 +7316,13 @@ class RequestSimpleWebView:
         out = b's>:A'
         _flags_word = ((1 << 1) if self.from_switch_webview else 0) | ((1 << 2) if self.from_side_menu else 0) | ((1 << 7) if self.compact else 0) | ((1 << 8) if self.fullscreen else 0) | (0 if self.url is None else (1 << 3)) | (0 if self.start_param is None else (1 << 4)) | (0 if self.theme_params is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
         if _flags_word & (1 << 3):
             out += _tl._pack_string(self.url)
         if _flags_word & (1 << 4):
             out += _tl._pack_string(self.start_param)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.theme_params), _SCHEMA)
+            out += _tl._ser(self.theme_params, _SCHEMA)
         out += _tl._pack_string(self.platform)
         return out
 
@@ -7339,14 +7339,14 @@ class RequestSimpleWebView:
             obj["compact"] = True
         if _flags_word & (1 << 8):
             obj["fullscreen"] = True
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 3):
-            obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["url"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 4):
-            obj["start_param"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["start_param"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["theme_params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
-        obj["platform"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["theme_params"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["platform"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7372,14 +7372,14 @@ class SendWebViewResultMessage:
     def to_bytes(self) -> bytes:
         out = b'\xf5\x14C\n'
         out += _tl._pack_string(self.bot_query_id)
-        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        out += _tl._ser(self.result, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.sendWebViewResultMessage"}
-        obj["bot_query_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["result"], pos = _tl._read_typed(data, pos, "InputBotInlineResult", _SCHEMA_BY_CID)
+        obj["bot_query_id"], pos = _tl._read_string(data, pos)
+        obj["result"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7410,7 +7410,7 @@ class SendWebViewData:
 
     def to_bytes(self) -> bytes:
         out = b'\xc8B\x02\xdc'
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
         out += _struct.pack('<q', self.random_id)
         out += _tl._pack_string(self.button_text)
         out += _tl._pack_string(self.data)
@@ -7419,11 +7419,11 @@ class SendWebViewData:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.sendWebViewData"}
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["button_text"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["button_text"], pos = _tl._read_string(data, pos)
+        obj["data"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7448,14 +7448,14 @@ class TranscribeAudio:
 
     def to_bytes(self) -> bytes:
         out = b'I\x9a\x9e&'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.transcribeAudio"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -7488,7 +7488,7 @@ class RateTranscribedAudio:
 
     def to_bytes(self) -> bytes:
         out = b'/\x07\x1d\x7f'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iq', self.msg_id, self.transcription_id)
         out += _tl._pack_bool(self.good)
         return out
@@ -7496,10 +7496,10 @@ class RateTranscribedAudio:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.rateTranscribedAudio"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"], obj["transcription_id"], = _struct.unpack_from('<iq', data, pos)
         pos += 12
-        obj["good"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["good"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7521,13 +7521,13 @@ class GetCustomEmojiDocuments:
 
     def to_bytes(self) -> bytes:
         out = b'T\x0f\xab\xd9'
-        out += _tl.serialize(_tl._resolve(self.document_id), _SCHEMA)
+        out += _tl._serialize_field(self.document_id, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getCustomEmojiDocuments"}
-        obj["document_id"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["document_id"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7613,18 +7613,18 @@ class ReportReaction:
 
     def to_bytes(self) -> bytes:
         out = b'v\xc0d?'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
-        out += _tl.serialize(_tl._resolve(self.reaction_peer), _SCHEMA)
+        out += _tl._ser_peer(self.reaction_peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.reportReaction"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["reaction_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["reaction_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7735,15 +7735,15 @@ class GetExtendedMedia:
 
     def to_bytes(self) -> bytes:
         out = b'\x14\x08\xf8\x84'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getExtendedMedia"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7830,13 +7830,13 @@ class SendBotRequestedPeer:
         out = b'\xa7\xf2\\l'
         _flags_word = (0 if self.msg_id is None else (1 << 0)) | (0 if self.webapp_req_id is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.msg_id)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.webapp_req_id)
         out += _struct.pack('<i', self.button_id)
-        out += _tl.serialize(_tl._resolve(self.requested_peers), _SCHEMA)
+        out += _tl._serialize_field(self.requested_peers, 'Vector<InputPeer>', _SCHEMA)
         return out
 
     @classmethod
@@ -7844,15 +7844,15 @@ class SendBotRequestedPeer:
         obj = {"_": "messages.sendBotRequestedPeer"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 1):
-            obj["webapp_req_id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["webapp_req_id"], pos = _tl._read_string(data, pos)
         obj["button_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["requested_peers"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
+        obj["requested_peers"], pos = _tl._read_vector(data, pos, 'InputPeer', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -7971,7 +7971,7 @@ class SearchCustomEmoji:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.searchCustomEmoji"}
-        obj["emoticon"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["emoticon"], pos = _tl._read_string(data, pos)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -8000,7 +8000,7 @@ class TogglePeerTranslations:
         out = b'y\xb5|\xe4'
         _flags_word = ((1 << 0) if self.disabled else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -8010,7 +8010,7 @@ class TogglePeerTranslations:
         pos += 4
         if _flags_word & (1 << 0):
             obj["disabled"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8035,14 +8035,14 @@ class GetBotApp:
 
     def to_bytes(self) -> bytes:
         out = b'\xc3\xc5\xfd4'
-        out += _tl.serialize(_tl._resolve(self.app), _SCHEMA)
+        out += _tl._ser(self.app, _SCHEMA)
         out += _struct.pack('<q', self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getBotApp"}
-        obj["app"], pos = _tl._read_typed(data, pos, "InputBotApp", _SCHEMA_BY_CID)
+        obj["app"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -8089,12 +8089,12 @@ class RequestAppWebView:
         out = b'\xce\x8baS'
         _flags_word = ((1 << 0) if self.write_allowed else 0) | ((1 << 7) if self.compact else 0) | ((1 << 8) if self.fullscreen else 0) | (0 if self.start_param is None else (1 << 1)) | (0 if self.theme_params is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.app), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.app, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.start_param)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.theme_params), _SCHEMA)
+            out += _tl._ser(self.theme_params, _SCHEMA)
         out += _tl._pack_string(self.platform)
         return out
 
@@ -8109,13 +8109,13 @@ class RequestAppWebView:
             obj["compact"] = True
         if _flags_word & (1 << 8):
             obj["fullscreen"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["app"], pos = _tl._read_typed(data, pos, "InputBotApp", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["app"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["start_param"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["start_param"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["theme_params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
-        obj["platform"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["theme_params"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["platform"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8154,11 +8154,11 @@ class SetChatWallPaper:
         out = b'\xe1\xca\xfa\x8f'
         _flags_word = ((1 << 3) if self.for_both else 0) | ((1 << 4) if self.revert else 0) | (0 if self.wallpaper is None else (1 << 0)) | (0 if self.settings is None else (1 << 2)) | (0 if self.id is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.wallpaper), _SCHEMA)
+            out += _tl._ser(self.wallpaper, _SCHEMA)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.settings), _SCHEMA)
+            out += _tl._ser(self.settings, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.id)
         return out
@@ -8172,11 +8172,11 @@ class SetChatWallPaper:
             obj["for_both"] = True
         if _flags_word & (1 << 4):
             obj["revert"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["wallpaper"], pos = _tl._read_typed(data, pos, "InputWallPaper", _SCHEMA_BY_CID)
+            obj["wallpaper"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 2):
-            obj["settings"], pos = _tl._read_typed(data, pos, "WallPaperSettings", _SCHEMA_BY_CID)
+            obj["settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
             obj["id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -8220,7 +8220,7 @@ class SearchEmojiStickerSets:
         pos += 4
         if _flags_word & (1 << 0):
             obj["exclude_featured"] = True
-        obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["q"], pos = _tl._read_string(data, pos)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -8265,9 +8265,9 @@ class GetSavedDialogs:
         _flags_word = ((1 << 0) if self.exclude_pinned else 0) | (0 if self.parent_peer is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.parent_peer), _SCHEMA)
+            out += _tl._ser_peer(self.parent_peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<ii', self.offset_date, self.offset_id)
-        out += _tl.serialize(_tl._resolve(self.offset_peer), _SCHEMA)
+        out += _tl._ser_peer(self.offset_peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iq', self.limit, self.hash)
         return out
 
@@ -8279,10 +8279,10 @@ class GetSavedDialogs:
         if _flags_word & (1 << 0):
             obj["exclude_pinned"] = True
         if _flags_word & (1 << 1):
-            obj["parent_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["parent_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_date"], obj["offset_id"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
-        obj["offset_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["offset_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["limit"], obj["hash"], = _struct.unpack_from('<iq', data, pos)
         pos += 12
         return obj, pos
@@ -8333,8 +8333,8 @@ class GetSavedHistory:
         _flags_word = (0 if self.parent_peer is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.parent_peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.parent_peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iiiiiiq', self.offset_id, self.offset_date, self.add_offset, self.limit, self.max_id, self.min_id, self.hash)
         return out
 
@@ -8344,8 +8344,8 @@ class GetSavedHistory:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["parent_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["parent_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["offset_id"], obj["offset_date"], obj["add_offset"], obj["limit"], obj["max_id"], obj["min_id"], obj["hash"], = _struct.unpack_from('<iiiiiiq', data, pos)
         pos += 32
         return obj, pos
@@ -8384,8 +8384,8 @@ class DeleteSavedHistory:
         _flags_word = (0 if self.parent_peer is None else (1 << 0)) | (0 if self.min_date is None else (1 << 2)) | (0 if self.max_date is None else (1 << 3))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.parent_peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.parent_peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.max_id)
         if _flags_word & (1 << 2):
             out += _struct.pack('<i', self.min_date)
@@ -8399,8 +8399,8 @@ class DeleteSavedHistory:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["parent_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["parent_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["max_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 2):
@@ -8457,7 +8457,7 @@ class ToggleSavedDialogPin:
         out = b'\xde\xbb\x81\xac'
         _flags_word = ((1 << 0) if self.pinned else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser(self.peer, _SCHEMA)
         return out
 
     @classmethod
@@ -8467,7 +8467,7 @@ class ToggleSavedDialogPin:
         pos += 4
         if _flags_word & (1 << 0):
             obj["pinned"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputDialogPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8494,7 +8494,7 @@ class ReorderPinnedSavedDialogs:
         out = b'\x87eq\x8b'
         _flags_word = ((1 << 0) if self.force else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        out += _tl._serialize_field(self.order, 'Vector<InputDialogPeer>', _SCHEMA)
         return out
 
     @classmethod
@@ -8504,7 +8504,7 @@ class ReorderPinnedSavedDialogs:
         pos += 4
         if _flags_word & (1 << 0):
             obj["force"] = True
-        obj["order"], pos = _tl._read_typed(data, pos, "Vector<InputDialogPeer>", _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_vector(data, pos, 'InputDialogPeer', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8532,7 +8532,7 @@ class GetSavedReactionTags:
         _flags_word = (0 if self.peer is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<q', self.hash)
         return out
 
@@ -8542,7 +8542,7 @@ class GetSavedReactionTags:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -8571,7 +8571,7 @@ class UpdateSavedReactionTag:
         out = b'\xec})`'
         _flags_word = (0 if self.title is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.reaction), _SCHEMA)
+        out += _tl._ser(self.reaction, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.title)
         return out
@@ -8581,9 +8581,9 @@ class UpdateSavedReactionTag:
         obj = {"_": "messages.updateSavedReactionTag"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["reaction"], pos = _tl._read_typed(data, pos, "Reaction", _SCHEMA_BY_CID)
+        obj["reaction"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["title"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8637,14 +8637,14 @@ class GetOutboxReadDate:
 
     def to_bytes(self) -> bytes:
         out = b']\xfeK\x8c'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getOutboxReadDate"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -8697,13 +8697,13 @@ class ReorderQuickReplies:
 
     def to_bytes(self) -> bytes:
         out = b'\x07\x193`'
-        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        out += _tl._serialize_field(self.order, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.reorderQuickReplies"}
-        obj["order"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8731,7 +8731,7 @@ class CheckQuickReplyShortcut:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.checkQuickReplyShortcut"}
-        obj["shortcut"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["shortcut"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8765,7 +8765,7 @@ class EditQuickReplyShortcut:
         obj = {"_": "messages.editQuickReplyShortcut"}
         obj["shortcut_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["shortcut"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["shortcut"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8826,7 +8826,7 @@ class GetQuickReplyMessages:
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.shortcut_id)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+            out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         out += _struct.pack('<q', self.hash)
         return out
 
@@ -8838,7 +8838,7 @@ class GetQuickReplyMessages:
         obj["shortcut_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+            obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         obj["hash"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         return obj, pos
@@ -8871,20 +8871,20 @@ class SendQuickReplyMessages:
 
     def to_bytes(self) -> bytes:
         out = b'\xe1\rul'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.shortcut_id)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.random_id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
+        out += _tl._serialize_field(self.random_id, 'Vector<long>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.sendQuickReplyMessages"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["shortcut_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["random_id"], pos = _tl._read_typed(data, pos, "Vector<long>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["random_id"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8910,7 +8910,7 @@ class DeleteQuickReplyMessages:
     def to_bytes(self) -> bytes:
         out = b'\x10\xe9\x05\xe1'
         out += _struct.pack('<i', self.shortcut_id)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
@@ -8918,7 +8918,7 @@ class DeleteQuickReplyMessages:
         obj = {"_": "messages.deleteQuickReplyMessages"}
         obj["shortcut_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -8946,7 +8946,7 @@ class ToggleDialogFilterTags:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.toggleDialogFilterTags"}
-        obj["enabled"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["enabled"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9064,18 +9064,18 @@ class EditFactCheck:
 
     def to_bytes(self) -> bytes:
         out = b'u\xee\x89\x05'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
-        out += _tl.serialize(_tl._resolve(self.text), _SCHEMA)
+        out += _tl._ser(self.text, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.editFactCheck"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["text"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+        obj["text"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9100,14 +9100,14 @@ class DeleteFactCheck:
 
     def to_bytes(self) -> bytes:
         out = b'\x0c\x94\xda\xd1'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.deleteFactCheck"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -9134,15 +9134,15 @@ class GetFactCheck:
 
     def to_bytes(self) -> bytes:
         out = b'\xee\xc5\xcd\xb9'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.msg_id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.msg_id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getFactCheck"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["msg_id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["msg_id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9184,12 +9184,12 @@ class RequestMainWebView:
         out = b'{\x1e\xe0\xc9'
         _flags_word = ((1 << 7) if self.compact else 0) | ((1 << 8) if self.fullscreen else 0) | (0 if self.start_param is None else (1 << 1)) | (0 if self.theme_params is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.start_param)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.theme_params), _SCHEMA)
+            out += _tl._ser(self.theme_params, _SCHEMA)
         out += _tl._pack_string(self.platform)
         return out
 
@@ -9202,13 +9202,13 @@ class RequestMainWebView:
             obj["compact"] = True
         if _flags_word & (1 << 8):
             obj["fullscreen"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["start_param"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["start_param"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
-            obj["theme_params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
-        obj["platform"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["theme_params"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["platform"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9244,10 +9244,10 @@ class SendPaidReaction:
         out = b'P\xcb\xbbX'
         _flags_word = (0 if self.private is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iiq', self.msg_id, self.count, self.random_id)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.private), _SCHEMA)
+            out += _tl._ser(self.private, _SCHEMA)
         return out
 
     @classmethod
@@ -9255,11 +9255,11 @@ class SendPaidReaction:
         obj = {"_": "messages.sendPaidReaction"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"], obj["count"], obj["random_id"], = _struct.unpack_from('<iiq', data, pos)
         pos += 16
         if _flags_word & (1 << 0):
-            obj["private"], pos = _tl._read_typed(data, pos, "PaidReactionPrivacy", _SCHEMA_BY_CID)
+            obj["private"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9287,18 +9287,18 @@ class TogglePaidReactionPrivacy:
 
     def to_bytes(self) -> bytes:
         out = b'\xb5\x85XC'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
-        out += _tl.serialize(_tl._resolve(self.private), _SCHEMA)
+        out += _tl._ser(self.private, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.togglePaidReactionPrivacy"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["private"], pos = _tl._read_typed(data, pos, "PaidReactionPrivacy", _SCHEMA_BY_CID)
+        obj["private"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9348,7 +9348,7 @@ class ViewSponsoredMessage:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.viewSponsoredMessage"}
-        obj["random_id"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["random_id"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9390,7 +9390,7 @@ class ClickSponsoredMessage:
             obj["media"] = True
         if _flags_word & (1 << 1):
             obj["fullscreen"] = True
-        obj["random_id"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["random_id"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9422,8 +9422,8 @@ class ReportSponsoredMessage:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.reportSponsoredMessage"}
-        obj["random_id"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
-        obj["option"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["random_id"], pos = _tl._read_bytes(data, pos)
+        obj["option"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9450,7 +9450,7 @@ class GetSponsoredMessages:
         out = b'P\xe8l='
         _flags_word = (0 if self.msg_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.msg_id)
         return out
@@ -9460,7 +9460,7 @@ class GetSponsoredMessages:
         obj = {"_": "messages.getSponsoredMessages"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -9493,10 +9493,10 @@ class SavePreparedInlineMessage:
         out = b'/\x7f\x1f\xf2'
         _flags_word = (0 if self.peer_types is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser(self.result, _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.peer_types), _SCHEMA)
+            out += _tl._serialize_field(self.peer_types, 'Vector<InlineQueryPeerType>', _SCHEMA)
         return out
 
     @classmethod
@@ -9504,10 +9504,10 @@ class SavePreparedInlineMessage:
         obj = {"_": "messages.savePreparedInlineMessage"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["result"], pos = _tl._read_typed(data, pos, "InputBotInlineResult", _SCHEMA_BY_CID)
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["result"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["peer_types"], pos = _tl._read_typed(data, pos, "Vector<InlineQueryPeerType>", _SCHEMA_BY_CID)
+            obj["peer_types"], pos = _tl._read_vector(data, pos, 'InlineQueryPeerType', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9532,15 +9532,15 @@ class GetPreparedInlineMessage:
 
     def to_bytes(self) -> bytes:
         out = b'\xb8\xbd~\x85'
-        out += _tl.serialize(_tl._resolve(self.bot), _SCHEMA)
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
         out += _tl._pack_string(self.id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getPreparedInlineMessage"}
-        obj["bot"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9584,7 +9584,7 @@ class SearchStickers:
         out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.q)
         out += _tl._pack_string(self.emoticon)
-        out += _tl.serialize(_tl._resolve(self.lang_code), _SCHEMA)
+        out += _tl._serialize_field(self.lang_code, 'Vector<string>', _SCHEMA)
         out += _struct.pack('<iiq', self.offset, self.limit, self.hash)
         return out
 
@@ -9595,9 +9595,9 @@ class SearchStickers:
         pos += 4
         if _flags_word & (1 << 0):
             obj["emojis"] = True
-        obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["emoticon"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["lang_code"], pos = _tl._read_typed(data, pos, "Vector<string>", _SCHEMA_BY_CID)
+        obj["q"], pos = _tl._read_string(data, pos)
+        obj["emoticon"], pos = _tl._read_string(data, pos)
+        obj["lang_code"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
         obj["offset"], obj["limit"], obj["hash"], = _struct.unpack_from('<iiq', data, pos)
         pos += 16
         return obj, pos
@@ -9629,8 +9629,8 @@ class ReportMessagesDelivery:
         out = b'\x95smZ'
         _flags_word = ((1 << 0) if self.push else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
@@ -9640,8 +9640,8 @@ class ReportMessagesDelivery:
         pos += 4
         if _flags_word & (1 << 0):
             obj["push"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9669,8 +9669,8 @@ class GetSavedDialogsByID:
         _flags_word = (0 if self.parent_peer is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.parent_peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.ids), _SCHEMA)
+            out += _tl._ser_peer(self.parent_peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.ids, 'Vector<InputPeer>', _SCHEMA)
         return out
 
     @classmethod
@@ -9679,8 +9679,8 @@ class GetSavedDialogsByID:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 1):
-            obj["parent_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["ids"], pos = _tl._read_typed(data, pos, "Vector<InputPeer>", _SCHEMA_BY_CID)
+            obj["parent_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["ids"], pos = _tl._read_vector(data, pos, 'InputPeer', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9708,16 +9708,16 @@ class ReadSavedHistory:
 
     def to_bytes(self) -> bytes:
         out = b'[;J\xba'
-        out += _tl.serialize(_tl._resolve(self.parent_peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.parent_peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.max_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.readSavedHistory"}
-        obj["parent_peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["parent_peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["max_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -9750,20 +9750,20 @@ class ToggleTodoCompleted:
 
     def to_bytes(self) -> bytes:
         out = b'$1\xe0\xd3'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
-        out += _tl.serialize(_tl._resolve(self.completed), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.incompleted), _SCHEMA)
+        out += _tl._serialize_field(self.completed, 'Vector<int>', _SCHEMA)
+        out += _tl._serialize_field(self.incompleted, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.toggleTodoCompleted"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["completed"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
-        obj["incompleted"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["completed"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
+        obj["incompleted"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9791,18 +9791,18 @@ class AppendTodoList:
 
     def to_bytes(self) -> bytes:
         out = b'W\x10\xa6!'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
-        out += _tl.serialize(_tl._resolve(self.list), _SCHEMA)
+        out += _tl._serialize_field(self.list, 'Vector<TodoItem>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.appendTodoList"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["list"], pos = _tl._read_typed(data, pos, "Vector<TodoItem>", _SCHEMA_BY_CID)
+        obj["list"], pos = _tl._read_vector(data, pos, 'TodoItem', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9838,7 +9838,7 @@ class ToggleSuggestedPostApproval:
         out = b'\\E\x07\x81'
         _flags_word = ((1 << 1) if self.reject else 0) | (0 if self.schedule_date is None else (1 << 0)) | (0 if self.reject_comment is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.schedule_date)
@@ -9853,14 +9853,14 @@ class ToggleSuggestedPostApproval:
         pos += 4
         if _flags_word & (1 << 1):
             obj["reject"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
             obj["schedule_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
         if _flags_word & (1 << 2):
-            obj["reject_comment"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["reject_comment"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9899,7 +9899,7 @@ class GetForumTopics:
         out = b'\xff{\xa4;'
         _flags_word = (0 if self.q is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.q)
         out += _struct.pack('<iiii', self.offset_date, self.offset_id, self.offset_topic, self.limit)
@@ -9910,9 +9910,9 @@ class GetForumTopics:
         obj = {"_": "messages.getForumTopics"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["q"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["q"], pos = _tl._read_string(data, pos)
         obj["offset_date"], obj["offset_id"], obj["offset_topic"], obj["limit"], = _struct.unpack_from('<iiii', data, pos)
         pos += 16
         return obj, pos
@@ -9939,15 +9939,15 @@ class GetForumTopicsByID:
 
     def to_bytes(self) -> bytes:
         out = b'\x08J\n\xaf'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.topics), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.topics, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getForumTopicsByID"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["topics"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["topics"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9986,7 +9986,7 @@ class EditForumTopic:
         out = b'4\x11\xcc\xce'
         _flags_word = (0 if self.title is None else (1 << 0)) | (0 if self.icon_emoji_id is None else (1 << 1)) | (0 if self.closed is None else (1 << 2)) | (0 if self.hidden is None else (1 << 3))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.topic_id)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.title)
@@ -10003,18 +10003,18 @@ class EditForumTopic:
         obj = {"_": "messages.editForumTopic"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["topic_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["title"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
             obj["icon_emoji_id"] = _struct.unpack_from('<q', data, pos)[0]
             pos = pos + 8
         if _flags_word & (1 << 2):
-            obj["closed"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["closed"], pos = _tl._read_bool(data, pos)
         if _flags_word & (1 << 3):
-            obj["hidden"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+            obj["hidden"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10042,7 +10042,7 @@ class UpdatePinnedForumTopic:
 
     def to_bytes(self) -> bytes:
         out = b'Q\xf2]\x17'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.topic_id)
         out += _tl._pack_bool(self.pinned)
         return out
@@ -10050,10 +10050,10 @@ class UpdatePinnedForumTopic:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.updatePinnedForumTopic"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["topic_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["pinned"], pos = _tl._read_typed(data, pos, "Bool", _SCHEMA_BY_CID)
+        obj["pinned"], pos = _tl._read_bool(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10083,8 +10083,8 @@ class ReorderPinnedForumTopics:
         out = b'\xf0Ax\x0e'
         _flags_word = ((1 << 0) if self.force else 0)
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.order), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.order, 'Vector<int>', _SCHEMA)
         return out
 
     @classmethod
@@ -10094,8 +10094,8 @@ class ReorderPinnedForumTopics:
         pos += 4
         if _flags_word & (1 << 0):
             obj["force"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["order"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["order"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10137,7 +10137,7 @@ class CreateForumTopic:
         out = b'\xd5\xc3\x98/'
         _flags_word = ((1 << 4) if self.title_missing else 0) | (0 if self.icon_color is None else (1 << 0)) | (0 if self.icon_emoji_id is None else (1 << 3)) | (0 if self.send_as is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.title)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.icon_color)
@@ -10145,7 +10145,7 @@ class CreateForumTopic:
             out += _struct.pack('<q', self.icon_emoji_id)
         out += _struct.pack('<q', self.random_id)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.send_as), _SCHEMA)
+            out += _tl._ser_peer(self.send_as, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -10155,8 +10155,8 @@ class CreateForumTopic:
         pos += 4
         if _flags_word & (1 << 4):
             obj["title_missing"] = True
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["title"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["title"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
             obj["icon_color"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -10166,7 +10166,7 @@ class CreateForumTopic:
         obj["random_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 2):
-            obj["send_as"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["send_as"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10191,14 +10191,14 @@ class DeleteTopicHistory:
 
     def to_bytes(self) -> bytes:
         out = b'\x10o\x81\xd2'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.top_msg_id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.deleteTopicHistory"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -10255,7 +10255,7 @@ class SummarizeText:
         out = b'F\xd3\xbb\xab'
         _flags_word = (0 if self.to_lang is None else (1 << 0)) | (0 if self.tone is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.to_lang)
@@ -10268,13 +10268,13 @@ class SummarizeText:
         obj = {"_": "messages.summarizeText"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["to_lang"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["to_lang"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["tone"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["tone"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10302,17 +10302,17 @@ class EditChatCreator:
 
     def to_bytes(self) -> bytes:
         out = b'W\xb8C\xf7'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.password), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
+        out += _tl._ser(self.password, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.editChatCreator"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
-        obj["password"], pos = _tl._read_typed(data, pos, "InputCheckPasswordSRP", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["password"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10334,13 +10334,13 @@ class GetFutureChatCreatorAfterLeave:
 
     def to_bytes(self) -> bytes:
         out = b'\xa6\x0e};'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getFutureChatCreatorAfterLeave"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10368,17 +10368,17 @@ class EditChatParticipantRank:
 
     def to_bytes(self) -> bytes:
         out = b'\xb02\x0f\xa0'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
         out += _tl._pack_string(self.rank)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.editChatParticipantRank"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["rank"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["rank"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10406,7 +10406,7 @@ class DeclineUrlAuth:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.declineUrlAuth"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10438,8 +10438,8 @@ class CheckUrlAuthMatchCode:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.checkUrlAuthMatchCode"}
-        obj["url"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
-        obj["match_code"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["url"], pos = _tl._read_string(data, pos)
+        obj["match_code"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10475,11 +10475,11 @@ class ComposeMessageWithAI:
         out = b'\x89\xc5\xec\xda'
         _flags_word = ((1 << 0) if self.proofread else 0) | ((1 << 3) if self.emojify else 0) | (0 if self.translate_to_lang is None else (1 << 1)) | (0 if self.tone is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.text), _SCHEMA)
+        out += _tl._ser(self.text, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.translate_to_lang)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.tone), _SCHEMA)
+            out += _tl._ser(self.tone, _SCHEMA)
         return out
 
     @classmethod
@@ -10491,11 +10491,11 @@ class ComposeMessageWithAI:
             obj["proofread"] = True
         if _flags_word & (1 << 3):
             obj["emojify"] = True
-        obj["text"], pos = _tl._read_typed(data, pos, "TextWithEntities", _SCHEMA_BY_CID)
+        obj["text"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["translate_to_lang"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["translate_to_lang"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["tone"], pos = _tl._read_typed(data, pos, "InputAiComposeTone", _SCHEMA_BY_CID)
+            obj["tone"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10520,15 +10520,15 @@ class ReportReadMetrics:
 
     def to_bytes(self) -> bytes:
         out = b'\xe6\xc5g@'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.metrics), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._serialize_field(self.metrics, 'Vector<InputMessageReadMetric>', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.reportReadMetrics"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["metrics"], pos = _tl._read_typed(data, pos, "Vector<InputMessageReadMetric>", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["metrics"], pos = _tl._read_vector(data, pos, 'InputMessageReadMetric', _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10553,14 +10553,14 @@ class ReportMusicListen:
 
     def to_bytes(self) -> bytes:
         out = b'\x19\xd8\xbc\xdd'
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
         out += _struct.pack('<i', self.listened_duration)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.reportMusicListen"}
-        obj["id"], pos = _tl._read_typed(data, pos, "InputDocument", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["listened_duration"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -10590,18 +10590,18 @@ class AddPollAnswer:
 
     def to_bytes(self) -> bytes:
         out = b'mK\xbc\x19'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
-        out += _tl.serialize(_tl._resolve(self.answer), _SCHEMA)
+        out += _tl._ser(self.answer, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.addPollAnswer"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["answer"], pos = _tl._read_typed(data, pos, "PollAnswer", _SCHEMA_BY_CID)
+        obj["answer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10629,7 +10629,7 @@ class DeletePollAnswer:
 
     def to_bytes(self) -> bytes:
         out = b'\xa5\x05\x85\xac'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
         out += _tl._pack_bytes(self.option)
         return out
@@ -10637,10 +10637,10 @@ class DeletePollAnswer:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.deletePollAnswer"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["option"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["option"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10682,7 +10682,7 @@ class GetUnreadPollVotes:
         out = b'\xf2l(C'
         _flags_word = (0 if self.top_msg_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.top_msg_id)
         out += _struct.pack('<iiiii', self.offset_id, self.add_offset, self.limit, self.max_id, self.min_id)
@@ -10693,7 +10693,7 @@ class GetUnreadPollVotes:
         obj = {"_": "messages.getUnreadPollVotes"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -10725,7 +10725,7 @@ class ReadPollVotes:
         out = b'\xd8\xb4 \x17'
         _flags_word = (0 if self.top_msg_id is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.top_msg_id)
         return out
@@ -10735,7 +10735,7 @@ class ReadPollVotes:
         obj = {"_": "messages.readPollVotes"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["top_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -10764,7 +10764,7 @@ class SetBotGuestChatResult:
     def to_bytes(self) -> bytes:
         out = b'\xe3\x06\xf1\xb8'
         out += _struct.pack('<q', self.query_id)
-        out += _tl.serialize(_tl._resolve(self.result), _SCHEMA)
+        out += _tl._ser(self.result, _SCHEMA)
         return out
 
     @classmethod
@@ -10772,7 +10772,7 @@ class SetBotGuestChatResult:
         obj = {"_": "messages.setBotGuestChatResult"}
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["result"], pos = _tl._read_typed(data, pos, "InputBotInlineResult", _SCHEMA_BY_CID)
+        obj["result"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10797,15 +10797,15 @@ class DeleteParticipantReactions:
 
     def to_bytes(self) -> bytes:
         out = b'\xf8\x0c\xb8\xa0'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.deleteParticipantReactions"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10833,18 +10833,18 @@ class DeleteParticipantReaction:
 
     def to_bytes(self) -> bytes:
         out = b',\xf8\xb7\xe3'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
-        out += _tl.serialize(_tl._resolve(self.participant), _SCHEMA)
+        out += _tl._ser_peer(self.participant, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.deleteParticipantReaction"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["participant"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["participant"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -10878,14 +10878,14 @@ class GetPersonalChannelHistory:
 
     def to_bytes(self) -> bytes:
         out = b'\x96\t\xfbU'
-        out += _tl.serialize(_tl._resolve(self.user_id), _SCHEMA)
+        out += _tl._ser_peer(self.user_id, 'InputUser', _SCHEMA)
         out += _struct.pack('<iiiq', self.limit, self.max_id, self.min_id, self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getPersonalChannelHistory"}
-        obj["user_id"], pos = _tl._read_typed(data, pos, "InputUser", _SCHEMA_BY_CID)
+        obj["user_id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["limit"], obj["max_id"], obj["min_id"], obj["hash"], = _struct.unpack_from('<iiiq', data, pos)
         pos += 20
         return obj, pos
@@ -10912,14 +10912,14 @@ class GetRichMessage:
 
     def to_bytes(self) -> bytes:
         out = b'\xcfi\x15P'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getRichMessage"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         return obj, pos
@@ -10958,11 +10958,11 @@ class TranslateRichMessage:
         _flags_word = (0 if self.peer is None else (1 << 0)) | (0 if self.id is None else (1 << 0)) | (0 if self.text is None else (1 << 1)) | (0 if self.tone is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+            out += _tl._serialize_field(self.id, 'Vector<int>', _SCHEMA)
         if _flags_word & (1 << 1):
-            out += _tl.serialize(_tl._resolve(self.text), _SCHEMA)
+            out += _tl._serialize_field(self.text, 'Vector<InputRichMessage>', _SCHEMA)
         out += _tl._pack_string(self.to_lang)
         if _flags_word & (1 << 2):
             out += _tl._pack_string(self.tone)
@@ -10974,14 +10974,14 @@ class TranslateRichMessage:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["id"], pos = _tl._read_typed(data, pos, "Vector<int>", _SCHEMA_BY_CID)
+            obj["id"], pos = _tl._read_vector(data, pos, 'int', _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["text"], pos = _tl._read_typed(data, pos, "Vector<InputRichMessage>", _SCHEMA_BY_CID)
-        obj["to_lang"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["text"], pos = _tl._read_vector(data, pos, 'InputRichMessage', _SCHEMA_BY_CID)
+        obj["to_lang"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["tone"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["tone"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -11018,11 +11018,11 @@ class ComposeRichMessageWithAI:
         _flags_word = ((1 << 0) if self.proofread else 0) | ((1 << 3) if self.emojify else 0) | (0 if self.text is None else (1 << 4)) | (0 if self.translate_to_lang is None else (1 << 1)) | (0 if self.tone is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 4):
-            out += _tl.serialize(_tl._resolve(self.text), _SCHEMA)
+            out += _tl._ser(self.text, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _tl._pack_string(self.translate_to_lang)
         if _flags_word & (1 << 2):
-            out += _tl.serialize(_tl._resolve(self.tone), _SCHEMA)
+            out += _tl._ser(self.tone, _SCHEMA)
         return out
 
     @classmethod
@@ -11035,11 +11035,11 @@ class ComposeRichMessageWithAI:
         if _flags_word & (1 << 3):
             obj["emojify"] = True
         if _flags_word & (1 << 4):
-            obj["text"], pos = _tl._read_typed(data, pos, "InputRichMessage", _SCHEMA_BY_CID)
+            obj["text"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
-            obj["translate_to_lang"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["translate_to_lang"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 2):
-            obj["tone"], pos = _tl._read_typed(data, pos, "InputAiComposeTone", _SCHEMA_BY_CID)
+            obj["tone"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -11071,7 +11071,7 @@ class RequestChatJoinWebView:
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.query_id)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.theme_params), _SCHEMA)
+            out += _tl._ser(self.theme_params, _SCHEMA)
         out += _tl._pack_string(self.platform)
         return out
 
@@ -11083,8 +11083,8 @@ class RequestChatJoinWebView:
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 0):
-            obj["theme_params"], pos = _tl._read_typed(data, pos, "DataJSON", _SCHEMA_BY_CID)
-        obj["platform"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["theme_params"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["platform"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -11109,15 +11109,15 @@ class SetShareTheme:
 
     def to_bytes(self) -> bytes:
         out = b'\x1a\x9b\x8ai'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
-        out += _tl.serialize(_tl._resolve(self.theme), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        out += _tl._ser(self.theme, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.setShareTheme"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
-        obj["theme"], pos = _tl._read_typed(data, pos, "ShareTheme", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["theme"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -11177,20 +11177,20 @@ class GetBotWidgetQueryAnswer:
 
     def to_bytes(self) -> bytes:
         out = b'y\x05U\\'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.msg_id)
-        out += _tl.serialize(_tl._resolve(self.query_type), _SCHEMA)
+        out += _tl._ser(self.query_type, _SCHEMA)
         out += _tl._pack_bytes(self.data)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getBotWidgetQueryAnswer"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
-        obj["query_type"], pos = _tl._read_typed(data, pos, "WidgetQueryType", _SCHEMA_BY_CID)
-        obj["data"], pos = _tl._read_typed(data, pos, "bytes", _SCHEMA_BY_CID)
+        obj["query_type"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["data"], pos = _tl._read_bytes(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -11230,7 +11230,7 @@ class SetBotWidgetQueryAnswer:
         obj["query_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
         if _flags_word & (1 << 0):
-            obj["result"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["result"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -11263,7 +11263,7 @@ class EditMessageWidgetData:
         out = b'\x1e\xbc$\xf6'
         _flags_word = (0 if self.public_data is None else (1 << 0)) | (0 if self.chat_data is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<i', self.id)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.public_data)
@@ -11276,13 +11276,13 @@ class EditMessageWidgetData:
         obj = {"_": "messages.editMessageWidgetData"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["id"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         if _flags_word & (1 << 0):
-            obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["public_data"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["chat_data"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -11312,7 +11312,7 @@ class EditInlineBotMessageWidgetData:
         out = b'+\xce\x96c'
         _flags_word = (0 if self.public_data is None else (1 << 0)) | (0 if self.chat_data is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
-        out += _tl.serialize(_tl._resolve(self.id), _SCHEMA)
+        out += _tl._ser(self.id, _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.public_data)
         if _flags_word & (1 << 1):
@@ -11324,11 +11324,11 @@ class EditInlineBotMessageWidgetData:
         obj = {"_": "messages.editInlineBotMessageWidgetData"}
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
-        obj["id"], pos = _tl._read_typed(data, pos, "InputBotInlineMessageID", _SCHEMA_BY_CID)
+        obj["id"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
-            obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["public_data"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 1):
-            obj["chat_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+            obj["chat_data"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -11371,7 +11371,7 @@ class EditWidgetData:
         pos += 4
         obj["widget_id"] = _struct.unpack_from('<q', data, pos)[0]
         pos = pos + 8
-        obj["public_data"], pos = _tl._read_typed(data, pos, "string", _SCHEMA_BY_CID)
+        obj["public_data"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
             obj["cache_time"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -11402,14 +11402,14 @@ class GetWidgetPublicData:
 
     def to_bytes(self) -> bytes:
         out = b'\x811\xc5o'
-        out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         out += _struct.pack('<iq', self.msg_id, self.hash)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.getWidgetPublicData"}
-        obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["msg_id"], obj["hash"], = _struct.unpack_from('<iq', data, pos)
         pos += 12
         return obj, pos
@@ -11433,13 +11433,13 @@ class TranscribeAudioFile:
 
     def to_bytes(self) -> bytes:
         out = b'\xf7.-\x07'
-        out += _tl.serialize(_tl._resolve(self.file), _SCHEMA)
+        out += _tl._ser(self.file, _SCHEMA)
         return out
 
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.transcribeAudioFile"}
-        obj["file"], pos = _tl._read_typed(data, pos, "InputFile", _SCHEMA_BY_CID)
+        obj["file"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -11464,7 +11464,7 @@ class GetTranscriptionLangs:
         _flags_word = (0 if self.peer is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
-            out += _tl.serialize(_tl._resolve(self.peer), _SCHEMA)
+            out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         return out
 
     @classmethod
@@ -11473,7 +11473,7 @@ class GetTranscriptionLangs:
         _flags_word, = _struct.unpack_from('<I', data, pos)
         pos += 4
         if _flags_word & (1 << 0):
-            obj["peer"], pos = _tl._read_typed(data, pos, "InputPeer", _SCHEMA_BY_CID)
+            obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
