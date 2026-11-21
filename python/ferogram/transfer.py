@@ -135,6 +135,11 @@ class TransferCancelled(Exception):
     """Raised when a TransferHandle is cancelled during upload or download."""
 
 
+# Mirror ferogram's media::MAX_WORKERS_PER_FILE / MAX_PIPELINE_DEPTH.
+MAX_WORKERS_PER_FILE = 4
+MAX_PIPELINE_DEPTH = 8
+
+
 class TransferLimits:
     """Concurrency ceilings for file transfers. Mirrors ferogram's Rust
     `TransferLimits` (same highway/trucks model, same field names).
@@ -142,7 +147,7 @@ class TransferLimits:
     - `download_tcp_connections` / `upload_tcp_connections` (**Y**): how many
       parallel worker connections a single transfer may open for itself.
       Small files always use 1 regardless of this value; larger files scale
-      up towards this ceiling. Default: 4.
+      up towards this ceiling. Default: 4. Max: 4 (same hard ceiling as Rust).
     - `max_tcp_connections`: total worker connections allowed across the
       whole client at once, shared by every upload and download running
       concurrently. Lower this on memory- or socket-constrained devices
@@ -154,7 +159,9 @@ class TransferLimits:
       the shared home-connection fallback path (used when no extra worker
       connections could be opened) still goes one request at a time, since
       that socket can't be handed off to a pipelined sender.
-      Default: 4.
+      Default: 1 (pipelining off), same as Rust. Raising it multiplies the
+      requests in flight (Y x X), and Telegram answers bursts with
+      FLOOD_WAIT, so raise it gradually (2, then 3...). Max: 8.
     - `bypass_tcp_allotments`: skip the size-based lookup tables for **Y**
       entirely and always use `download_tcp_connections` /
       `upload_tcp_connections` directly, regardless of file size. This is an
@@ -190,15 +197,17 @@ class TransferLimits:
         download_tcp_connections: int = 4,
         upload_tcp_connections: int = 4,
         max_tcp_connections: int = 12,
-        download_pipeline_depth: int = 4,
-        upload_pipeline_depth: int = 4,
+        download_pipeline_depth: int = 1,
+        upload_pipeline_depth: int = 1,
         bypass_tcp_allotments: bool = False,
     ) -> None:
-        self.download_tcp_connections = max(1, download_tcp_connections)
-        self.upload_tcp_connections   = max(1, upload_tcp_connections)
+        # Same clamps as Rust's TransferLimits::normalized(): Y in 1..=4
+        # (more connections per file makes Telegram shed them), X in 1..=8.
+        self.download_tcp_connections = min(max(1, download_tcp_connections), MAX_WORKERS_PER_FILE)
+        self.upload_tcp_connections   = min(max(1, upload_tcp_connections), MAX_WORKERS_PER_FILE)
         self.max_tcp_connections      = max(1, max_tcp_connections)
-        self.download_pipeline_depth  = max(1, download_pipeline_depth)
-        self.upload_pipeline_depth    = max(1, upload_pipeline_depth)
+        self.download_pipeline_depth  = min(max(1, download_pipeline_depth), MAX_PIPELINE_DEPTH)
+        self.upload_pipeline_depth    = min(max(1, upload_pipeline_depth), MAX_PIPELINE_DEPTH)
         self.bypass_tcp_allotments    = bypass_tcp_allotments
 
     def __repr__(self) -> str:
