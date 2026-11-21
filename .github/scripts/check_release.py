@@ -2,7 +2,8 @@
 """Release checks used by .github/workflows/publish.yml.
 
   check_release.py version [--check-pypi]
-      pyproject.toml version must match the pushed tag (v<version>). With
+      On a tag run, the pyproject.toml version must match the tag
+      (v<version>). Manual runs from a branch skip that comparison. With
       --check-pypi the version must also not exist on PyPI yet.
 
   check_release.py dists DIR VERSION
@@ -25,15 +26,15 @@ PROJECT = "ferogram"
 # one file and every file must match exactly one pattern.
 EXPECTED_DISTS = [
     "{p}-{v}.tar.gz",
-    "{p}-{v}-cp39-abi3-manylinux*x86_64*.whl",
-    "{p}-{v}-cp39-abi3-manylinux*aarch64*.whl",
-    "{p}-{v}-cp39-abi3-macosx_*_x86_64.whl",
-    "{p}-{v}-cp39-abi3-macosx_*_arm64.whl",
-    "{p}-{v}-cp39-abi3-win_amd64.whl",
-    "{p}-{v}-cp39-abi3-android_*_arm64_v8a.whl",
-    "{p}-{v}-cp39-abi3-android_*_armeabi_v7a.whl",
-    "{p}-{v}-cp39-abi3-android_*_x86_64.whl",
-    "{p}-{v}-cp39-abi3-android_*_x86.whl",
+    "{p}-{v}-cp310-abi3-manylinux*x86_64*.whl",
+    "{p}-{v}-cp310-abi3-manylinux*aarch64*.whl",
+    "{p}-{v}-cp310-abi3-macosx_*_x86_64.whl",
+    "{p}-{v}-cp310-abi3-macosx_*_arm64.whl",
+    "{p}-{v}-cp310-abi3-win_amd64.whl",
+    "{p}-{v}-cp310-abi3-android_*_arm64_v8a.whl",
+    "{p}-{v}-cp310-abi3-android_*_armeabi_v7a.whl",
+    "{p}-{v}-cp310-abi3-android_*_x86_64.whl",
+    "{p}-{v}-cp310-abi3-android_*_x86.whl",
 ]
 
 

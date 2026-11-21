@@ -18,7 +18,7 @@ on:
           - android-termux
           - sdist
       publish:
-        description: "Upload to PyPI after build. Only runs from a v* tag with job=all."
+        description: "Upload to PyPI after build. Needs job=all and a run from main or a v* tag."
         required: false
         default: false
         type: boolean
@@ -36,6 +36,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.release.outputs.publish }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,8 +47,36 @@ jobs:
       - name: Tag matches pyproject.toml version
         id: version
         run: python .github/scripts/check_release.py version
+      # A release is either a pushed v* tag, or a manual run (workflow_dispatch)
+      # with publish=true and job=all. Manual releases are only allowed from
+      # main or a v* tag, so a stray feature branch can never reach PyPI.
+      - name: Decide whether this run publishes
+        id: release
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_PUBLISH: ${{ inputs.publish }}
+          INPUT_JOB: ${{ inputs.job }}
+          REF: ${{ github.ref }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          publish=false
+          if [ "$EVENT" = "push" ]; then
+            publish=true
+          elif [ "$INPUT_PUBLISH" = "true" ]; then
+            if [ "$INPUT_JOB" != "all" ]; then
+              echo "::error::publish=true needs job=all (got job=$INPUT_JOB)"
+              exit 1
+            fi
+            if [ "$REF_TYPE" != "tag" ] && [ "$REF" != "refs/heads/main" ]; then
+              echo "::error::Manual releases only run from main or a v* tag (got $REF)"
+              exit 1
+            fi
+            publish=true
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "Publishing to PyPI: $publish"
       - name: Version is not on PyPI yet
-        if: github.ref_type == 'tag' && (github.event_name == 'push' || (inputs.publish == true && inputs.job == 'all'))
+        if: steps.release.outputs.publish == 'true'
         run: python .github/scripts/check_release.py version --check-pypi
 
   tests:
@@ -352,16 +381,16 @@ jobs:
     name: Smoke test (Python ${{ matrix.python }})
     needs: [check, linux]
     if: github.event_name == 'push' || inputs.job == 'all' || inputs.job == 'linux'
-    # ubuntu-latest has no Python 3.9 build for actions/setup-python, see tests.yml
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.9", "3.13"]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
+          allow-prereleases: true
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: wheels-linux-x86_64-unknown-linux-gnu
@@ -414,7 +443,7 @@ jobs:
   # the PyPA action, nothing else. Maturin builds, it does not upload.
   publish:
     needs: [check, collect]
-    if: github.ref_type == 'tag' && (github.event_name == 'push' || (inputs.publish == true && inputs.job == 'all'))
+    if: needs.check.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     environment:
       name: pypi
@@ -456,6 +485,7 @@ jobs:
 
   verify:
     needs: [check, publish]
+    if: needs.check.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

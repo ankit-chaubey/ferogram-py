@@ -1,6 +1,6 @@
 // build.rs - regenerate python/ferogram/raw/generated/ from schema/api.tl
 //
-// Runs at `maturin develop` / `pip install .` time. Requires Python 3.9+ on
+// Runs at `maturin develop` / `pip install .` time. Requires Python 3.10+ on
 // PATH (the same interpreter maturin is already using to build the extension).
 //
 // To skip regen during development (e.g. you only changed Rust code):

@@ -1,3 +1,10 @@
+## Unreleased
+
+### Changed
+- Minimum Python is now 3.10 (`requires-python = ">=3.10"`); Python 3.9 support is dropped. Wheels are built for the stable ABI as `cp310-abi3` (`pyo3/abi3-py310`) and work on Python 3.10 through 3.15.
+- CI runs the unit tests and the wheel smoke test on Python 3.10, 3.11, 3.12, 3.13, 3.14 and 3.15.
+- Releases no longer need a tag push. The `Publish to PyPI` workflow can also be started by hand (`workflow_dispatch`) with `job=all` and `publish=true` from `main` or a `v*` tag. The version-not-on-PyPI check, the distribution check, attestations and the provenance check run the same way for both.
+
 ## 0.5.5 (16-11-2026)
 
 ### Changed

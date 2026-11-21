@@ -15,11 +15,17 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Rust",
     "Topic :: Communications :: Chat",
     "Topic :: Software Development :: Libraries",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.urls]
 Homepage      = "https://ferogram.dev"
@@ -46,7 +52,7 @@ testpaths  = ["tests"]
 pythonpath = ["python"]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 extend-exclude = ["python/ferogram/raw/generated"]
 
 [tool.ruff.lint]
