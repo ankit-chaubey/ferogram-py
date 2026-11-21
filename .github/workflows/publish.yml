@@ -18,7 +18,7 @@ on:
           - android-termux
           - sdist
       publish:
-        description: "Upload to PyPI after build. Needs job=all and a run from main or a v* tag."
+        description: "Upload to PyPI after build. Needs job=all and a run from main, unstable or a v* tag."
         required: false
         default: false
         type: boolean
@@ -49,7 +49,8 @@ jobs:
         run: python .github/scripts/check_release.py version
       # A release is either a pushed v* tag, or a manual run (workflow_dispatch)
       # with publish=true and job=all. Manual releases are only allowed from
-      # main or a v* tag, so a stray feature branch can never reach PyPI.
+      # the branches listed in RELEASE_BRANCHES (or a tag), so a stray feature
+      # branch can never reach PyPI. Add a branch to the list to allow it.
       - name: Decide whether this run publishes
         id: release
         env:
@@ -58,6 +59,7 @@ jobs:
           INPUT_JOB: ${{ inputs.job }}
           REF: ${{ github.ref }}
           REF_TYPE: ${{ github.ref_type }}
+          RELEASE_BRANCHES: "main unstable"
         run: |
           publish=false
           if [ "$EVENT" = "push" ]; then
@@ -67,8 +69,16 @@ jobs:
               echo "::error::publish=true needs job=all (got job=$INPUT_JOB)"
               exit 1
             fi
-            if [ "$REF_TYPE" != "tag" ] && [ "$REF" != "refs/heads/main" ]; then
-              echo "::error::Manual releases only run from main or a v* tag (got $REF)"
+            allowed=false
+            if [ "$REF_TYPE" = "tag" ]; then
+              allowed=true
+            else
+              for b in $RELEASE_BRANCHES; do
+                [ "$REF" = "refs/heads/$b" ] && allowed=true
+              done
+            fi
+            if [ "$allowed" != "true" ]; then
+              echo "::error::Manual releases only run from a tag or one of: $RELEASE_BRANCHES (got $REF)"
               exit 1
             fi
             publish=true
