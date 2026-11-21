@@ -2,7 +2,7 @@
 name            = "ferogram-py"
 version         = "0.5.5-beta.6"
 edition         = "2024"
-description     = "Python MTProto client based on ferogram (Rust MTProto)"
+description     = "Elegant, modern and asynchronous Telegram MTProto API framework in Python for users and bots, powered by Rust."
 documentation   = "https://python.ferogram.dev"
 homepage        = "https://ferogram.dev"
 repository      = "https://github.com/ankit-chaubey/ferogram-py"
@@ -32,7 +32,9 @@ log                 = "0.4"
 [profile.release]
 strip     = true
 opt-level = 3
-lto       = true
+lto       = "fat"
+codegen-units = 1
+debug     = false
 
 [build-dependencies]
 pyo3-build-config = "0.29"

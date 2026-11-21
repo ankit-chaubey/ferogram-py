@@ -8,7 +8,7 @@
 ![License](https://img.shields.io/badge/License-MIT%20%7C%20Apache--2.0-64748B?style=flat-square)
 ![Telegram](https://img.shields.io/badge/Telegram-FerogramChat-06B6D4?style=flat-square&logo=telegram&logoColor=white)
 
-**A modern, elegant, asynchronous MTProto framework for building Telegram clients and bots in Python.**
+**Elegant, modern and asynchronous Telegram MTProto API framework in Python for users and bots**
 
 </div>
 
