@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import os
+import re
 from collections import deque
 from contextlib import AsyncExitStack, suppress
 from typing import TYPE_CHECKING, Any, Callable
@@ -42,6 +43,18 @@ from ..transfer import (
     _VOICE_MIME,
     _STICKER_MIME,
 )
+
+# Telegram answers bursts of getFile with FLOOD_WAIT_X / "FLOOD_WAIT (value: X)".
+# X is the number of seconds to pause; the request is fine to repeat afterwards.
+_FLOOD_WAIT_RE = re.compile(r"FLOOD(?:_PREMIUM)?_WAIT[^0-9]*(\d+)")
+_MAX_FLOOD_SLEEP = 120   # seconds; longer waits are surfaced to the caller
+_MAX_FLOOD_HITS = 50     # consecutive flood waits tolerated per worker
+
+
+def _parse_flood_wait(msg: str) -> "int | None":
+    m = _FLOOD_WAIT_RE.search(msg)
+    return int(m.group(1)) if m else None
+
 
 if TYPE_CHECKING:
     pass
@@ -192,9 +205,9 @@ class MediaMethods:
         """Mirrors ferogram download_chunk_size()."""
         if file_size < 50 * 1024 * 1024:
             return 256 * 1024
-        if file_size < 500 * 1024 * 1024:
-            return 512 * 1024
-        return 1024 * 1024
+        # Capped at 512 KB: 1 MiB replies overflow ferogram-mtsender's read
+        # buffer (READ_BUF_CAP) -> "server outpaced frame draining".
+        return 512 * 1024
 
     def _download_worker_count(self, file_size: int) -> int:
         """Mirrors ferogram download_worker_count(), capped by
@@ -636,6 +649,13 @@ class MediaMethods:
                                 handle._add_bytes(len(data))
                             return conn
                         except Exception as e:
+                            flood = _parse_flood_wait(str(e)) if isinstance(e, RuntimeError) else None
+                            if flood is not None and flood <= _MAX_FLOOD_SLEEP:
+                                self._log.warning(
+                                    "download: FLOOD_WAIT_%d on part %d, sleeping", flood, part_idx,
+                                )
+                                await asyncio.sleep(flood + 0.5)
+                                continue  # flood waits don't consume a retry attempt
                             new_dc = _parse_migrate(str(e)) if isinstance(e, RuntimeError) else None
                             if new_dc is not None:
                                 self._log.info(
@@ -678,6 +698,7 @@ class MediaMethods:
                     requests in flight on one socket at once. Mirrors the
                     sliding-window loop in ferogram's Rust `media.rs`."""
                     nonlocal next_part
+                    flood_hits = 0
                     depth = max(1, self._transfer_limits.download_pipeline_depth)
                     sender = await conn.into_pipelined_sender()
                     # Sliding window of (part_idx, in-flight PipelinedRequest).
@@ -706,6 +727,23 @@ class MediaMethods:
                         try:
                             resp_bytes = await request.wait()
                         except Exception as e:
+                            flood = _parse_flood_wait(str(e)) if isinstance(e, RuntimeError) else None
+                            if flood is not None:
+                                flood_hits += 1
+                                if flood > _MAX_FLOOD_SLEEP or flood_hits > _MAX_FLOOD_HITS:
+                                    raise
+                                # Every request still in flight was throttled too:
+                                # wait once, then resubmit the whole window.
+                                self._log.warning(
+                                    "download: FLOOD_WAIT_%d on part %d, sleeping then resubmitting %d part(s)",
+                                    flood, idx, 1 + len(window),
+                                )
+                                pending = [idx] + [w[0] for w in window]
+                                window.clear()
+                                await asyncio.sleep(flood + 0.5)
+                                for pidx in sorted(pending):
+                                    window.append((pidx, await sender.enqueue(_build_download_req(pidx * chunk_size))))
+                                continue
                             new_dc = _parse_migrate(str(e)) if isinstance(e, RuntimeError) else None
                             if new_dc is not None:
                                 # A redirect invalidates every part still in
@@ -737,6 +775,7 @@ class MediaMethods:
                             result = _tl.deserialize(resp_bytes, _SCHEMA_BY_CID)
                             data = result.get("bytes", b"") if isinstance(result, dict) else b""
                         store_part(idx, data)
+                        flood_hits = 0
                         if handle is not None:
                             handle._add_bytes(len(data))
 
@@ -766,6 +805,10 @@ class MediaMethods:
                         try:
                             resp_bytes = await conn.rpc_call(req_bytes)
                         except RuntimeError as e:
+                            flood = _parse_flood_wait(str(e))
+                            if flood is not None and flood <= _MAX_FLOOD_SLEEP:
+                                await asyncio.sleep(flood + 0.5)
+                                continue
                             new_dc = _parse_migrate(str(e))
                             if new_dc is not None:
                                 conn = await self._open_worker_conn(new_dc)
