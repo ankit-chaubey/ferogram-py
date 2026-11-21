@@ -18,7 +18,7 @@ on:
           - android-termux
           - sdist
       publish:
-        description: "Upload to PyPI after build. Needs job=all and a run from main, unstable or a v* tag."
+        description: "Upload to PyPI after build. Needs job=all and a run from main, dev or a v* tag."
         required: false
         default: false
         type: boolean
@@ -59,7 +59,7 @@ jobs:
           INPUT_JOB: ${{ inputs.job }}
           REF: ${{ github.ref }}
           REF_TYPE: ${{ github.ref_type }}
-          RELEASE_BRANCHES: "main unstable"
+          RELEASE_BRANCHES: "main dev"
         run: |
           publish=false
           if [ "$EVENT" = "push" ]; then
