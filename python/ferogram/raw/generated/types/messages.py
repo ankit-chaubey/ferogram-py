@@ -22,7 +22,7 @@ from .._tl_schema import _SCHEMA, _SCHEMA_BY_CID
 
 
 class Dialogs:
-    _CID = 0x15ba6c40
+    _CID = 0x2dfdd993
 
     def __init__(
         self,
@@ -30,7 +30,9 @@ class Dialogs:
         messages: list[Any],
         chats: list[Any],
         users: list[Any],
+        topics: list[Any] | None = None,
     ) -> None:
+        self.topics = topics
         self.dialogs = dialogs
         self.messages = messages
         self.chats = chats
@@ -38,6 +40,7 @@ class Dialogs:
 
     def to_dict(self) -> dict:
         return {"_": "messages.dialogs", **{
+            "topics": _tl._resolve(self.topics),
             "dialogs": _tl._resolve(self.dialogs),
             "messages": _tl._resolve(self.messages),
             "chats": _tl._resolve(self.chats),
@@ -45,7 +48,11 @@ class Dialogs:
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'@l\xba\x15'
+        out = b'\x93\xd9\xfd-'
+        _flags_word = (0 if self.topics is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl._serialize_field(self.topics, 'Vector<ForumTopic>', _SCHEMA)
         out += _tl._serialize_field(self.dialogs, 'Vector<Dialog>', _SCHEMA)
         out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
         out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
@@ -55,6 +62,10 @@ class Dialogs:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.dialogs"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["topics"], pos = _tl._read_vector(data, pos, 'ForumTopic', _SCHEMA_BY_CID)
         obj["dialogs"], pos = _tl._read_vector(data, pos, 'Dialog', _SCHEMA_BY_CID)
         obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
         obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
@@ -62,10 +73,10 @@ class Dialogs:
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"Dialogs(dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r}, users={self.users!r})"
+        return f"Dialogs(topics={self.topics!r}, dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r})"
 
 class DialogsSlice:
-    _CID = 0x71e094f3
+    _CID = 0xd1747044
 
     def __init__(
         self,
@@ -74,8 +85,10 @@ class DialogsSlice:
         messages: list[Any],
         chats: list[Any],
         users: list[Any],
+        topics: list[Any] | None = None,
     ) -> None:
         self.count = count
+        self.topics = topics
         self.dialogs = dialogs
         self.messages = messages
         self.chats = chats
@@ -84,6 +97,7 @@ class DialogsSlice:
     def to_dict(self) -> dict:
         return {"_": "messages.dialogsSlice", **{
             "count": _tl._resolve(self.count),
+            "topics": _tl._resolve(self.topics),
             "dialogs": _tl._resolve(self.dialogs),
             "messages": _tl._resolve(self.messages),
             "chats": _tl._resolve(self.chats),
@@ -91,8 +105,12 @@ class DialogsSlice:
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\xf3\x94\xe0q'
+        out = b'Dpt\xd1'
+        _flags_word = (0 if self.topics is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<i', self.count)
+        if _flags_word & (1 << 0):
+            out += _tl._serialize_field(self.topics, 'Vector<ForumTopic>', _SCHEMA)
         out += _tl._serialize_field(self.dialogs, 'Vector<Dialog>', _SCHEMA)
         out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
         out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
@@ -102,8 +120,12 @@ class DialogsSlice:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.dialogsSlice"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
+        if _flags_word & (1 << 0):
+            obj["topics"], pos = _tl._read_vector(data, pos, 'ForumTopic', _SCHEMA_BY_CID)
         obj["dialogs"], pos = _tl._read_vector(data, pos, 'Dialog', _SCHEMA_BY_CID)
         obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
         obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
@@ -111,7 +133,7 @@ class DialogsSlice:
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"DialogsSlice(count={self.count!r}, dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r})"
+        return f"DialogsSlice(count={self.count!r}, topics={self.topics!r}, dialogs={self.dialogs!r}, messages={self.messages!r})"
 
 class DialogsNotModified:
     _CID = 0xf0e3e596
@@ -1070,7 +1092,7 @@ class MessageEditData:
         return f"MessageEditData(caption={self.caption!r})"
 
 class PeerDialogs:
-    _CID = 0x3371c354
+    _CID = 0xa749f3e5
 
     def __init__(
         self,
@@ -1079,7 +1101,9 @@ class PeerDialogs:
         chats: list[Any],
         users: list[Any],
         state: Any,
+        topics: list[Any] | None = None,
     ) -> None:
+        self.topics = topics
         self.dialogs = dialogs
         self.messages = messages
         self.chats = chats
@@ -1088,6 +1112,7 @@ class PeerDialogs:
 
     def to_dict(self) -> dict:
         return {"_": "messages.peerDialogs", **{
+            "topics": _tl._resolve(self.topics),
             "dialogs": _tl._resolve(self.dialogs),
             "messages": _tl._resolve(self.messages),
             "chats": _tl._resolve(self.chats),
@@ -1096,7 +1121,11 @@ class PeerDialogs:
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'T\xc3q3'
+        out = b'\xe5\xf3I\xa7'
+        _flags_word = (0 if self.topics is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl._serialize_field(self.topics, 'Vector<ForumTopic>', _SCHEMA)
         out += _tl._serialize_field(self.dialogs, 'Vector<Dialog>', _SCHEMA)
         out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
         out += _tl._serialize_field(self.chats, 'Vector<Chat>', _SCHEMA)
@@ -1107,6 +1136,10 @@ class PeerDialogs:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "messages.peerDialogs"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["topics"], pos = _tl._read_vector(data, pos, 'ForumTopic', _SCHEMA_BY_CID)
         obj["dialogs"], pos = _tl._read_vector(data, pos, 'Dialog', _SCHEMA_BY_CID)
         obj["messages"], pos = _tl._read_vector(data, pos, 'Message', _SCHEMA_BY_CID)
         obj["chats"], pos = _tl._read_vector(data, pos, 'Chat', _SCHEMA_BY_CID)
@@ -1115,7 +1148,7 @@ class PeerDialogs:
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"PeerDialogs(dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r}, users={self.users!r})"
+        return f"PeerDialogs(topics={self.topics!r}, dialogs={self.dialogs!r}, messages={self.messages!r}, chats={self.chats!r})"
 
 class FeaturedStickersNotModified:
     _CID = 0xc6dc0c66
@@ -2525,7 +2558,7 @@ class Reactions:
         return f"Reactions(hash={self.hash!r}, reactions={self.reactions!r})"
 
 class ForumTopics:
-    _CID = 0x367617d3
+    _CID = 0xa9ce6e95
 
     def __init__(
         self,
@@ -2536,8 +2569,10 @@ class ForumTopics:
         users: list[Any],
         pts: int,
         order_by_create_date: bool | None = None,
+        top_icons: list[int] | None = None,
     ) -> None:
         self.order_by_create_date = order_by_create_date
+        self.top_icons = top_icons
         self.count = count
         self.topics = topics
         self.messages = messages
@@ -2548,6 +2583,7 @@ class ForumTopics:
     def to_dict(self) -> dict:
         return {"_": "messages.forumTopics", **{
             "order_by_create_date": _tl._resolve(self.order_by_create_date),
+            "top_icons": _tl._resolve(self.top_icons),
             "count": _tl._resolve(self.count),
             "topics": _tl._resolve(self.topics),
             "messages": _tl._resolve(self.messages),
@@ -2557,9 +2593,11 @@ class ForumTopics:
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\xd3\x17v6'
-        _flags_word = ((1 << 0) if self.order_by_create_date else 0)
+        out = b'\x95n\xce\xa9'
+        _flags_word = ((1 << 0) if self.order_by_create_date else 0) | (0 if self.top_icons is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 1):
+            out += _tl._serialize_field(self.top_icons, 'Vector<long>', _SCHEMA)
         out += _struct.pack('<i', self.count)
         out += _tl._serialize_field(self.topics, 'Vector<ForumTopic>', _SCHEMA)
         out += _tl._serialize_field(self.messages, 'Vector<Message>', _SCHEMA)
@@ -2575,6 +2613,8 @@ class ForumTopics:
         pos += 4
         if _flags_word & (1 << 0):
             obj["order_by_create_date"] = True
+        if _flags_word & (1 << 1):
+            obj["top_icons"], pos = _tl._read_vector(data, pos, 'long', _SCHEMA_BY_CID)
         obj["count"] = _struct.unpack_from('<i', data, pos)[0]
         pos = pos + 4
         obj["topics"], pos = _tl._read_vector(data, pos, 'ForumTopic', _SCHEMA_BY_CID)
@@ -2586,7 +2626,7 @@ class ForumTopics:
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"ForumTopics(order_by_create_date={self.order_by_create_date!r}, count={self.count!r}, topics={self.topics!r}, messages={self.messages!r})"
+        return f"ForumTopics(order_by_create_date={self.order_by_create_date!r}, top_icons={self.top_icons!r}, count={self.count!r}, topics={self.topics!r})"
 
 class EmojiGroupsNotModified:
     _CID = 0x6fb4ad87

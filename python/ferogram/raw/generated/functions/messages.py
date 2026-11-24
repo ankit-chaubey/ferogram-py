@@ -9867,7 +9867,7 @@ class ToggleSuggestedPostApproval:
         return f"ToggleSuggestedPostApproval(reject={self.reject!r}, peer={self.peer!r}, msg_id={self.msg_id!r}, schedule_date={self.schedule_date!r})"
 
 class GetForumTopics:
-    _CID = 0x3ba47bff
+    _CID = 0xc68c219a
 
     def __init__(
         self,
@@ -9877,9 +9877,13 @@ class GetForumTopics:
         offset_topic: int,
         limit: int,
         q: str | None = None,
+        icon_emoji_id: int | None = None,
+        closed: bool | None = None,
     ) -> None:
         self.peer = peer
         self.q = q
+        self.icon_emoji_id = icon_emoji_id
+        self.closed = closed
         self.offset_date = offset_date
         self.offset_id = offset_id
         self.offset_topic = offset_topic
@@ -9889,6 +9893,8 @@ class GetForumTopics:
         return {"_": "messages.getForumTopics", **{
             "peer": _tl._resolve(self.peer),
             "q": _tl._resolve(self.q),
+            "icon_emoji_id": _tl._resolve(self.icon_emoji_id),
+            "closed": _tl._resolve(self.closed),
             "offset_date": _tl._resolve(self.offset_date),
             "offset_id": _tl._resolve(self.offset_id),
             "offset_topic": _tl._resolve(self.offset_topic),
@@ -9896,12 +9902,16 @@ class GetForumTopics:
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\xff{\xa4;'
-        _flags_word = (0 if self.q is None else (1 << 0))
+        out = b'\x9a!\x8c\xc6'
+        _flags_word = (0 if self.q is None else (1 << 0)) | (0 if self.icon_emoji_id is None else (1 << 1)) | (0 if self.closed is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
         out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.q)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<q', self.icon_emoji_id)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_bool(self.closed)
         out += _struct.pack('<iiii', self.offset_date, self.offset_id, self.offset_topic, self.limit)
         return out
 
@@ -9913,12 +9923,17 @@ class GetForumTopics:
         obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 0):
             obj["q"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 1):
+            obj["icon_emoji_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 2):
+            obj["closed"], pos = _tl._read_bool(data, pos)
         obj["offset_date"], obj["offset_id"], obj["offset_topic"], obj["limit"], = _struct.unpack_from('<iiii', data, pos)
         pos += 16
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"GetForumTopics(peer={self.peer!r}, q={self.q!r}, offset_date={self.offset_date!r}, offset_id={self.offset_id!r})"
+        return f"GetForumTopics(peer={self.peer!r}, q={self.q!r}, icon_emoji_id={self.icon_emoji_id!r}, closed={self.closed!r})"
 
 class GetForumTopicsByID:
     _CID = 0xaf0a4a08
@@ -11478,3 +11493,65 @@ class GetTranscriptionLangs:
 
     def __repr__(self) -> str:
         return f"GetTranscriptionLangs(peer={self.peer!r})"
+
+class InviteUsersToBot:
+    _CID = 0x1db7effb
+
+    def __init__(
+        self,
+        bot: Any,
+        users: list[Any],
+    ) -> None:
+        self.bot = bot
+        self.users = users
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.inviteUsersToBot", **{
+            "bot": _tl._resolve(self.bot),
+            "users": _tl._resolve(self.users),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xfb\xef\xb7\x1d'
+        out += _tl._ser_peer(self.bot, 'InputUser', _SCHEMA)
+        out += _tl._serialize_field(self.users, 'Vector<InputUser>', _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.inviteUsersToBot"}
+        obj["bot"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["users"], pos = _tl._read_vector(data, pos, 'InputUser', _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InviteUsersToBot(bot={self.bot!r}, users={self.users!r})"
+
+class GetTranscriptionModels:
+    _CID = 0x081f6321
+
+    def __init__(
+        self,
+        version: int,
+    ) -> None:
+        self.version = version
+
+    def to_dict(self) -> dict:
+        return {"_": "messages.getTranscriptionModels", **{
+            "version": _tl._resolve(self.version),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'!c\x1f\x08'
+        out += _struct.pack('<i', self.version)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messages.getTranscriptionModels"}
+        obj["version"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"GetTranscriptionModels(version={self.version!r})"

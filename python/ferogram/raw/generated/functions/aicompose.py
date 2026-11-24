@@ -281,3 +281,42 @@ class GetToneExample:
 
     def __repr__(self) -> str:
         return f"GetToneExample(tone={self.tone!r}, num={self.num!r})"
+
+class SetChatStyle:
+    _CID = 0x5d9939c0
+
+    def __init__(
+        self,
+        peer: Any,
+        style: Any | None = None,
+    ) -> None:
+        self.peer = peer
+        self.style = style
+
+    def to_dict(self) -> dict:
+        return {"_": "aicompose.setChatStyle", **{
+            "peer": _tl._resolve(self.peer),
+            "style": _tl._resolve(self.style),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xc09\x99]'
+        _flags_word = (0 if self.style is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._ser_peer(self.peer, 'InputPeer', _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl._ser(self.style, _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "aicompose.setChatStyle"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["peer"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["style"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"SetChatStyle(peer={self.peer!r}, style={self.style!r})"

@@ -1880,3 +1880,269 @@ class StarGiftDepositPayload:
 
     def __repr__(self) -> str:
         return f"StarGiftDepositPayload(nft_address={self.nft_address!r}, payload={self.payload!r}, amount={self.amount!r})"
+
+class StarGiftOnchainSalePayload:
+    _CID = 0x3d1356f0
+
+    def __init__(
+        self,
+        nft_address: str,
+        amount: int,
+        payload: bytes,
+        gasless_available: bool | None = None,
+    ) -> None:
+        self.gasless_available = gasless_available
+        self.nft_address = nft_address
+        self.amount = amount
+        self.payload = payload
+
+    def to_dict(self) -> dict:
+        return {"_": "payments.starGiftOnchainSalePayload", **{
+            "gasless_available": _tl._resolve(self.gasless_available),
+            "nft_address": _tl._resolve(self.nft_address),
+            "amount": _tl._resolve(self.amount),
+            "payload": _tl._resolve(self.payload),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xf0V\x13='
+        _flags_word = ((1 << 0) if self.gasless_available else 0)
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.nft_address)
+        out += _struct.pack('<q', self.amount)
+        out += _tl._pack_bytes(self.payload)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "payments.starGiftOnchainSalePayload"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["gasless_available"] = True
+        obj["nft_address"], pos = _tl._read_string(data, pos)
+        obj["amount"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["payload"], pos = _tl._read_bytes(data, pos)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"StarGiftOnchainSalePayload(gasless_available={self.gasless_available!r}, nft_address={self.nft_address!r}, amount={self.amount!r}, payload={self.payload!r})"
+
+class StarGiftOnchainFixedSalePayload:
+    _CID = 0x82f9c2b7
+
+    def __init__(
+        self,
+        sale_address: str,
+        messages: list[Any],
+        gasless_messages: list[Any] | None = None,
+    ) -> None:
+        self.sale_address = sale_address
+        self.messages = messages
+        self.gasless_messages = gasless_messages
+
+    def to_dict(self) -> dict:
+        return {"_": "payments.starGiftOnchainFixedSalePayload", **{
+            "sale_address": _tl._resolve(self.sale_address),
+            "messages": _tl._resolve(self.messages),
+            "gasless_messages": _tl._resolve(self.gasless_messages),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xb7\xc2\xf9\x82'
+        _flags_word = (0 if self.gasless_messages is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.sale_address)
+        out += _tl._serialize_field(self.messages, 'Vector<payments.StarGiftOnchainOfferTxMessage>', _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _tl._serialize_field(self.gasless_messages, 'Vector<payments.StarGiftOnchainOfferTxMessage>', _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "payments.starGiftOnchainFixedSalePayload"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["sale_address"], pos = _tl._read_string(data, pos)
+        obj["messages"], pos = _tl._read_vector(data, pos, 'payments.StarGiftOnchainOfferTxMessage', _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["gasless_messages"], pos = _tl._read_vector(data, pos, 'payments.StarGiftOnchainOfferTxMessage', _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"StarGiftOnchainFixedSalePayload(sale_address={self.sale_address!r}, messages={self.messages!r}, gasless_messages={self.gasless_messages!r})"
+
+class StarGiftOnchainOfferTxInitState:
+    _CID = 0x08d6e475
+
+    def __init__(
+        self,
+        code: bytes,
+        data: bytes,
+    ) -> None:
+        self.code = code
+        self.data = data
+
+    def to_dict(self) -> dict:
+        return {"_": "payments.starGiftOnchainOfferTxInitState", **{
+            "code": _tl._resolve(self.code),
+            "data": _tl._resolve(self.data),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'u\xe4\xd6\x08'
+        out += _tl._pack_bytes(self.code)
+        out += _tl._pack_bytes(self.data)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "payments.starGiftOnchainOfferTxInitState"}
+        obj["code"], pos = _tl._read_bytes(data, pos)
+        obj["data"], pos = _tl._read_bytes(data, pos)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"StarGiftOnchainOfferTxInitState(code={self.code!r}, data={self.data!r})"
+
+class StarGiftOnchainOfferTxMessage:
+    _CID = 0x889c8615
+
+    def __init__(
+        self,
+        destination: str,
+        value: int,
+        mode: int,
+        body: bytes,
+        init_state: Any | None = None,
+    ) -> None:
+        self.destination = destination
+        self.value = value
+        self.mode = mode
+        self.body = body
+        self.init_state = init_state
+
+    def to_dict(self) -> dict:
+        return {"_": "payments.starGiftOnchainOfferTxMessage", **{
+            "destination": _tl._resolve(self.destination),
+            "value": _tl._resolve(self.value),
+            "mode": _tl._resolve(self.mode),
+            "body": _tl._resolve(self.body),
+            "init_state": _tl._resolve(self.init_state),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x15\x86\x9c\x88'
+        _flags_word = (0 if self.init_state is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.destination)
+        out += _struct.pack('<qi', self.value, self.mode)
+        out += _tl._pack_bytes(self.body)
+        if _flags_word & (1 << 0):
+            out += _tl._ser(self.init_state, _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "payments.starGiftOnchainOfferTxMessage"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["destination"], pos = _tl._read_string(data, pos)
+        obj["value"], obj["mode"], = _struct.unpack_from('<qi', data, pos)
+        pos += 12
+        obj["body"], pos = _tl._read_bytes(data, pos)
+        if _flags_word & (1 << 0):
+            obj["init_state"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"StarGiftOnchainOfferTxMessage(destination={self.destination!r}, value={self.value!r}, mode={self.mode!r}, body={self.body!r})"
+
+class StarGiftOnchainOfferTx:
+    _CID = 0xfe5681cf
+
+    def __init__(
+        self,
+        offer_id: int,
+        offer_address: str,
+        expires_at: int,
+        message: Any,
+        gasless_message: Any | None = None,
+        rent_budget: int | None = None,
+        execution_allowance: int | None = None,
+        forward_amount: int | None = None,
+        fine: int | None = None,
+    ) -> None:
+        self.offer_id = offer_id
+        self.offer_address = offer_address
+        self.expires_at = expires_at
+        self.message = message
+        self.gasless_message = gasless_message
+        self.rent_budget = rent_budget
+        self.execution_allowance = execution_allowance
+        self.forward_amount = forward_amount
+        self.fine = fine
+
+    def to_dict(self) -> dict:
+        return {"_": "payments.starGiftOnchainOfferTx", **{
+            "offer_id": _tl._resolve(self.offer_id),
+            "offer_address": _tl._resolve(self.offer_address),
+            "expires_at": _tl._resolve(self.expires_at),
+            "message": _tl._resolve(self.message),
+            "gasless_message": _tl._resolve(self.gasless_message),
+            "rent_budget": _tl._resolve(self.rent_budget),
+            "execution_allowance": _tl._resolve(self.execution_allowance),
+            "forward_amount": _tl._resolve(self.forward_amount),
+            "fine": _tl._resolve(self.fine),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xcf\x81V\xfe'
+        _flags_word = (0 if self.gasless_message is None else (1 << 3)) | (0 if self.rent_budget is None else (1 << 0)) | (0 if self.execution_allowance is None else (1 << 0)) | (0 if self.forward_amount is None else (1 << 1)) | (0 if self.fine is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.offer_id)
+        out += _tl._pack_string(self.offer_address)
+        out += _struct.pack('<i', self.expires_at)
+        out += _tl._ser(self.message, _SCHEMA)
+        if _flags_word & (1 << 3):
+            out += _tl._ser(self.gasless_message, _SCHEMA)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.rent_budget)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.execution_allowance)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<q', self.forward_amount)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<q', self.fine)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "payments.starGiftOnchainOfferTx"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["offer_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["offer_address"], pos = _tl._read_string(data, pos)
+        obj["expires_at"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        obj["message"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["gasless_message"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        if _flags_word & (1 << 0):
+            obj["rent_budget"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 0):
+            obj["execution_allowance"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 1):
+            obj["forward_amount"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 2):
+            obj["fine"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"StarGiftOnchainOfferTx(offer_id={self.offer_id!r}, offer_address={self.offer_address!r}, expires_at={self.expires_at!r}, message={self.message!r})"

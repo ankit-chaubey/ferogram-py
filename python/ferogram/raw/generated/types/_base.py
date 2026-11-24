@@ -4413,7 +4413,7 @@ class ChannelFull:
         return f"ChannelFull(can_view_participants={self.can_view_participants!r}, can_set_username={self.can_set_username!r}, can_set_stickers={self.can_set_stickers!r}, hidden_prehistory={self.hidden_prehistory!r})"
 
 class CommunityFull:
-    _CID = 0xcbb7a507
+    _CID = 0x706702fb
 
     def __init__(
         self,
@@ -4421,6 +4421,7 @@ class CommunityFull:
         about: str,
         chat_photo: Any,
         linked_peers: list[Any],
+        notify_settings: Any | None = None,
         admins_count: int | None = None,
         kicked_count: int | None = None,
         peer_link_requests_pending: int | None = None,
@@ -4429,6 +4430,7 @@ class CommunityFull:
         self.about = about
         self.chat_photo = chat_photo
         self.linked_peers = linked_peers
+        self.notify_settings = notify_settings
         self.admins_count = admins_count
         self.kicked_count = kicked_count
         self.peer_link_requests_pending = peer_link_requests_pending
@@ -4439,19 +4441,22 @@ class CommunityFull:
             "about": _tl._resolve(self.about),
             "chat_photo": _tl._resolve(self.chat_photo),
             "linked_peers": _tl._resolve(self.linked_peers),
+            "notify_settings": _tl._resolve(self.notify_settings),
             "admins_count": _tl._resolve(self.admins_count),
             "kicked_count": _tl._resolve(self.kicked_count),
             "peer_link_requests_pending": _tl._resolve(self.peer_link_requests_pending),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\x07\xa5\xb7\xcb'
-        _flags_word = (0 if self.admins_count is None else (1 << 1)) | (0 if self.kicked_count is None else (1 << 2)) | (0 if self.peer_link_requests_pending is None else (1 << 0))
+        out = b'\xfb\x02gp'
+        _flags_word = (0 if self.notify_settings is None else (1 << 3)) | (0 if self.admins_count is None else (1 << 1)) | (0 if self.kicked_count is None else (1 << 2)) | (0 if self.peer_link_requests_pending is None else (1 << 0))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.id)
         out += _tl._pack_string(self.about)
         out += _tl._ser(self.chat_photo, _SCHEMA)
         out += _tl._serialize_field(self.linked_peers, 'Vector<CommunityPeer>', _SCHEMA)
+        if _flags_word & (1 << 3):
+            out += _tl._ser(self.notify_settings, _SCHEMA)
         if _flags_word & (1 << 1):
             out += _struct.pack('<i', self.admins_count)
         if _flags_word & (1 << 2):
@@ -4470,6 +4475,8 @@ class CommunityFull:
         obj["about"], pos = _tl._read_string(data, pos)
         obj["chat_photo"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         obj["linked_peers"], pos = _tl._read_vector(data, pos, 'CommunityPeer', _SCHEMA_BY_CID)
+        if _flags_word & (1 << 3):
+            obj["notify_settings"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 1):
             obj["admins_count"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
@@ -9174,7 +9181,7 @@ class MessageActionChatJoinedViaCommunity:
         return f"MessageActionChatJoinedViaCommunity(community_id={self.community_id!r})"
 
 class MessageActionGramTransfer:
-    _CID = 0x9329ea33
+    _CID = 0x34f87469
 
     def __init__(
         self,
@@ -9183,12 +9190,14 @@ class MessageActionGramTransfer:
         transaction_id: str,
         comment_encrypted: bool | None = None,
         comment: str | None = None,
+        onramp_provider_name: str | None = None,
     ) -> None:
         self.comment_encrypted = comment_encrypted
         self.amount = amount
         self.peer_address = peer_address
         self.transaction_id = transaction_id
         self.comment = comment
+        self.onramp_provider_name = onramp_provider_name
 
     def to_dict(self) -> dict:
         return {"_": "messageActionGramTransfer", **{
@@ -9197,17 +9206,20 @@ class MessageActionGramTransfer:
             "peer_address": _tl._resolve(self.peer_address),
             "transaction_id": _tl._resolve(self.transaction_id),
             "comment": _tl._resolve(self.comment),
+            "onramp_provider_name": _tl._resolve(self.onramp_provider_name),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'3\xea)\x93'
-        _flags_word = ((1 << 1) if self.comment_encrypted else 0) | (0 if self.comment is None else (1 << 0))
+        out = b'it\xf84'
+        _flags_word = ((1 << 1) if self.comment_encrypted else 0) | (0 if self.comment is None else (1 << 0)) | (0 if self.onramp_provider_name is None else (1 << 2))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.amount)
         out += _tl._pack_string(self.peer_address)
         out += _tl._pack_string(self.transaction_id)
         if _flags_word & (1 << 0):
             out += _tl._pack_string(self.comment)
+        if _flags_word & (1 << 2):
+            out += _tl._pack_string(self.onramp_provider_name)
         return out
 
     @classmethod
@@ -9223,6 +9235,8 @@ class MessageActionGramTransfer:
         obj["transaction_id"], pos = _tl._read_string(data, pos)
         if _flags_word & (1 << 0):
             obj["comment"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 2):
+            obj["onramp_provider_name"], pos = _tl._read_string(data, pos)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -9316,6 +9330,141 @@ class MessageActionNoPaidMessagesTokenUsed:
 
     def __repr__(self) -> str:
         return f"MessageActionNoPaidMessagesTokenUsed()"
+
+class MessageActionStarGiftOnchainOffer:
+    _CID = 0x444a6568
+
+    def __init__(
+        self,
+        offer_id: int,
+        gift: Any,
+        amount: int,
+        fee_bps: int,
+        expires_at: int,
+        offer_address: str,
+        accepted: bool | None = None,
+        declined: bool | None = None,
+        cancelled: bool | None = None,
+        expired: bool | None = None,
+        settled: bool | None = None,
+        buyer: bool | None = None,
+        cancelling: bool | None = None,
+        buyer_refund: int | None = None,
+        fine: int | None = None,
+    ) -> None:
+        self.accepted = accepted
+        self.declined = declined
+        self.cancelled = cancelled
+        self.expired = expired
+        self.settled = settled
+        self.buyer = buyer
+        self.cancelling = cancelling
+        self.offer_id = offer_id
+        self.gift = gift
+        self.amount = amount
+        self.fee_bps = fee_bps
+        self.expires_at = expires_at
+        self.offer_address = offer_address
+        self.buyer_refund = buyer_refund
+        self.fine = fine
+
+    def to_dict(self) -> dict:
+        return {"_": "messageActionStarGiftOnchainOffer", **{
+            "accepted": _tl._resolve(self.accepted),
+            "declined": _tl._resolve(self.declined),
+            "cancelled": _tl._resolve(self.cancelled),
+            "expired": _tl._resolve(self.expired),
+            "settled": _tl._resolve(self.settled),
+            "buyer": _tl._resolve(self.buyer),
+            "cancelling": _tl._resolve(self.cancelling),
+            "offer_id": _tl._resolve(self.offer_id),
+            "gift": _tl._resolve(self.gift),
+            "amount": _tl._resolve(self.amount),
+            "fee_bps": _tl._resolve(self.fee_bps),
+            "expires_at": _tl._resolve(self.expires_at),
+            "offer_address": _tl._resolve(self.offer_address),
+            "buyer_refund": _tl._resolve(self.buyer_refund),
+            "fine": _tl._resolve(self.fine),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'heJD'
+        _flags_word = ((1 << 0) if self.accepted else 0) | ((1 << 1) if self.declined else 0) | ((1 << 2) if self.cancelled else 0) | ((1 << 3) if self.expired else 0) | ((1 << 6) if self.settled else 0) | ((1 << 7) if self.buyer else 0) | ((1 << 8) if self.cancelling else 0) | (0 if self.buyer_refund is None else (1 << 4)) | (0 if self.fine is None else (1 << 5))
+        out += _struct.pack('<I', _flags_word)
+        out += _struct.pack('<q', self.offer_id)
+        out += _tl._ser(self.gift, _SCHEMA)
+        out += _struct.pack('<qii', self.amount, self.fee_bps, self.expires_at)
+        out += _tl._pack_string(self.offer_address)
+        if _flags_word & (1 << 4):
+            out += _struct.pack('<q', self.buyer_refund)
+        if _flags_word & (1 << 5):
+            out += _struct.pack('<q', self.fine)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messageActionStarGiftOnchainOffer"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["accepted"] = True
+        if _flags_word & (1 << 1):
+            obj["declined"] = True
+        if _flags_word & (1 << 2):
+            obj["cancelled"] = True
+        if _flags_word & (1 << 3):
+            obj["expired"] = True
+        if _flags_word & (1 << 6):
+            obj["settled"] = True
+        if _flags_word & (1 << 7):
+            obj["buyer"] = True
+        if _flags_word & (1 << 8):
+            obj["cancelling"] = True
+        obj["offer_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        obj["gift"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["amount"], obj["fee_bps"], obj["expires_at"], = _struct.unpack_from('<qii', data, pos)
+        pos += 16
+        obj["offer_address"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 4):
+            obj["buyer_refund"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 5):
+            obj["fine"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"MessageActionStarGiftOnchainOffer(accepted={self.accepted!r}, declined={self.declined!r}, cancelled={self.cancelled!r}, expired={self.expired!r})"
+
+class MessageActionBotInvite:
+    _CID = 0xe509b17b
+
+    def __init__(
+        self,
+        inviter_id: int,
+    ) -> None:
+        self.inviter_id = inviter_id
+
+    def to_dict(self) -> dict:
+        return {"_": "messageActionBotInvite", **{
+            "inviter_id": _tl._resolve(self.inviter_id),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'{\xb1\t\xe5'
+        out += _struct.pack('<q', self.inviter_id)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "messageActionBotInvite"}
+        obj["inviter_id"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"MessageActionBotInvite(inviter_id={self.inviter_id!r})"
 
 class Dialog:
     _CID = 0xfc89f7f3
@@ -10252,7 +10401,7 @@ class PeerNotifySettings:
         return f"PeerNotifySettings(show_previews={self.show_previews!r}, silent={self.silent!r}, mute_until={self.mute_until!r}, ios_sound={self.ios_sound!r})"
 
 class PeerSettings:
-    _CID = 0xf47741f7
+    _CID = 0x2441c84b
 
     def __init__(
         self,
@@ -10277,6 +10426,8 @@ class PeerSettings:
         phone_country: str | None = None,
         name_change_date: int | None = None,
         photo_change_date: int | None = None,
+        bot_inviter_id: int | None = None,
+        bot_owner_id: int | None = None,
     ) -> None:
         self.report_spam = report_spam
         self.add_contact = add_contact
@@ -10299,6 +10450,8 @@ class PeerSettings:
         self.phone_country = phone_country
         self.name_change_date = name_change_date
         self.photo_change_date = photo_change_date
+        self.bot_inviter_id = bot_inviter_id
+        self.bot_owner_id = bot_owner_id
 
     def to_dict(self) -> dict:
         return {"_": "peerSettings", **{
@@ -10323,11 +10476,13 @@ class PeerSettings:
             "phone_country": _tl._resolve(self.phone_country),
             "name_change_date": _tl._resolve(self.name_change_date),
             "photo_change_date": _tl._resolve(self.photo_change_date),
+            "bot_inviter_id": _tl._resolve(self.bot_inviter_id),
+            "bot_owner_id": _tl._resolve(self.bot_owner_id),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\xf7Aw\xf4'
-        _flags_word = ((1 << 0) if self.report_spam else 0) | ((1 << 1) if self.add_contact else 0) | ((1 << 2) if self.block_contact else 0) | ((1 << 3) if self.share_contact else 0) | ((1 << 4) if self.need_contacts_exception else 0) | ((1 << 5) if self.report_geo else 0) | ((1 << 7) if self.autoarchived else 0) | ((1 << 8) if self.invite_members else 0) | ((1 << 10) if self.request_chat_broadcast else 0) | ((1 << 11) if self.business_bot_paused else 0) | ((1 << 12) if self.business_bot_can_reply else 0) | (0 if self.geo_distance is None else (1 << 6)) | (0 if self.request_chat_title is None else (1 << 9)) | (0 if self.request_chat_date is None else (1 << 9)) | (0 if self.business_bot_id is None else (1 << 13)) | (0 if self.business_bot_manage_url is None else (1 << 13)) | (0 if self.charge_paid_message_stars is None else (1 << 14)) | (0 if self.registration_month is None else (1 << 15)) | (0 if self.phone_country is None else (1 << 16)) | (0 if self.name_change_date is None else (1 << 17)) | (0 if self.photo_change_date is None else (1 << 18))
+        out = b'K\xc8A$'
+        _flags_word = ((1 << 0) if self.report_spam else 0) | ((1 << 1) if self.add_contact else 0) | ((1 << 2) if self.block_contact else 0) | ((1 << 3) if self.share_contact else 0) | ((1 << 4) if self.need_contacts_exception else 0) | ((1 << 5) if self.report_geo else 0) | ((1 << 7) if self.autoarchived else 0) | ((1 << 8) if self.invite_members else 0) | ((1 << 10) if self.request_chat_broadcast else 0) | ((1 << 11) if self.business_bot_paused else 0) | ((1 << 12) if self.business_bot_can_reply else 0) | (0 if self.geo_distance is None else (1 << 6)) | (0 if self.request_chat_title is None else (1 << 9)) | (0 if self.request_chat_date is None else (1 << 9)) | (0 if self.business_bot_id is None else (1 << 13)) | (0 if self.business_bot_manage_url is None else (1 << 13)) | (0 if self.charge_paid_message_stars is None else (1 << 14)) | (0 if self.registration_month is None else (1 << 15)) | (0 if self.phone_country is None else (1 << 16)) | (0 if self.name_change_date is None else (1 << 17)) | (0 if self.photo_change_date is None else (1 << 18)) | (0 if self.bot_inviter_id is None else (1 << 19)) | (0 if self.bot_owner_id is None else (1 << 20))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 6):
             out += _struct.pack('<i', self.geo_distance)
@@ -10349,6 +10504,10 @@ class PeerSettings:
             out += _struct.pack('<i', self.name_change_date)
         if _flags_word & (1 << 18):
             out += _struct.pack('<i', self.photo_change_date)
+        if _flags_word & (1 << 19):
+            out += _struct.pack('<q', self.bot_inviter_id)
+        if _flags_word & (1 << 20):
+            out += _struct.pack('<q', self.bot_owner_id)
         return out
 
     @classmethod
@@ -10404,6 +10563,12 @@ class PeerSettings:
         if _flags_word & (1 << 18):
             obj["photo_change_date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
+        if _flags_word & (1 << 19):
+            obj["bot_inviter_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 20):
+            obj["bot_owner_id"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
         return obj, pos
 
     def __repr__(self) -> str:
@@ -12623,29 +12788,39 @@ class UpdateReadMessagesContents:
         return f"UpdateReadMessagesContents(messages={self.messages!r}, pts={self.pts!r}, pts_count={self.pts_count!r}, date={self.date!r})"
 
 class UpdateChannelTooLong:
-    _CID = 0x108d941f
+    _CID = 0x0f4e4e5a
 
     def __init__(
         self,
         channel_id: int,
         pts: int | None = None,
+        last_msg_id: int | None = None,
+        last_msg_date: int | None = None,
     ) -> None:
         self.channel_id = channel_id
         self.pts = pts
+        self.last_msg_id = last_msg_id
+        self.last_msg_date = last_msg_date
 
     def to_dict(self) -> dict:
         return {"_": "updateChannelTooLong", **{
             "channel_id": _tl._resolve(self.channel_id),
             "pts": _tl._resolve(self.pts),
+            "last_msg_id": _tl._resolve(self.last_msg_id),
+            "last_msg_date": _tl._resolve(self.last_msg_date),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\x1f\x94\x8d\x10'
-        _flags_word = (0 if self.pts is None else (1 << 0))
+        out = b'ZNN\x0f'
+        _flags_word = (0 if self.pts is None else (1 << 0)) | (0 if self.last_msg_id is None else (1 << 1)) | (0 if self.last_msg_date is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<q', self.channel_id)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.pts)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.last_msg_id)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.last_msg_date)
         return out
 
     @classmethod
@@ -12658,10 +12833,16 @@ class UpdateChannelTooLong:
         if _flags_word & (1 << 0):
             obj["pts"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["last_msg_id"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["last_msg_date"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"UpdateChannelTooLong(channel_id={self.channel_id!r}, pts={self.pts!r})"
+        return f"UpdateChannelTooLong(channel_id={self.channel_id!r}, pts={self.pts!r}, last_msg_id={self.last_msg_id!r}, last_msg_date={self.last_msg_date!r})"
 
 class UpdateChannel:
     _CID = 0x635b4c09
@@ -19166,6 +19347,7 @@ class Config:
         revoke_pm_inbox: bool | None = None,
         blocked_mode: bool | None = None,
         force_try_ipv6: bool | None = None,
+        fpnv_allowed: bool | None = None,
         tmp_sessions: int | None = None,
         autoupdate_url_prefix: str | None = None,
         gif_search_username: str | None = None,
@@ -19183,6 +19365,7 @@ class Config:
         self.revoke_pm_inbox = revoke_pm_inbox
         self.blocked_mode = blocked_mode
         self.force_try_ipv6 = force_try_ipv6
+        self.fpnv_allowed = fpnv_allowed
         self.date = date
         self.expires = expires
         self.test_mode = test_mode
@@ -19233,6 +19416,7 @@ class Config:
             "revoke_pm_inbox": _tl._resolve(self.revoke_pm_inbox),
             "blocked_mode": _tl._resolve(self.blocked_mode),
             "force_try_ipv6": _tl._resolve(self.force_try_ipv6),
+            "fpnv_allowed": _tl._resolve(self.fpnv_allowed),
             "date": _tl._resolve(self.date),
             "expires": _tl._resolve(self.expires),
             "test_mode": _tl._resolve(self.test_mode),
@@ -19279,7 +19463,7 @@ class Config:
 
     def to_bytes(self) -> bytes:
         out = b'\x1e$\x1a\xcc'
-        _flags_word = ((1 << 3) if self.default_p2p_contacts else 0) | ((1 << 4) if self.preload_featured_stickers else 0) | ((1 << 6) if self.revoke_pm_inbox else 0) | ((1 << 8) if self.blocked_mode else 0) | ((1 << 14) if self.force_try_ipv6 else 0) | (0 if self.tmp_sessions is None else (1 << 0)) | (0 if self.autoupdate_url_prefix is None else (1 << 7)) | (0 if self.gif_search_username is None else (1 << 9)) | (0 if self.venue_search_username is None else (1 << 10)) | (0 if self.img_search_username is None else (1 << 11)) | (0 if self.static_maps_provider is None else (1 << 12)) | (0 if self.suggested_lang_code is None else (1 << 2)) | (0 if self.lang_pack_version is None else (1 << 2)) | (0 if self.base_lang_pack_version is None else (1 << 2)) | (0 if self.reactions_default is None else (1 << 15)) | (0 if self.autologin_token is None else (1 << 16))
+        _flags_word = ((1 << 3) if self.default_p2p_contacts else 0) | ((1 << 4) if self.preload_featured_stickers else 0) | ((1 << 6) if self.revoke_pm_inbox else 0) | ((1 << 8) if self.blocked_mode else 0) | ((1 << 14) if self.force_try_ipv6 else 0) | ((1 << 17) if self.fpnv_allowed else 0) | (0 if self.tmp_sessions is None else (1 << 0)) | (0 if self.autoupdate_url_prefix is None else (1 << 7)) | (0 if self.gif_search_username is None else (1 << 9)) | (0 if self.venue_search_username is None else (1 << 10)) | (0 if self.img_search_username is None else (1 << 11)) | (0 if self.static_maps_provider is None else (1 << 12)) | (0 if self.suggested_lang_code is None else (1 << 2)) | (0 if self.lang_pack_version is None else (1 << 2)) | (0 if self.base_lang_pack_version is None else (1 << 2)) | (0 if self.reactions_default is None else (1 << 15)) | (0 if self.autologin_token is None else (1 << 16))
         out += _struct.pack('<I', _flags_word)
         out += _struct.pack('<ii', self.date, self.expires)
         out += _tl._pack_bool(self.test_mode)
@@ -19329,6 +19513,8 @@ class Config:
             obj["blocked_mode"] = True
         if _flags_word & (1 << 14):
             obj["force_try_ipv6"] = True
+        if _flags_word & (1 << 17):
+            obj["fpnv_allowed"] = True
         obj["date"], obj["expires"], = _struct.unpack_from('<ii', data, pos)
         pos += 8
         obj["test_mode"], pos = _tl._read_bool(data, pos)
@@ -27817,25 +28003,30 @@ class TopPeerCategoryPeers:
         return f"TopPeerCategoryPeers(category={self.category!r}, count={self.count!r}, peers={self.peers!r})"
 
 class DraftMessageEmpty:
-    _CID = 0x1b0c841a
+    _CID = 0x22c44bc8
 
     def __init__(
         self,
         date: int | None = None,
+        ai_style: Any | None = None,
     ) -> None:
         self.date = date
+        self.ai_style = ai_style
 
     def to_dict(self) -> dict:
         return {"_": "draftMessageEmpty", **{
             "date": _tl._resolve(self.date),
+            "ai_style": _tl._resolve(self.ai_style),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\x1a\x84\x0c\x1b'
-        _flags_word = (0 if self.date is None else (1 << 0))
+        out = b'\xc8K\xc4"'
+        _flags_word = (0 if self.date is None else (1 << 0)) | (0 if self.ai_style is None else (1 << 1))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 0):
             out += _struct.pack('<i', self.date)
+        if _flags_word & (1 << 1):
+            out += _tl._ser(self.ai_style, _SCHEMA)
         return out
 
     @classmethod
@@ -27846,13 +28037,15 @@ class DraftMessageEmpty:
         if _flags_word & (1 << 0):
             obj["date"] = _struct.unpack_from('<i', data, pos)[0]
             pos = pos + 4
+        if _flags_word & (1 << 1):
+            obj["ai_style"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"DraftMessageEmpty(date={self.date!r})"
+        return f"DraftMessageEmpty(date={self.date!r}, ai_style={self.ai_style!r})"
 
 class DraftMessage:
-    _CID = 0x60fe3294
+    _CID = 0x9cb1d4fa
 
     def __init__(
         self,
@@ -27866,6 +28059,7 @@ class DraftMessage:
         effect: int | None = None,
         suggested_post: Any | None = None,
         rich_message: Any | None = None,
+        ai_style: Any | None = None,
     ) -> None:
         self.no_webpage = no_webpage
         self.invert_media = invert_media
@@ -27877,6 +28071,7 @@ class DraftMessage:
         self.effect = effect
         self.suggested_post = suggested_post
         self.rich_message = rich_message
+        self.ai_style = ai_style
 
     def to_dict(self) -> dict:
         return {"_": "draftMessage", **{
@@ -27890,11 +28085,12 @@ class DraftMessage:
             "effect": _tl._resolve(self.effect),
             "suggested_post": _tl._resolve(self.suggested_post),
             "rich_message": _tl._resolve(self.rich_message),
+            "ai_style": _tl._resolve(self.ai_style),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\x942\xfe`'
-        _flags_word = ((1 << 1) if self.no_webpage else 0) | ((1 << 6) if self.invert_media else 0) | (0 if self.reply_to is None else (1 << 4)) | (0 if self.entities is None else (1 << 3)) | (0 if self.media is None else (1 << 5)) | (0 if self.effect is None else (1 << 7)) | (0 if self.suggested_post is None else (1 << 8)) | (0 if self.rich_message is None else (1 << 9))
+        out = b'\xfa\xd4\xb1\x9c'
+        _flags_word = ((1 << 1) if self.no_webpage else 0) | ((1 << 6) if self.invert_media else 0) | (0 if self.reply_to is None else (1 << 4)) | (0 if self.entities is None else (1 << 3)) | (0 if self.media is None else (1 << 5)) | (0 if self.effect is None else (1 << 7)) | (0 if self.suggested_post is None else (1 << 8)) | (0 if self.rich_message is None else (1 << 9)) | (0 if self.ai_style is None else (1 << 10))
         out += _struct.pack('<I', _flags_word)
         if _flags_word & (1 << 4):
             out += _tl._ser(self.reply_to, _SCHEMA)
@@ -27910,6 +28106,8 @@ class DraftMessage:
             out += _tl._ser(self.suggested_post, _SCHEMA)
         if _flags_word & (1 << 9):
             out += _tl._ser(self.rich_message, _SCHEMA)
+        if _flags_word & (1 << 10):
+            out += _tl._ser(self.ai_style, _SCHEMA)
         return out
 
     @classmethod
@@ -27937,6 +28135,8 @@ class DraftMessage:
             obj["suggested_post"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         if _flags_word & (1 << 9):
             obj["rich_message"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        if _flags_word & (1 << 10):
+            obj["ai_style"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
@@ -30669,24 +30869,29 @@ class InputPageBlockMap:
         return f"InputPageBlockMap(geo={self.geo!r}, zoom={self.zoom!r}, w={self.w!r}, h={self.h!r})"
 
 class PageBlockBlockquoteBlocks:
-    _CID = 0x0e6e47c4
+    _CID = 0x2613f896
 
     def __init__(
         self,
         blocks: list[Any],
         caption: Any,
+        collapsed: bool | None = None,
     ) -> None:
+        self.collapsed = collapsed
         self.blocks = blocks
         self.caption = caption
 
     def to_dict(self) -> dict:
         return {"_": "pageBlockBlockquoteBlocks", **{
+            "collapsed": _tl._resolve(self.collapsed),
             "blocks": _tl._resolve(self.blocks),
             "caption": _tl._resolve(self.caption),
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\xc4Gn\x0e'
+        out = b'\x96\xf8\x13&'
+        _flags_word = ((1 << 0) if self.collapsed else 0)
+        out += _struct.pack('<I', _flags_word)
         out += _tl._serialize_field(self.blocks, 'Vector<PageBlock>', _SCHEMA)
         out += _tl._ser(self.caption, _SCHEMA)
         return out
@@ -30694,12 +30899,16 @@ class PageBlockBlockquoteBlocks:
     @classmethod
     def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
         obj = {"_": "pageBlockBlockquoteBlocks"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["collapsed"] = True
         obj["blocks"], pos = _tl._read_vector(data, pos, 'PageBlock', _SCHEMA_BY_CID)
         obj["caption"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
         return obj, pos
 
     def __repr__(self) -> str:
-        return f"PageBlockBlockquoteBlocks(blocks={self.blocks!r}, caption={self.caption!r})"
+        return f"PageBlockBlockquoteBlocks(collapsed={self.collapsed!r}, blocks={self.blocks!r}, caption={self.caption!r})"
 
 class PageBlockButtonRow:
     _CID = 0x6d640318
@@ -50783,7 +50992,7 @@ class StarGift:
         return f"StarGift(limited={self.limited!r}, sold_out={self.sold_out!r}, birthday={self.birthday!r}, require_premium={self.require_premium!r})"
 
 class StarGiftUnique:
-    _CID = 0x85f0a9cd
+    _CID = 0x87214192
 
     def __init__(
         self,
@@ -50800,6 +51009,11 @@ class StarGiftUnique:
         theme_available: bool | None = None,
         burned: bool | None = None,
         crafted: bool | None = None,
+        onchain_sale: bool | None = None,
+        fixed_sale: bool | None = None,
+        my_sale: bool | None = None,
+        offer_min_amount: int | None = None,
+        fee_bps: int | None = None,
         owner_id: Any | None = None,
         owner_name: str | None = None,
         owner_address: str | None = None,
@@ -50820,6 +51034,11 @@ class StarGiftUnique:
         self.theme_available = theme_available
         self.burned = burned
         self.crafted = crafted
+        self.onchain_sale = onchain_sale
+        self.fixed_sale = fixed_sale
+        self.my_sale = my_sale
+        self.offer_min_amount = offer_min_amount
+        self.fee_bps = fee_bps
         self.id = id
         self.gift_id = gift_id
         self.title = title
@@ -50850,6 +51069,11 @@ class StarGiftUnique:
             "theme_available": _tl._resolve(self.theme_available),
             "burned": _tl._resolve(self.burned),
             "crafted": _tl._resolve(self.crafted),
+            "onchain_sale": _tl._resolve(self.onchain_sale),
+            "fixed_sale": _tl._resolve(self.fixed_sale),
+            "my_sale": _tl._resolve(self.my_sale),
+            "offer_min_amount": _tl._resolve(self.offer_min_amount),
+            "fee_bps": _tl._resolve(self.fee_bps),
             "id": _tl._resolve(self.id),
             "gift_id": _tl._resolve(self.gift_id),
             "title": _tl._resolve(self.title),
@@ -50875,9 +51099,13 @@ class StarGiftUnique:
         }}
 
     def to_bytes(self) -> bytes:
-        out = b'\xcd\xa9\xf0\x85'
-        _flags_word = ((1 << 6) if self.require_premium else 0) | ((1 << 7) if self.resale_ton_only else 0) | ((1 << 9) if self.theme_available else 0) | ((1 << 14) if self.burned else 0) | ((1 << 15) if self.crafted else 0) | (0 if self.owner_id is None else (1 << 0)) | (0 if self.owner_name is None else (1 << 1)) | (0 if self.owner_address is None else (1 << 2)) | (0 if self.gift_address is None else (1 << 3)) | (0 if self.resell_amount is None else (1 << 4)) | (0 if self.released_by is None else (1 << 5)) | (0 if self.value_amount is None else (1 << 8)) | (0 if self.value_currency is None else (1 << 8)) | (0 if self.value_usd_amount is None else (1 << 8)) | (0 if self.theme_peer is None else (1 << 10)) | (0 if self.peer_color is None else (1 << 11)) | (0 if self.host_id is None else (1 << 12)) | (0 if self.offer_min_stars is None else (1 << 13)) | (0 if self.craft_chance_permille is None else (1 << 16))
+        out = b'\x92A!\x87'
+        _flags_word = ((1 << 6) if self.require_premium else 0) | ((1 << 7) if self.resale_ton_only else 0) | ((1 << 9) if self.theme_available else 0) | ((1 << 14) if self.burned else 0) | ((1 << 15) if self.crafted else 0) | ((1 << 17) if self.onchain_sale else 0) | ((1 << 19) if self.fixed_sale else 0) | ((1 << 21) if self.my_sale else 0) | (0 if self.offer_min_amount is None else (1 << 18)) | (0 if self.fee_bps is None else (1 << 20)) | (0 if self.owner_id is None else (1 << 0)) | (0 if self.owner_name is None else (1 << 1)) | (0 if self.owner_address is None else (1 << 2)) | (0 if self.gift_address is None else (1 << 3)) | (0 if self.resell_amount is None else (1 << 4)) | (0 if self.released_by is None else (1 << 5)) | (0 if self.value_amount is None else (1 << 8)) | (0 if self.value_currency is None else (1 << 8)) | (0 if self.value_usd_amount is None else (1 << 8)) | (0 if self.theme_peer is None else (1 << 10)) | (0 if self.peer_color is None else (1 << 11)) | (0 if self.host_id is None else (1 << 12)) | (0 if self.offer_min_stars is None else (1 << 13)) | (0 if self.craft_chance_permille is None else (1 << 16))
         out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 18):
+            out += _struct.pack('<q', self.offer_min_amount)
+        if _flags_word & (1 << 20):
+            out += _struct.pack('<i', self.fee_bps)
         out += _struct.pack('<qq', self.id, self.gift_id)
         out += _tl._pack_string(self.title)
         out += _tl._pack_string(self.slug)
@@ -50929,6 +51157,18 @@ class StarGiftUnique:
             obj["burned"] = True
         if _flags_word & (1 << 15):
             obj["crafted"] = True
+        if _flags_word & (1 << 17):
+            obj["onchain_sale"] = True
+        if _flags_word & (1 << 19):
+            obj["fixed_sale"] = True
+        if _flags_word & (1 << 21):
+            obj["my_sale"] = True
+        if _flags_word & (1 << 18):
+            obj["offer_min_amount"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        if _flags_word & (1 << 20):
+            obj["fee_bps"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
         obj["id"], obj["gift_id"], = _struct.unpack_from('<qq', data, pos)
         pos += 16
         obj["title"], pos = _tl._read_string(data, pos)
@@ -56569,6 +56809,34 @@ class WalletTransactionPeerTelegramGift:
     def __repr__(self) -> str:
         return f"WalletTransactionPeerTelegramGift(own_profile={self.own_profile!r})"
 
+class WalletTransactionPeerOnchainGift:
+    _CID = 0x4af4aff8
+
+    def __init__(
+        self,
+        action: Any,
+    ) -> None:
+        self.action = action
+
+    def to_dict(self) -> dict:
+        return {"_": "walletTransactionPeerOnchainGift", **{
+            "action": _tl._resolve(self.action),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xf8\xaf\xf4J'
+        out += _tl._ser(self.action, _SCHEMA)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "walletTransactionPeerOnchainGift"}
+        obj["action"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WalletTransactionPeerOnchainGift(action={self.action!r})"
+
 class WalletTransaction:
     _CID = 0x952dc143
 
@@ -56584,6 +56852,7 @@ class WalletTransaction:
         failed: bool | None = None,
         key_change: bool | None = None,
         comment_encrypted: bool | None = None,
+        suspected_spam: bool | None = None,
         comment: str | None = None,
         tx_hash: str | None = None,
         nft: Any | None = None,
@@ -56593,6 +56862,7 @@ class WalletTransaction:
         self.failed = failed
         self.key_change = key_change
         self.comment_encrypted = comment_encrypted
+        self.suspected_spam = suspected_spam
         self.id = id
         self.amount = amount
         self.fee = fee
@@ -56609,6 +56879,7 @@ class WalletTransaction:
             "failed": _tl._resolve(self.failed),
             "key_change": _tl._resolve(self.key_change),
             "comment_encrypted": _tl._resolve(self.comment_encrypted),
+            "suspected_spam": _tl._resolve(self.suspected_spam),
             "id": _tl._resolve(self.id),
             "amount": _tl._resolve(self.amount),
             "fee": _tl._resolve(self.fee),
@@ -56621,7 +56892,7 @@ class WalletTransaction:
 
     def to_bytes(self) -> bytes:
         out = b'C\xc1-\x95'
-        _flags_word = ((1 << 0) if self.incoming else 0) | ((1 << 1) if self.gasless else 0) | ((1 << 2) if self.failed else 0) | ((1 << 5) if self.key_change else 0) | ((1 << 6) if self.comment_encrypted else 0) | (0 if self.comment is None else (1 << 3)) | (0 if self.tx_hash is None else (1 << 4)) | (0 if self.nft is None else (1 << 7))
+        _flags_word = ((1 << 0) if self.incoming else 0) | ((1 << 1) if self.gasless else 0) | ((1 << 2) if self.failed else 0) | ((1 << 5) if self.key_change else 0) | ((1 << 6) if self.comment_encrypted else 0) | ((1 << 8) if self.suspected_spam else 0) | (0 if self.comment is None else (1 << 3)) | (0 if self.tx_hash is None else (1 << 4)) | (0 if self.nft is None else (1 << 7))
         out += _struct.pack('<I', _flags_word)
         out += _tl._pack_string(self.id)
         out += _struct.pack('<qqi', self.amount, self.fee, self.date)
@@ -56649,6 +56920,8 @@ class WalletTransaction:
             obj["key_change"] = True
         if _flags_word & (1 << 6):
             obj["comment_encrypted"] = True
+        if _flags_word & (1 << 8):
+            obj["suspected_spam"] = True
         obj["id"], pos = _tl._read_string(data, pos)
         obj["amount"], obj["fee"], obj["date"], = _struct.unpack_from('<qqi', data, pos)
         pos += 20
@@ -57480,3 +57753,455 @@ class WidgetQueryTypeSentTransaction:
 
     def __repr__(self) -> str:
         return f"WidgetQueryTypeSentTransaction(wallet={self.wallet!r}, msg_hash={self.msg_hash!r})"
+
+class WalletOnchainGiftActionBuy:
+    _CID = 0xf932b52d
+
+    def __init__(self) -> None:
+        pass
+
+    def to_dict(self) -> dict:
+        return {"_": "walletOnchainGiftActionBuy", **{
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'-\xb52\xf9'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "walletOnchainGiftActionBuy"}
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WalletOnchainGiftActionBuy()"
+
+class WalletOnchainGiftActionDelist:
+    _CID = 0x9a082f8e
+
+    def __init__(self) -> None:
+        pass
+
+    def to_dict(self) -> dict:
+        return {"_": "walletOnchainGiftActionDelist", **{
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x8e/\x08\x9a'
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "walletOnchainGiftActionDelist"}
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WalletOnchainGiftActionDelist()"
+
+class WalletOnchainGiftActionChangePrice:
+    _CID = 0x480a59bd
+
+    def __init__(
+        self,
+        new_price: int,
+        old_price: int | None = None,
+    ) -> None:
+        self.old_price = old_price
+        self.new_price = new_price
+
+    def to_dict(self) -> dict:
+        return {"_": "walletOnchainGiftActionChangePrice", **{
+            "old_price": _tl._resolve(self.old_price),
+            "new_price": _tl._resolve(self.new_price),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xbdY\nH'
+        _flags_word = (0 if self.old_price is None else (1 << 0))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _struct.pack('<q', self.old_price)
+        out += _struct.pack('<q', self.new_price)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "walletOnchainGiftActionChangePrice"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["old_price"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        obj["new_price"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WalletOnchainGiftActionChangePrice(old_price={self.old_price!r}, new_price={self.new_price!r})"
+
+class WalletOnchainGiftActionOfferCreate:
+    _CID = 0xe50fd20e
+
+    def __init__(
+        self,
+        offer_address: str,
+        price: int,
+        amount: int,
+        service_fee: int,
+        counterparty_address: str | None = None,
+        expires_at: int | None = None,
+    ) -> None:
+        self.offer_address = offer_address
+        self.counterparty_address = counterparty_address
+        self.price = price
+        self.amount = amount
+        self.service_fee = service_fee
+        self.expires_at = expires_at
+
+    def to_dict(self) -> dict:
+        return {"_": "walletOnchainGiftActionOfferCreate", **{
+            "offer_address": _tl._resolve(self.offer_address),
+            "counterparty_address": _tl._resolve(self.counterparty_address),
+            "price": _tl._resolve(self.price),
+            "amount": _tl._resolve(self.amount),
+            "service_fee": _tl._resolve(self.service_fee),
+            "expires_at": _tl._resolve(self.expires_at),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x0e\xd2\x0f\xe5'
+        _flags_word = (0 if self.counterparty_address is None else (1 << 0)) | (0 if self.expires_at is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.offer_address)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.counterparty_address)
+        out += _struct.pack('<qqq', self.price, self.amount, self.service_fee)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<i', self.expires_at)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "walletOnchainGiftActionOfferCreate"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["offer_address"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 0):
+            obj["counterparty_address"], pos = _tl._read_string(data, pos)
+        obj["price"], obj["amount"], obj["service_fee"], = _struct.unpack_from('<qqq', data, pos)
+        pos += 24
+        if _flags_word & (1 << 1):
+            obj["expires_at"] = _struct.unpack_from('<i', data, pos)[0]
+            pos = pos + 4
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WalletOnchainGiftActionOfferCreate(offer_address={self.offer_address!r}, counterparty_address={self.counterparty_address!r}, price={self.price!r}, amount={self.amount!r})"
+
+class WalletOnchainGiftActionOfferAccept:
+    _CID = 0xf4d60e48
+
+    def __init__(
+        self,
+        offer_address: str,
+        counterparty_address: str,
+        price: int,
+        service_fee: int,
+        buyer: bool | None = None,
+    ) -> None:
+        self.buyer = buyer
+        self.offer_address = offer_address
+        self.counterparty_address = counterparty_address
+        self.price = price
+        self.service_fee = service_fee
+
+    def to_dict(self) -> dict:
+        return {"_": "walletOnchainGiftActionOfferAccept", **{
+            "buyer": _tl._resolve(self.buyer),
+            "offer_address": _tl._resolve(self.offer_address),
+            "counterparty_address": _tl._resolve(self.counterparty_address),
+            "price": _tl._resolve(self.price),
+            "service_fee": _tl._resolve(self.service_fee),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'H\x0e\xd6\xf4'
+        _flags_word = ((1 << 0) if self.buyer else 0)
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.offer_address)
+        out += _tl._pack_string(self.counterparty_address)
+        out += _struct.pack('<qq', self.price, self.service_fee)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "walletOnchainGiftActionOfferAccept"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 0):
+            obj["buyer"] = True
+        obj["offer_address"], pos = _tl._read_string(data, pos)
+        obj["counterparty_address"], pos = _tl._read_string(data, pos)
+        obj["price"], obj["service_fee"], = _struct.unpack_from('<qq', data, pos)
+        pos += 16
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WalletOnchainGiftActionOfferAccept(buyer={self.buyer!r}, offer_address={self.offer_address!r}, counterparty_address={self.counterparty_address!r}, price={self.price!r})"
+
+class WalletOnchainGiftActionOfferCancel:
+    _CID = 0x65c8b78d
+
+    def __init__(
+        self,
+        offer_address: str,
+        refund_amount: int,
+        counterparty_address: str | None = None,
+        price: int | None = None,
+        fine: int | None = None,
+    ) -> None:
+        self.offer_address = offer_address
+        self.counterparty_address = counterparty_address
+        self.price = price
+        self.refund_amount = refund_amount
+        self.fine = fine
+
+    def to_dict(self) -> dict:
+        return {"_": "walletOnchainGiftActionOfferCancel", **{
+            "offer_address": _tl._resolve(self.offer_address),
+            "counterparty_address": _tl._resolve(self.counterparty_address),
+            "price": _tl._resolve(self.price),
+            "refund_amount": _tl._resolve(self.refund_amount),
+            "fine": _tl._resolve(self.fine),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x8d\xb7\xc8e'
+        _flags_word = (0 if self.counterparty_address is None else (1 << 0)) | (0 if self.price is None else (1 << 1)) | (0 if self.fine is None else (1 << 2))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.offer_address)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.counterparty_address)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<q', self.price)
+        out += _struct.pack('<q', self.refund_amount)
+        if _flags_word & (1 << 2):
+            out += _struct.pack('<q', self.fine)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "walletOnchainGiftActionOfferCancel"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["offer_address"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 0):
+            obj["counterparty_address"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 1):
+            obj["price"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        obj["refund_amount"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        if _flags_word & (1 << 2):
+            obj["fine"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WalletOnchainGiftActionOfferCancel(offer_address={self.offer_address!r}, counterparty_address={self.counterparty_address!r}, price={self.price!r}, refund_amount={self.refund_amount!r})"
+
+class WalletOnchainGiftActionOfferDecline:
+    _CID = 0xc5a854ec
+
+    def __init__(
+        self,
+        offer_address: str,
+        refund_amount: int,
+        counterparty_address: str | None = None,
+        price: int | None = None,
+    ) -> None:
+        self.offer_address = offer_address
+        self.counterparty_address = counterparty_address
+        self.price = price
+        self.refund_amount = refund_amount
+
+    def to_dict(self) -> dict:
+        return {"_": "walletOnchainGiftActionOfferDecline", **{
+            "offer_address": _tl._resolve(self.offer_address),
+            "counterparty_address": _tl._resolve(self.counterparty_address),
+            "price": _tl._resolve(self.price),
+            "refund_amount": _tl._resolve(self.refund_amount),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xecT\xa8\xc5'
+        _flags_word = (0 if self.counterparty_address is None else (1 << 0)) | (0 if self.price is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.offer_address)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.counterparty_address)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<q', self.price)
+        out += _struct.pack('<q', self.refund_amount)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "walletOnchainGiftActionOfferDecline"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["offer_address"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 0):
+            obj["counterparty_address"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 1):
+            obj["price"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        obj["refund_amount"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WalletOnchainGiftActionOfferDecline(offer_address={self.offer_address!r}, counterparty_address={self.counterparty_address!r}, price={self.price!r}, refund_amount={self.refund_amount!r})"
+
+class WalletOnchainGiftActionOfferExpire:
+    _CID = 0xda858ed0
+
+    def __init__(
+        self,
+        offer_address: str,
+        refund_amount: int,
+        counterparty_address: str | None = None,
+        price: int | None = None,
+    ) -> None:
+        self.offer_address = offer_address
+        self.counterparty_address = counterparty_address
+        self.price = price
+        self.refund_amount = refund_amount
+
+    def to_dict(self) -> dict:
+        return {"_": "walletOnchainGiftActionOfferExpire", **{
+            "offer_address": _tl._resolve(self.offer_address),
+            "counterparty_address": _tl._resolve(self.counterparty_address),
+            "price": _tl._resolve(self.price),
+            "refund_amount": _tl._resolve(self.refund_amount),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xd0\x8e\x85\xda'
+        _flags_word = (0 if self.counterparty_address is None else (1 << 0)) | (0 if self.price is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        out += _tl._pack_string(self.offer_address)
+        if _flags_word & (1 << 0):
+            out += _tl._pack_string(self.counterparty_address)
+        if _flags_word & (1 << 1):
+            out += _struct.pack('<q', self.price)
+        out += _struct.pack('<q', self.refund_amount)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "walletOnchainGiftActionOfferExpire"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        obj["offer_address"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 0):
+            obj["counterparty_address"], pos = _tl._read_string(data, pos)
+        if _flags_word & (1 << 1):
+            obj["price"] = _struct.unpack_from('<q', data, pos)[0]
+            pos = pos + 8
+        obj["refund_amount"] = _struct.unpack_from('<q', data, pos)[0]
+        pos = pos + 8
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"WalletOnchainGiftActionOfferExpire(offer_address={self.offer_address!r}, counterparty_address={self.counterparty_address!r}, price={self.price!r}, refund_amount={self.refund_amount!r})"
+
+class InputAiComposeStyle:
+    _CID = 0xa82101f0
+
+    def __init__(
+        self,
+        emojify: bool | None = None,
+        proofread: bool | None = None,
+        tone: Any | None = None,
+        to_lang: str | None = None,
+    ) -> None:
+        self.emojify = emojify
+        self.proofread = proofread
+        self.tone = tone
+        self.to_lang = to_lang
+
+    def to_dict(self) -> dict:
+        return {"_": "inputAiComposeStyle", **{
+            "emojify": _tl._resolve(self.emojify),
+            "proofread": _tl._resolve(self.proofread),
+            "tone": _tl._resolve(self.tone),
+            "to_lang": _tl._resolve(self.to_lang),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\xf0\x01!\xa8'
+        _flags_word = ((1 << 2) if self.emojify else 0) | ((1 << 3) if self.proofread else 0) | (0 if self.tone is None else (1 << 0)) | (0 if self.to_lang is None else (1 << 1))
+        out += _struct.pack('<I', _flags_word)
+        if _flags_word & (1 << 0):
+            out += _tl._ser(self.tone, _SCHEMA)
+        if _flags_word & (1 << 1):
+            out += _tl._pack_string(self.to_lang)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "inputAiComposeStyle"}
+        _flags_word, = _struct.unpack_from('<I', data, pos)
+        pos += 4
+        if _flags_word & (1 << 2):
+            obj["emojify"] = True
+        if _flags_word & (1 << 3):
+            obj["proofread"] = True
+        if _flags_word & (1 << 0):
+            obj["tone"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        if _flags_word & (1 << 1):
+            obj["to_lang"], pos = _tl._read_string(data, pos)
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"InputAiComposeStyle(emojify={self.emojify!r}, proofread={self.proofread!r}, tone={self.tone!r}, to_lang={self.to_lang!r})"
+
+class TranscriptionModel:
+    _CID = 0x00c16f15
+
+    def __init__(
+        self,
+        document: Any,
+        languages: list[str],
+        version: int,
+    ) -> None:
+        self.document = document
+        self.languages = languages
+        self.version = version
+
+    def to_dict(self) -> dict:
+        return {"_": "transcriptionModel", **{
+            "document": _tl._resolve(self.document),
+            "languages": _tl._resolve(self.languages),
+            "version": _tl._resolve(self.version),
+        }}
+
+    def to_bytes(self) -> bytes:
+        out = b'\x15o\xc1\x00'
+        out += _tl._ser(self.document, _SCHEMA)
+        out += _tl._serialize_field(self.languages, 'Vector<string>', _SCHEMA)
+        out += _struct.pack('<i', self.version)
+        return out
+
+    @classmethod
+    def from_bytes(cls, data: bytes, pos: int = 0) -> tuple[dict, int]:
+        obj = {"_": "transcriptionModel"}
+        obj["document"], pos = _tl._read_object(data, pos, _SCHEMA_BY_CID)
+        obj["languages"], pos = _tl._read_vector(data, pos, 'string', _SCHEMA_BY_CID)
+        obj["version"] = _struct.unpack_from('<i', data, pos)[0]
+        pos = pos + 4
+        return obj, pos
+
+    def __repr__(self) -> str:
+        return f"TranscriptionModel(document={self.document!r}, languages={self.languages!r}, version={self.version!r})"

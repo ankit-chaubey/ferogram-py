@@ -1,6 +1,6 @@
 [package]
 name            = "ferogram-py"
-version         = "0.5.5-beta.6"
+version         = "0.5.5-beta.7"
 edition         = "2024"
 description     = "Elegant, modern and asynchronous Telegram MTProto API framework in Python for users and bots, powered by Rust."
 documentation   = "https://python.ferogram.dev"
@@ -15,12 +15,12 @@ name            = "_ferogram"
 crate-type      = ["cdylib"]
 
 [dependencies]
-ferogram-mtsender   = "0.6.7"
-ferogram-session    = { version = "0.6.7", features = ["sqlite-session"] }
-ferogram-connect    = { version = "0.6.7", features = ["socks5"] }
-ferogram-tl-types   = "0.6.7"
-ferogram-crypto     = "0.6.7"
-ferogram-msgbox     = "0.6.7"
+ferogram-mtsender   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "4d4b69a" }
+ferogram-session    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "4d4b69a", features = ["sqlite-session"] }
+ferogram-connect    = { git = "https://github.com/ankit-chaubey/ferogram", rev = "4d4b69a", features = ["socks5"] }
+ferogram-tl-types   = { git = "https://github.com/ankit-chaubey/ferogram", rev = "4d4b69a" }
+ferogram-crypto     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "4d4b69a" }
+ferogram-msgbox     = { git = "https://github.com/ankit-chaubey/ferogram", rev = "4d4b69a" }
 getrandom           = "0.4"
 base64              = "0.23"
 pyo3                = { version = "0.29", features = ["extension-module", "abi3-py310"] }

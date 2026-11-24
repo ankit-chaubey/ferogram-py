@@ -275,7 +275,7 @@ impl DcConnection {
                     (3, "149.154.175.117:443"),
                 ]
                 .iter()
-                .map(|(id, a)| (*id as i32, a.to_string()))
+                .map(|(id, a)| (*id, a.to_string()))
                 .collect::<std::collections::HashMap<_, _>>()
             } else {
                 default_dc_addresses()
@@ -473,10 +473,10 @@ impl DcConnection {
                 };
                 match result {
                     Ok(result) => {
-                        if let Some(mbox) = &mbox {
-                            if let Some(parsed) = ferogram_msgbox::classify_own_response(&result) {
-                                let _ = mbox.lock().await.process_updates(parsed);
-                            }
+                        if let Some(mbox) = &mbox
+                            && let Some(parsed) = ferogram_msgbox::classify_own_response(&result)
+                        {
+                            let _ = mbox.lock().await.process_updates(parsed);
                         }
                         return Ok(result);
                     }
@@ -530,19 +530,18 @@ impl DcConnection {
                 };
                 match result {
                     Ok(result) => {
-                        if let Some(mbox) = &mbox {
-                            if let Ok(affected) =
+                        if let Some(mbox) = &mbox
+                            && let Ok(affected) =
                                 ferogram_tl_types::types::messages::AffectedMessages::from_bytes_exact(
                                     &result,
                                 )
-                            {
-                                let _ = mbox.lock().await.process_updates(
-                                    ferogram_msgbox::UpdatesLike::AffectedChannelMessages {
-                                        affected,
-                                        channel_id,
-                                    },
-                                );
-                            }
+                        {
+                            let _ = mbox.lock().await.process_updates(
+                                ferogram_msgbox::UpdatesLike::AffectedChannelMessages {
+                                    affected,
+                                    channel_id,
+                                },
+                            );
                         }
                         return Ok(result);
                     }
@@ -564,7 +563,8 @@ impl DcConnection {
     /// `PipelinedSender`. Only call this on a connection you opened
     /// specifically for a transfer worker (e.g. via `_open_worker_conn`),
     /// never on the main session connection.
-    fn into_pipelined_sender<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    #[pyo3(name = "into_pipelined_sender")]
+    fn graduate_to_pipelined_sender<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let inner = Arc::clone(&self.inner);
         future_into_py(py, async move {
             let mut guard = inner.lock().await;

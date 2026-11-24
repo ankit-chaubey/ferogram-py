@@ -1,6 +1,13 @@
 ## Unreleased
 
+## 0.5.5b7 (24-11-2026)
+
 ### Changed
+- Layer upgrade to 234 (from 233). `schema/api.tl` and `python/ferogram/raw/generated/` regenerated from the schema in ferogram rev 4d4b69a.
+- Rust dependencies (`ferogram-mtsender`, `ferogram-session`, `ferogram-connect`, `ferogram-tl-types`, `ferogram-crypto`, `ferogram-msgbox`) are pinned to ferogram git revision 4d4b69a, which is built on layer 234. They move back to crates.io once the next ferogram release is published.
+- `messages.getForumTopics` takes the optional `icon_emoji_id` and `closed` filters. `messages.dialogs`, `messages.dialogsSlice`, `messages.peerDialogs` and the `updates` difference types carry an optional `topics` list. New raw types cover onchain star gift offers and sales, AI compose styles, transcription models and bot invites.
+- `updateChannelTooLong` has a new constructor id and the optional `last_msg_id` and `last_msg_date` fields. The message box in the extension uses the new id through ferogram.
+- Fixed the clippy lints that newer Rust reports in `src/connection.rs`. The Python method name `DcConnection.into_pipelined_sender()` is unchanged.
 - Minimum Python is now 3.10 (`requires-python = ">=3.10"`); Python 3.9 support is dropped. Wheels are built for the stable ABI as `cp310-abi3` (`pyo3/abi3-py310`) and work on Python 3.10 through 3.15.
 - CI runs the unit tests and the wheel smoke test on Python 3.10, 3.11, 3.12, 3.13, 3.14 and 3.15.
 - Releases no longer need a tag push. The `Publish to PyPI` workflow can also be started by hand (`workflow_dispatch`) with `job=all` and `publish=true` from `main` or a `v*` tag. The version-not-on-PyPI check, the distribution check, attestations and the provenance check run the same way for both.
